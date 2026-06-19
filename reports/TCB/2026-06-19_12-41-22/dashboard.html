@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCB XGBoost dashboard</title>
+  <style>
+    :root { --bg:#f4f6f3; --ink:#1f2933; --muted:#687382; --line:#d6ddd5; --panel:#fff; --green:#0f7b68; --blue:#2563a8; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:28px clamp(18px,4vw,46px) 20px; background:#fff; border-bottom:1px solid var(--line); }
+    .eyebrow { color:var(--green); font-size:12px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
+    h1 { margin:8px 0 6px; font-size:clamp(28px,4vw,46px); line-height:1.05; letter-spacing:0; }
+    .subtitle,.disclaimer { color:var(--muted); line-height:1.55; }
+    main { padding:22px clamp(18px,4vw,46px) 44px; display:grid; gap:22px; }
+    .metrics { display:grid; grid-template-columns:repeat(6,minmax(140px,1fr)); gap:12px; }
+    .metric,section { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    .metric { padding:14px; min-height:104px; }
+    .metric-label { color:var(--muted); font-size:12px; font-weight:750; text-transform:uppercase; }
+    .metric-value { margin-top:10px; font-size:23px; font-weight:760; line-height:1.1; }
+    .metric-detail { color:var(--muted); margin-top:7px; font-size:13px; }
+    section { padding:18px; }
+    .grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr); gap:22px; align-items:start; }
+    .two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+    h2 { margin:0 0 12px; font-size:18px; letter-spacing:0; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    td { padding:10px 8px; border-top:1px solid var(--line); vertical-align:top; }
+    td:first-child { font-weight:700; width:28%; }
+    td:nth-child(2) { color:var(--blue); font-weight:650; width:24%; }
+    img { width:100%; height:auto; display:block; border-radius:6px; border:1px solid var(--line); background:#fff; }
+    @media (max-width:1100px) { .metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } .grid,.two { grid-template-columns:1fr; } }
+    @media (max-width:620px) { .metrics { grid-template-columns:1fr; } td { display:block; width:100%!important; border:0; padding:6px 4px; } tr { display:block; border-top:1px solid var(--line); padding:8px 0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">VN Stock XGBoost Analysis</div>
+    <h1>TCB - Techcombank</h1>
+    <p class="subtitle">Du lieu 2018-06-04 -> 2026-06-19. Source vnstock/VCI. XGBoost la model chinh; logistic va majority la baseline.</p>
+  </header>
+  <main>
+    <div class="metrics"><div class="metric"><div class="metric-label">Gia dong cua</div><div class="metric-value">31.05</div><div class="metric-detail">2026-06-19</div></div><div class="metric"><div class="metric-label">Bias ky thuat</div><div class="metric-value">Tieu cuc</div><div class="metric-detail">Score -5</div></div><div class="metric"><div class="metric-label">XGBoost up</div><div class="metric-value">49.7%</div><div class="metric-detail">Phien ke tiep</div></div><div class="metric"><div class="metric-label">Forecast P50</div><div class="metric-value">31.02</div><div class="metric-detail">-0.1%</div></div><div class="metric"><div class="metric-label">Stop</div><div class="metric-value">30.49</div><div class="metric-detail">R/R 3.23</div></div><div class="metric"><div class="metric-label">Position 100tr</div><div class="metric-value">1,792 cp</div><div class="metric-detail">0.1 ty</div></div></div>
+    <div class="grid"><section><h2>Chart ky thuat</h2><img src="technical_chart.png" alt="Technical chart"></section><section><h2>Tin hieu ky thuat</h2><table><tbody><tr><td>Trend</td><td>Can than</td><td>Gia nam duoi SMA60.</td></tr><tr><td>MACD</td><td>Can than</td><td>MACD duoi signal, histogram am.</td></tr><tr><td>RSI14</td><td>Yeu</td><td>RSI 41.1.</td></tr><tr><td>Bollinger</td><td>On dinh</td><td>Gia nam trong dai Bollinger.</td></tr><tr><td>ADX</td><td>Di ngang</td><td>ADX 16.4.</td></tr><tr><td>Thanh khoan</td><td>Thap</td><td>0.25 lan trung binh.</td></tr><tr><td>Stochastic</td><td>Cuc tri</td><td>%K 15.6, %D 21.0.</td></tr></tbody></table></section></div>
+    <div class="two"><section><h2>So sanh model</h2><table><tbody><tr><td>XGBoost</td><td>0.533</td><td>AUC 0.535</td></tr><tr><td>Logistic</td><td>0.476</td><td>AUC 0.499</td></tr><tr><td>Majority</td><td>0.500</td><td>Baseline</td></tr></tbody></table><h2>Feature importance</h2><table><tbody><tr><td>atr_pct_14</td><td>11.24</td><td>Gain</td></tr><tr><td>macd</td><td>9.14</td><td>Gain</td></tr><tr><td>volatility_20d</td><td>8.48</td><td>Gain</td></tr><tr><td>rsi_14</td><td>7.95</td><td>Gain</td></tr><tr><td>close_vs_sma20</td><td>7.44</td><td>Gain</td></tr><tr><td>return_5d</td><td>7.07</td><td>Gain</td></tr><tr><td>bb_position_20</td><td>6.45</td><td>Gain</td></tr><tr><td>volume_z_20</td><td>6.39</td><td>Gain</td></tr></tbody></table></section><section><h2>Quan tri rui ro</h2><table><tbody><tr><td>Risk/lenh</td><td>1.0%</td><td>1,000,000 VND</td></tr><tr><td>Stop</td><td>30.49</td><td>Risk/cp 0.56</td></tr><tr><td>Target 1</td><td>32.85</td><td>R/R 3.23</td></tr><tr><td>Target 2</td><td>33.70</td><td>Forecast/khang cu</td></tr></tbody></table></section></div>
+    <div class="two"><section><h2>Phan tich co ban</h2><table><tbody><tr><td>P/E</td><td>8.49</td><td>2026-Q1</td></tr><tr><td>P/B</td><td>1.25</td><td>2026-Q1</td></tr><tr><td>P/S</td><td>3.99</td><td>2026-Q1</td></tr><tr><td>ROE</td><td>14.7%</td><td>2026-Q1</td></tr><tr><td>ROA</td><td>2.3%</td><td>2026-Q1</td></tr><tr><td>Gross margin</td><td>69.3%</td><td>2026-Q1</td></tr><tr><td>Net margin</td><td>46.9%</td><td>2026-Q1</td></tr><tr><td>Debt/Equity</td><td>5.38</td><td>2026-Q1</td></tr><tr><td>Current ratio</td><td>0.00</td><td>2026-Q1</td></tr><tr><td>NPL</td><td>1.1%</td><td>2026-Q1</td></tr><tr><td>CASA</td><td>32.6%</td><td>2026-Q1</td></tr><tr><td>Dividend yield</td><td>0.0%</td><td>2026-Q1</td></tr><tr><td>Market cap</td><td>221,090.7 ty</td><td>2026-Q1</td></tr></tbody></table></section><section><h2>Forecast ngan han</h2><table><tbody><tr><td>2026-06-22</td><td>31.04</td><td>P10 30.25 / P90 31.84</td></tr><tr><td>2026-06-23</td><td>31.05</td><td>P10 29.91 / P90 32.17</td></tr><tr><td>2026-06-24</td><td>31.03</td><td>P10 29.69 / P90 32.41</td></tr><tr><td>2026-06-25</td><td>31.03</td><td>P10 29.49 / P90 32.65</td></tr><tr><td>2026-06-26</td><td>31.02</td><td>P10 29.30 / P90 32.85</td></tr></tbody></table></section></div>
+    <section><h2>Forecast chart</h2><img src="forecast_chart.png" alt="Forecast chart"></section>
+    <section><h2>Lich su gia va drawdown</h2><img src="history_chart.png" alt="History chart"></section>
+    <p class="disclaimer">Bao cao dung de hoc tap va lap kich ban, khong phai khuyen nghi mua/ban.</p>
+  </main>
+</body>
+</html>

@@ -6,6 +6,8 @@ Ban khong can sua code khi muon doi ma. Chi can truyen ma vao lenh chay.
 
 Project nay dung PostgreSQL 18 database `stock_db` de luu ket qua phan tich.
 
+Model chinh la XGBoost. Logistic Regression va majority class duoc giu lam baseline de so sanh.
+
 ## Setup moi truong Python
 
 Chay 1 lan:
@@ -21,6 +23,42 @@ Script nay se tao `.venv` va cai cac thu vien:
 - `numpy`
 - `matplotlib`
 - `psycopg[binary]`
+- `xgboost`
+
+Tren macOS, neu XGBoost bao thieu `libomp.dylib`:
+
+```bash
+brew install libomp
+```
+
+## Cau truc source
+
+```text
+src/
+├── data/
+│   ├── fetch.py
+│   └── transform.py
+├── features/
+│   ├── technical.py
+│   └── fundamental.py
+├── models/
+│   ├── xgboost.py
+│   ├── logistic.py
+│   └── metrics.py
+├── forecast/
+│   └── monte_carlo.py
+├── risk/
+│   └── management.py
+├── reports/
+│   └── dashboard.py
+├── database/
+│   └── postgres.py
+├── config.py
+├── utils.py
+└── main.py
+```
+
+`vn_stock_daily_analysis.py` chi la entrypoint tuong thich nguoc. Logic chinh nam trong `src/`.
 
 ## PostgreSQL 18 / stock_db
 
@@ -77,7 +115,7 @@ Vi du chay ma VCB:
 Hoac chay bang Python:
 
 ```bash
-.venv/bin/python vn_stock_daily_analysis.py --once --symbol HCM
+.venv/bin/python -m src.main --once --symbol HCM
 ```
 
 Neu ban chay `./run_now.sh` ma khong nhap ma, chuong trinh se hoi ma trong terminal.
@@ -122,12 +160,20 @@ reports/FPT/2026-06-06_15-30-00/
 Ben trong co:
 
 - `analysis_report.md`: bao cao tom tat va khung kich ban.
+- `dashboard.html`: dashboard tong hop dep hon, mo truc tiep bang trinh duyet.
 - `history_chart.png`: bieu do gia, SMA, volume, drawdown.
+- `technical_chart.png`: bieu do Bollinger Bands, MACD, RSI, ATR/ADX.
 - `forecast_chart.png`: bieu do du bao voi vung P10/P50/P90.
 - `history_features.csv`: du lieu gia + chi bao.
 - `forecast_20_sessions.csv`: bang du bao cac phien toi.
 - `model_metrics.json`: ket qua test model.
+- `xgboost_model.json`: model XGBoost da train tren toan bo du lieu co nhan.
+- `latest_probabilities.json`: xac suat moi nhat tu XGBoost va logistic baseline.
 - `latest_levels.json`: cac muc gia/chi bao moi nhat.
+- `technical_assessment.json`: bias va cac tin hieu ky thuat.
+- `risk_plan.json`: stop, target, reward/risk va position sizing tham khao.
+- `fundamental_summary.json`: tom tat phan tich co ban neu lay duoc tu `vnstock`.
+- `company_overview.csv`, `financial_ratios.csv`, `income_statement.csv`: du lieu co ban raw neu nguon ho tro.
 - `model_test_predictions.csv`: du doan tren tap test.
 
 Dong thoi, ket qua duoc luu vao PostgreSQL:
@@ -137,6 +183,9 @@ Dong thoi, ket qua duoc luu vao PostgreSQL:
 - `forecasts`: bang du bao.
 - `model_test_predictions`: du doan tren tap test.
 - `model_metrics`: diem danh gia model.
+- `fundamental_metrics`: cac chi so co ban da tom tat.
+
+Dashboard hien thi P/E, P/B, ROE, ROA, Market Cap, Revenue Growth va Profit Growth. Hai chi so tang truong duoc tinh YoY tu quy moi nhat so voi cung quy nam truoc.
 
 Vi du query:
 
@@ -154,6 +203,14 @@ Nhung muc hay dung:
 {
   "source": "VCI",
   "forecast_sessions": 20,
+  "xgboost": {
+    "num_boost_round": 400,
+    "learning_rate": 0.03,
+    "max_depth": 4
+  },
+  "risk_per_trade_pct": 0.01,
+  "risk_capital_vnd": 100000000,
+  "atr_stop_multiplier": 1.5,
   "daily_run_time": "15:30"
 }
 ```
@@ -162,6 +219,10 @@ Giai thich:
 
 - `source`: nguon du lieu cua vnstock, mac dinh `VCI`.
 - `forecast_sessions`: so phien muon du bao.
+- `xgboost`: tham so boosting, regularization va early stopping cua model chinh.
+- `risk_per_trade_pct`: % von chap nhan rui ro cho moi lenh tham khao.
+- `risk_capital_vnd`: von tham chieu de tinh position sizing.
+- `atr_stop_multiplier`: so ATR dung de dat stop tham chieu.
 - `daily_run_time`: gio chay tu dong moi ngay.
 
 `symbol` trong config dang de rong de tranh hard-code. Ban nen truyen ma qua lenh chay.

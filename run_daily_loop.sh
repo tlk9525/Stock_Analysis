@@ -9,4 +9,4 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
   PYTHON_BIN="python3"
 fi
 
-"$PYTHON_BIN" vn_stock_daily_analysis.py --loop "$@"
+"$PYTHON_BIN" -m src.main --loop "$@"
