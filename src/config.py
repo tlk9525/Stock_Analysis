@@ -25,11 +25,11 @@ def resolve_config(config: dict, args: argparse.Namespace) -> dict:
     selected_symbol = normalize_symbol(args.symbol_option or args.symbol or config.get("symbol"))
 
     if not selected_symbol and sys.stdin.isatty():
-        selected_symbol = normalize_symbol(input("Nhap ma co phieu, vi du HCM/FPT/VCB: "))
+        selected_symbol = normalize_symbol(input("Nhập mã cổ phiếu, ví dụ HCM/FPT/VCB: "))
 
     if not selected_symbol:
         raise ValueError(
-            "Chua co ma co phieu. Hay chay: ./run_now.sh HCM hoac "
+            "Chưa có mã cổ phiếu. Hãy chạy: ./run_now.sh HCM hoặc "
             "python3 -m src.main --once --symbol HCM"
         )
 
@@ -48,4 +48,3 @@ def resolve_config(config: dict, args: argparse.Namespace) -> dict:
         resolved["save_to_postgres"] = False
 
     return resolved
-

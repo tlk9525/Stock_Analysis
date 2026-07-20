@@ -1,0 +1,88 @@
+{
+  "rank_ic": {
+    "observations": 318,
+    "mean": 0.029241373362755528,
+    "std": 0.34349622371758376,
+    "information_ratio": 0.08512866035696871,
+    "positive_rate": 0.5345911949685535
+  },
+  "top_k_portfolio": {
+    "observations": 16,
+    "total_return": 0.7769759058773713,
+    "annualized_return": 0.5726215120741132,
+    "annualized_volatility": 0.4852205596918238,
+    "sharpe": 1.1597306464905741,
+    "max_drawdown": -0.19829715831674855,
+    "win_rate": 0.5625,
+    "top_k": 3,
+    "transaction_cost_bps": 50.0,
+    "cost_convention": "round_trip_equivalent",
+    "terminal_liquidation_charged": true,
+    "rebalance_every": 20,
+    "min_symbols_per_date": 5,
+    "average_turnover": 0.5625,
+    "total_turnover": 9.0,
+    "mean_net_excess_return": 0.023011502215954965
+  },
+  "by_regime": {
+    "bear": {
+      "observations": 2,
+      "total_return": 0.4653251942780603,
+      "annualized_return": 10.101567546475522,
+      "annualized_volatility": 0.7499980739365608,
+      "sharpe": 3.690820845272752,
+      "max_drawdown": 0.0,
+      "win_rate": 1.0,
+      "rank_ic_observations": 67,
+      "rank_ic_mean": 0.08712600979666252
+    },
+    "bull": {
+      "observations": 8,
+      "total_return": 0.23294761686730903,
+      "annualized_return": 0.3907138672984567,
+      "annualized_volatility": 0.4556247673444653,
+      "sharpe": 0.9243600833621939,
+      "max_drawdown": -0.14995883158810042,
+      "win_rate": 0.5,
+      "rank_ic_observations": 144,
+      "rank_ic_mean": 0.013662398640702436
+    },
+    "sideways": {
+      "observations": 6,
+      "total_return": -0.016435382991611958,
+      "annualized_return": -0.03420248514605251,
+      "annualized_volatility": 0.343229444555414,
+      "sharpe": 0.047633160981427496,
+      "max_drawdown": -0.1795123752756529,
+      "win_rate": 0.5,
+      "rank_ic_observations": 107,
+      "rank_ic_mean": 0.013961950174941302
+    }
+  },
+  "publish_guard": {
+    "status": "RESEARCH_OK",
+    "checks": {
+      "rank_ic_sample": true,
+      "portfolio_sample": true,
+      "positive_rank_ic": true,
+      "positive_net_return": true,
+      "positive_sharpe": true
+    },
+    "failed_checks": [],
+    "thresholds": {
+      "min_rank_ic_observations": 20,
+      "min_portfolio_observations": 12,
+      "min_mean_rank_ic": 0.0,
+      "min_total_return": 0.0,
+      "min_sharpe": 0.0
+    },
+    "meaning": "Chỉ là bảng xếp hạng nghiên cứu; không tự động đặt lệnh."
+  },
+  "execution": {
+    "signal": "after_close_t",
+    "entry": "open_t_plus_1",
+    "exit": "close_t_plus_20",
+    "target": "target_excess_return_20d",
+    "transaction_cost_bps_round_trip_equivalent": 50.0
+  }
+}

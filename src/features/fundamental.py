@@ -196,32 +196,32 @@ def fundamental_assessment(fundamentals: dict) -> list[str]:
 
     if pe is not None:
         if pe <= 10:
-            notes.append(f"P/E {pe:.2f}: dinh gia tuong doi thap neu loi nhuan ben vung.")
+            notes.append(f"P/E {pe:.2f}: định giá tương đối thấp nếu lợi nhuận bền vững.")
         elif pe >= 20:
-            notes.append(f"P/E {pe:.2f}: dinh gia cao, can tang truong loi nhuan ho tro.")
+            notes.append(f"P/E {pe:.2f}: định giá cao, cần tăng trưởng lợi nhuận hỗ trợ.")
         else:
-            notes.append(f"P/E {pe:.2f}: can so sanh them voi doanh nghiep cung nganh.")
+            notes.append(f"P/E {pe:.2f}: cần so sánh thêm với doanh nghiệp cùng ngành.")
     if pb is not None:
-        notes.append(f"P/B {pb:.2f}: nen doc cung ROE va dac thu nganh.")
+        notes.append(f"P/B {pb:.2f}: nên đọc cùng ROE và đặc thù ngành.")
     if roe is not None:
         if roe >= 0.15:
-            notes.append(f"ROE {roe:.1%}: hieu qua von chu so huu tot.")
+            notes.append(f"ROE {roe:.1%}: hiệu quả vốn chủ sở hữu tốt.")
         elif roe <= 0.08:
-            notes.append(f"ROE {roe:.1%}: hieu qua von con yeu.")
+            notes.append(f"ROE {roe:.1%}: hiệu quả vốn còn yếu.")
     if roa is not None and roa >= 0.02:
-        notes.append(f"ROA {roa:.1%}: kha tot, dac biet voi nhom ngan hang.")
+        notes.append(f"ROA {roa:.1%}: khá tốt, đặc biệt với nhóm ngân hàng.")
     if debt_to_equity is not None and debt_to_equity > 2:
-        notes.append(f"Debt/Equity {debt_to_equity:.2f}: don bay cao, can doc theo nganh.")
+        notes.append(f"Debt/Equity {debt_to_equity:.2f}: đòn bẩy cao, cần đọc theo ngành.")
     if current_ratio is not None and current_ratio > 0:
-        status = "kha" if current_ratio >= 1 else "can theo doi"
-        notes.append(f"Current ratio {current_ratio:.2f}: thanh khoan ngan han {status}.")
+        status = "khá" if current_ratio >= 1 else "cần theo dõi"
+        notes.append(f"Current ratio {current_ratio:.2f}: thanh khoản ngắn hạn {status}.")
     if npl is not None and npl > 0:
-        status = "dang o muc kiem soat" if npl <= 0.02 else "can theo doi"
+        status = "đang ở mức kiểm soát" if npl <= 0.02 else "cần theo dõi"
         notes.append(f"NPL {npl:.1%}: {status}.")
     if revenue_growth is not None:
         notes.append(f"Revenue Growth {revenue_growth:.1%} YoY.")
     if profit_growth is not None:
         notes.append(f"Profit Growth {profit_growth:.1%} YoY.")
     if not notes and not fundamentals.get("available"):
-        notes.append("Chua lay duoc du lieu co ban tu nguon du lieu.")
+        notes.append("Chưa lấy được dữ liệu cơ bản từ nguồn dữ liệu.")
     return notes

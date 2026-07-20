@@ -43,6 +43,13 @@ CREATE TABLE IF NOT EXISTS daily_runs (
     risk_reward_ratio DOUBLE PRECISION,
     risk_position_shares INTEGER,
     risk_position_value_vnd DOUBLE PRECISION,
+    signal_status TEXT,
+    signal_reasons TEXT,
+    validation_scheme TEXT,
+    validation_folds INTEGER,
+    backtest_total_return DOUBLE PRECISION,
+    backtest_sharpe DOUBLE PRECISION,
+    backtest_max_drawdown DOUBLE PRECISION,
     PRIMARY KEY (run_id, symbol)
 );
 
@@ -180,6 +187,57 @@ CREATE TABLE IF NOT EXISTS fundamental_metrics (
     PRIMARY KEY (run_id, symbol, metric_name)
 );
 
+CREATE TABLE IF NOT EXISTS panel_runs (
+    run_id TEXT PRIMARY KEY,
+    generated_at TIMESTAMPTZ NOT NULL,
+    source TEXT,
+    benchmark_symbol TEXT NOT NULL,
+    symbols_json TEXT NOT NULL,
+    horizons_json TEXT NOT NULL,
+    model_kind TEXT NOT NULL,
+    transaction_cost_bps DOUBLE PRECISION NOT NULL,
+    latest_date DATE,
+    report_dir TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS panel_predictions (
+    run_id TEXT NOT NULL,
+    horizon INTEGER NOT NULL,
+    trade_date DATE NOT NULL,
+    symbol TEXT NOT NULL,
+    fold INTEGER,
+    prediction DOUBLE PRECISION,
+    prediction_score DOUBLE PRECISION,
+    predicted_rank DOUBLE PRECISION,
+    predicted_percentile DOUBLE PRECISION,
+    predicted_excess_return DOUBLE PRECISION,
+    actual_excess_return DOUBLE PRECISION,
+    actual_return DOUBLE PRECISION,
+    actual_market_return DOUBLE PRECISION,
+    market_regime TEXT,
+    PRIMARY KEY (run_id, horizon, trade_date, symbol)
+);
+
+CREATE TABLE IF NOT EXISTS panel_latest_rankings (
+    run_id TEXT NOT NULL,
+    horizon INTEGER NOT NULL,
+    as_of_date DATE NOT NULL,
+    symbol TEXT NOT NULL,
+    prediction DOUBLE PRECISION,
+    prediction_score DOUBLE PRECISION,
+    predicted_rank DOUBLE PRECISION,
+    predicted_percentile DOUBLE PRECISION,
+    predicted_excess_return DOUBLE PRECISION,
+    PRIMARY KEY (run_id, horizon, as_of_date, symbol)
+);
+
+CREATE TABLE IF NOT EXISTS panel_metrics (
+    run_id TEXT NOT NULL,
+    horizon INTEGER NOT NULL,
+    metric_json TEXT NOT NULL,
+    PRIMARY KEY (run_id, horizon)
+);
+
 ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS macd DOUBLE PRECISION;
 ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS macd_signal DOUBLE PRECISION;
 ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS macd_hist DOUBLE PRECISION;
@@ -200,6 +258,13 @@ ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS risk_target_2 DOUBLE PRECISION;
 ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS risk_reward_ratio DOUBLE PRECISION;
 ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS risk_position_shares INTEGER;
 ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS risk_position_value_vnd DOUBLE PRECISION;
+ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS signal_status TEXT;
+ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS signal_reasons TEXT;
+ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS validation_scheme TEXT;
+ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS validation_folds INTEGER;
+ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS backtest_total_return DOUBLE PRECISION;
+ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS backtest_sharpe DOUBLE PRECISION;
+ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS backtest_max_drawdown DOUBLE PRECISION;
 
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS macd_signal DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS macd_hist DOUBLE PRECISION;
@@ -252,3 +317,9 @@ CREATE INDEX IF NOT EXISTS idx_forecasts_symbol_date
 
 CREATE INDEX IF NOT EXISTS idx_fundamental_metrics_symbol_period
     ON fundamental_metrics (symbol, period);
+
+CREATE INDEX IF NOT EXISTS idx_panel_predictions_date_rank
+    ON panel_predictions (horizon, trade_date DESC, predicted_rank);
+
+CREATE INDEX IF NOT EXISTS idx_panel_latest_rankings_date_rank
+    ON panel_latest_rankings (horizon, as_of_date DESC, predicted_rank);

@@ -52,11 +52,15 @@ def true_range(frame: pd.DataFrame) -> pd.Series:
 
 
 def average_true_range(frame: pd.DataFrame, window: int = 14) -> pd.Series:
-    return true_range(frame).ewm(
-        alpha=1 / window,
-        adjust=False,
-        min_periods=window,
-    ).mean()
+    return (
+        true_range(frame)
+        .ewm(
+            alpha=1 / window,
+            adjust=False,
+            min_periods=window,
+        )
+        .mean()
+    )
 
 
 def adx_components(
@@ -84,9 +88,7 @@ def adx_components(
         / atr
     )
     directional_index = (
-        100
-        * (plus_di - minus_di).abs()
-        / (plus_di + minus_di).replace(0, np.nan)
+        100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
     )
     adx = directional_index.ewm(
         alpha=1 / window,
@@ -103,11 +105,7 @@ def stochastic_oscillator(
 ) -> tuple[pd.Series, pd.Series]:
     low_min = frame["low"].rolling(k_window).min()
     high_max = frame["high"].rolling(k_window).max()
-    k_value = (
-        100
-        * (frame["close"] - low_min)
-        / (high_max - low_min).replace(0, np.nan)
-    )
+    k_value = 100 * (frame["close"] - low_min) / (high_max - low_min).replace(0, np.nan)
     return k_value, k_value.rolling(d_window).mean()
 
 
@@ -143,13 +141,10 @@ def add_features(frame: pd.DataFrame) -> pd.DataFrame:
     out["bb_std_20"] = out["close"].rolling(20).std()
     out["bb_upper_20"] = out["bb_mid_20"] + 2 * out["bb_std_20"]
     out["bb_lower_20"] = out["bb_mid_20"] - 2 * out["bb_std_20"]
-    out["bb_width_20"] = (
-        (out["bb_upper_20"] - out["bb_lower_20"]) / out["bb_mid_20"]
-    )
-    out["bb_position_20"] = (
-        (out["close"] - out["bb_lower_20"])
-        / (out["bb_upper_20"] - out["bb_lower_20"]).replace(0, np.nan)
-    )
+    out["bb_width_20"] = (out["bb_upper_20"] - out["bb_lower_20"]) / out["bb_mid_20"]
+    out["bb_position_20"] = (out["close"] - out["bb_lower_20"]) / (
+        out["bb_upper_20"] - out["bb_lower_20"]
+    ).replace(0, np.nan)
     out["atr_14"] = average_true_range(out, 14)
     out["atr_pct_14"] = out["atr_14"] / out["close"]
     out["adx_14"], out["plus_di_14"], out["minus_di_14"] = adx_components(out, 14)
@@ -158,17 +153,87 @@ def add_features(frame: pd.DataFrame) -> pd.DataFrame:
     out["obv_sma_20"] = out["obv"].rolling(20).mean()
     out["volatility_20d"] = out["return_1d"].rolling(20).std() * math.sqrt(252)
     out["volume_sma_20"] = out["volume"].rolling(20).mean()
-    out["volume_z_20"] = (
-        (out["volume"] - out["volume_sma_20"])
-        / out["volume"].rolling(20).std()
-    )
+    out["volume_z_20"] = (out["volume"] - out["volume_sma_20"]) / out["volume"].rolling(
+        20
+    ).std()
     out["volume_ratio_20"] = out["volume"] / out["volume_sma_20"]
     out["range_pct"] = (out["high"] - out["low"]) / out["close"]
     out["close_vs_sma20"] = out["close"] / out["sma_20"] - 1
     out["close_vs_sma60"] = out["close"] / out["sma_60"] - 1
-    out["target_next_up"] = (out["close"].shift(-1) > out["close"]).astype(int)
-    out["next_return"] = out["close"].pct_change().shift(-1)
+    next_open = out["open"].shift(-1)
+    next_close = out["close"].shift(-1)
+    out["next_return"] = next_close.div(next_open).sub(1)
+    quality = frame.attrs.get("data_quality_report", {}) or {}
+    quarantined_times = pd.to_datetime(
+        [
+            item.get("time")
+            for item in quality.get("quarantine", [])
+            if item.get("time") is not None
+            and "invalid_time" not in item.get("reasons", [])
+            and "duplicate_time" not in item.get("reasons", [])
+        ],
+        errors="coerce",
+    )
+    quarantined_times = pd.DatetimeIndex(quarantined_times).dropna()
+    invalid_forward_target = pd.Series(False, index=out.index)
+    if len(quarantined_times):
+        current_dates = out.index[:-1]
+        next_dates = out.index[1:]
+        for current_date, next_date in zip(current_dates, next_dates):
+            if ((quarantined_times > current_date) & (quarantined_times <= next_date)).any():
+                invalid_forward_target.loc[current_date] = True
+        out.loc[invalid_forward_target, "next_return"] = np.nan
+    out["target_next_up"] = (out["next_return"] > 0).astype(float)
+    out.loc[out["next_return"].isna(), "target_next_up"] = np.nan
+    out.attrs.update(frame.attrs)
+    out.attrs["target_definition"] = (
+        "signal sau close t; vào open t+1; thoát close t+1"
+    )
+    out.attrs["targets_invalidated_by_quarantine"] = int(
+        invalid_forward_target.sum()
+    )
     return out
+
+
+def latest_model_features(
+    frame: pd.DataFrame,
+    feature_columns: list[str] | None = None,
+) -> pd.DataFrame:
+    """Trả về feature mới nhất thực sự và từ chối dữ liệu stale/leakage."""
+    if frame.empty:
+        raise ValueError("Không có dữ liệu để lấy feature mới nhất.")
+    if not frame.index.is_monotonic_increasing or not frame.index.is_unique:
+        raise ValueError(
+            "Dữ liệu feature phải được sắp xếp tăng dần và không trùng ngày."
+        )
+
+    columns = MODEL_FEATURES if feature_columns is None else feature_columns
+    missing_columns = [column for column in columns if column not in frame.columns]
+    if missing_columns:
+        raise ValueError(f"Thiếu feature: {', '.join(missing_columns)}")
+
+    latest = frame.iloc[[-1]]
+    known_future_columns = [
+        column
+        for column in ("target_next_up", "next_return")
+        if column in latest.columns and latest[column].notna().any()
+    ]
+    if known_future_columns:
+        raise ValueError(
+            "Dòng mới nhất không được có dữ liệu tương lai: "
+            + ", ".join(known_future_columns)
+        )
+
+    numeric_latest = latest[columns].apply(pd.to_numeric, errors="coerce")
+    finite = np.isfinite(numeric_latest.to_numpy(dtype=float)).all(axis=0)
+    invalid_features = [
+        column for column, is_finite in zip(columns, finite) if not is_finite
+    ]
+    if invalid_features:
+        raise ValueError(
+            "Feature mới nhất bị thiếu/không hợp lệ: " + ", ".join(invalid_features)
+        )
+    return numeric_latest.copy()
 
 
 def current_levels(frame: pd.DataFrame) -> dict:
@@ -222,64 +287,92 @@ def technical_assessment(levels: dict) -> dict:
     latest = levels["latest_close"]
 
     if latest > levels["sma20"] > levels["sma60"]:
-        signals.append(_signal("Trend", "Tich cuc", "Gia nam tren SMA20 va SMA60.", 2))
+        signals.append(
+            _signal("Xu hướng", "Tích cực", "Giá nằm trên SMA20 và SMA60.", 2)
+        )
     elif latest > levels["sma60"]:
-        signals.append(_signal("Trend", "Trung tinh", "Gia tren SMA60 nhung chua vuot SMA20.", 0))
+        signals.append(
+            _signal(
+                "Xu hướng", "Trung tính", "Giá trên SMA60 nhưng chưa vượt SMA20.", 0
+            )
+        )
     else:
-        signals.append(_signal("Trend", "Can than", "Gia nam duoi SMA60.", -2))
+        signals.append(_signal("Xu hướng", "Cẩn thận", "Giá nằm dưới SMA60.", -2))
 
     if levels["macd"] > levels["macd_signal"] and levels["macd_hist"] > 0:
-        signals.append(_signal("MACD", "Tich cuc", "MACD tren signal, histogram duong.", 2))
+        signals.append(
+            _signal("MACD", "Tích cực", "MACD trên signal, histogram dương.", 2)
+        )
     elif levels["macd"] < levels["macd_signal"] and levels["macd_hist"] < 0:
-        signals.append(_signal("MACD", "Can than", "MACD duoi signal, histogram am.", -2))
+        signals.append(
+            _signal("MACD", "Cẩn thận", "MACD dưới signal, histogram âm.", -2)
+        )
     else:
-        signals.append(_signal("MACD", "Trung tinh", "MACD chua xac nhan ro.", 0))
+        signals.append(_signal("MACD", "Trung tính", "MACD chưa xác nhận rõ.", 0))
 
     rsi_value = levels["rsi14"]
     if rsi_value >= 70:
-        signals.append(_signal("RSI14", "Qua mua", f"RSI {rsi_value:.1f}.", -1))
+        signals.append(_signal("RSI14", "Quá mua", f"RSI {rsi_value:.1f}.", -1))
     elif rsi_value <= 30:
-        signals.append(_signal("RSI14", "Qua ban", f"RSI {rsi_value:.1f}.", 1))
+        signals.append(_signal("RSI14", "Quá bán", f"RSI {rsi_value:.1f}.", 1))
     elif rsi_value >= 55:
-        signals.append(_signal("RSI14", "Tich cuc", f"RSI {rsi_value:.1f}.", 1))
+        signals.append(_signal("RSI14", "Tích cực", f"RSI {rsi_value:.1f}.", 1))
     elif rsi_value <= 45:
-        signals.append(_signal("RSI14", "Yeu", f"RSI {rsi_value:.1f}.", -1))
+        signals.append(_signal("RSI14", "Yếu", f"RSI {rsi_value:.1f}.", -1))
     else:
-        signals.append(_signal("RSI14", "Trung tinh", f"RSI {rsi_value:.1f}.", 0))
+        signals.append(_signal("RSI14", "Trung tính", f"RSI {rsi_value:.1f}.", 0))
 
     bb_position = levels["bb_position20"]
     if bb_position >= 0.9:
-        signals.append(_signal("Bollinger", "Gan bien tren", "Gia sat/vuot bien tren.", 0))
+        signals.append(
+            _signal("Bollinger", "Gần biên trên", "Giá sát/vượt biên trên.", 0)
+        )
     elif bb_position <= 0.1:
-        signals.append(_signal("Bollinger", "Gan bien duoi", "Gia sat/vuot bien duoi.", -1))
+        signals.append(
+            _signal("Bollinger", "Gần biên dưới", "Giá sát/vượt biên dưới.", -1)
+        )
     else:
-        signals.append(_signal("Bollinger", "On dinh", "Gia nam trong dai Bollinger.", 1))
+        signals.append(
+            _signal("Bollinger", "Ổn định", "Giá nằm trong dải Bollinger.", 1)
+        )
 
     adx_value = levels["adx14"]
     if adx_value >= 25 and levels["plus_di14"] > levels["minus_di14"]:
-        signals.append(_signal("ADX", "Xu huong tang", f"ADX {adx_value:.1f}, +DI vuot -DI.", 2))
+        signals.append(
+            _signal("ADX", "Xu hướng tăng", f"ADX {adx_value:.1f}, +DI vượt -DI.", 2)
+        )
     elif adx_value >= 25 and levels["plus_di14"] < levels["minus_di14"]:
-        signals.append(_signal("ADX", "Xu huong giam", f"ADX {adx_value:.1f}, -DI vuot +DI.", -2))
+        signals.append(
+            _signal("ADX", "Xu hướng giảm", f"ADX {adx_value:.1f}, -DI vượt +DI.", -2)
+        )
     else:
-        signals.append(_signal("ADX", "Di ngang", f"ADX {adx_value:.1f}.", 0))
+        signals.append(_signal("ADX", "Đi ngang", f"ADX {adx_value:.1f}.", 0))
 
     volume_ratio = levels["volume_ratio20"]
     if volume_ratio >= 1.5:
-        signals.append(_signal("Thanh khoan", "Dot bien", f"{volume_ratio:.2f} lan trung binh.", 1))
+        signals.append(
+            _signal("Thanh khoản", "Đột biến", f"{volume_ratio:.2f} lần trung bình.", 1)
+        )
     elif volume_ratio <= 0.7:
-        signals.append(_signal("Thanh khoan", "Thap", f"{volume_ratio:.2f} lan trung binh.", -1))
+        signals.append(
+            _signal("Thanh khoản", "Thấp", f"{volume_ratio:.2f} lần trung bình.", -1)
+        )
     else:
-        signals.append(_signal("Thanh khoan", "Binh thuong", f"{volume_ratio:.2f} lan trung binh.", 0))
+        signals.append(
+            _signal(
+                "Thanh khoản", "Bình thường", f"{volume_ratio:.2f} lần trung bình.", 0
+            )
+        )
 
     if levels["stoch_k14"] > levels["stoch_d3"] and levels["stoch_k14"] < 80:
-        signals.append(_signal("Stochastic", "Hoi phuc", "%K nam tren %D.", 1))
+        signals.append(_signal("Stochastic", "Hồi phục", "%K nằm trên %D.", 1))
     elif levels["stoch_k14"] < levels["stoch_d3"] and levels["stoch_k14"] > 20:
-        signals.append(_signal("Stochastic", "Yeu lai", "%K nam duoi %D.", -1))
+        signals.append(_signal("Stochastic", "Yếu lại", "%K nằm dưới %D.", -1))
     else:
         signals.append(
             _signal(
                 "Stochastic",
-                "Cuc tri",
+                "Cực trị",
                 f"%K {levels['stoch_k14']:.1f}, %D {levels['stoch_d3']:.1f}.",
                 0,
             )
@@ -287,14 +380,13 @@ def technical_assessment(levels: dict) -> dict:
 
     score = int(sum(item["score"] for item in signals))
     if score >= 5:
-        bias = "Tich cuc"
+        bias = "Tích cực"
     elif score >= 2:
-        bias = "Hoi phuc / nghieng tang"
+        bias = "Hồi phục / nghiêng tăng"
     elif score <= -5:
-        bias = "Tieu cuc"
+        bias = "Tiêu cực"
     elif score <= -2:
-        bias = "Suy yeu / can than"
+        bias = "Suy yếu / cẩn thận"
     else:
-        bias = "Trung tinh"
+        bias = "Trung tính"
     return {"score": score, "bias": bias, "signals": signals}
-

@@ -49,7 +49,7 @@ def fetch_fundamentals(config: dict) -> tuple[dict, dict[str, pd.DataFrame]]:
             result["company"] = dataframe_first_record(overview)
             result["available"] = True
     except Exception as exc:
-        result["notes"].append(f"Khong lay duoc overview: {exc}")
+        result["notes"].append(f"Không lấy được overview: {exc}")
 
     finance = None
     try:
@@ -63,7 +63,7 @@ def fetch_fundamentals(config: dict) -> tuple[dict, dict[str, pd.DataFrame]]:
             show_log=False,
         )
     except Exception as exc:
-        result["notes"].append(f"Khong khoi tao duoc Finance API: {exc}")
+        result["notes"].append(f"Không khởi tạo được Finance API: {exc}")
 
     if finance is not None:
         try:
@@ -83,7 +83,7 @@ def fetch_fundamentals(config: dict) -> tuple[dict, dict[str, pd.DataFrame]]:
                 result["metrics"], result["latest_period"] = summarize_ratios(ratios)
                 result["available"] = True
         except Exception as exc:
-            result["notes"].append(f"Khong lay duoc financial ratios: {exc}")
+            result["notes"].append(f"Không lấy được financial ratios: {exc}")
 
         try:
             income_statement = pd.DataFrame()
@@ -110,7 +110,7 @@ def fetch_fundamentals(config: dict) -> tuple[dict, dict[str, pd.DataFrame]]:
                 result["growth_period"] = growth_period
                 result["available"] = True
         except Exception as exc:
-            result["notes"].append(f"Khong lay duoc income statement: {exc}")
+            result["notes"].append(f"Không lấy được income statement: {exc}")
 
     result["assessment"] = fundamental_assessment(result)
     return result, frames

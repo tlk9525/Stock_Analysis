@@ -2,6 +2,32 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from pandas.tseries.offsets import CustomBusinessDay
+
+
+def _moving_block_bootstrap(
+    returns: np.ndarray,
+    simulations: int,
+    sessions: int,
+    block_size: int,
+    random_generator: np.random.Generator,
+    drift_shrinkage: float,
+) -> np.ndarray:
+    """Resample contiguous historical blocks to retain tails and short memory."""
+
+    block_size = max(1, min(block_size, len(returns)))
+    block_count = int(np.ceil(sessions / block_size))
+    maximum_start = len(returns) - block_size + 1
+    starts = random_generator.integers(
+        0,
+        maximum_start,
+        size=(simulations, block_count),
+    )
+    offsets = np.arange(block_size)
+    indices = starts[..., None] + offsets
+    sampled = returns[indices].reshape(simulations, -1)[:, :sessions]
+    historical_mean = float(np.mean(returns))
+    return sampled - historical_mean + historical_mean * drift_shrinkage
 
 
 def simulate_forecast(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
@@ -11,21 +37,40 @@ def simulate_forecast(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
     returns = frame["return_1d"].dropna().tail(lookback)
     latest_close = frame["close"].iloc[-1]
     if len(returns) < 30:
-        raise ValueError("Khong du return de chay Monte Carlo.")
+        raise ValueError("Không đủ return để chạy Monte Carlo.")
 
     random_generator = np.random.default_rng(int(config.get("random_seed", 42)))
-    drift = returns.mean() * 0.35
-    volatility = returns.std()
-    simulated_returns = random_generator.normal(
-        loc=drift,
-        scale=volatility,
-        size=(simulations, sessions),
-    )
+    method = str(config.get("monte_carlo_method", "moving_block_bootstrap"))
+    drift_shrinkage = float(config.get("monte_carlo_drift_shrinkage", 0.0))
+    return_values = returns.to_numpy(dtype=float)
+    if method == "moving_block_bootstrap":
+        simulated_returns = _moving_block_bootstrap(
+            return_values,
+            simulations,
+            sessions,
+            int(config.get("monte_carlo_block_size", 5)),
+            random_generator,
+            drift_shrinkage,
+        )
+    elif method == "normal":
+        simulated_returns = random_generator.normal(
+            loc=float(returns.mean()) * drift_shrinkage,
+            scale=float(returns.std()),
+            size=(simulations, sessions),
+        )
+    else:
+        raise ValueError(f"Phương pháp Monte Carlo không hợp lệ: {method}")
+
+    simulated_returns = np.clip(simulated_returns, -0.99, None)
     simulated_prices = latest_close * np.cumprod(1 + simulated_returns, axis=1)
     percentiles = np.percentile(simulated_prices, [10, 25, 50, 75, 90], axis=0)
-    future_dates = pd.bdate_range(
-        frame.index[-1] + pd.Timedelta(days=1),
+    market_calendar = CustomBusinessDay(
+        holidays=pd.to_datetime(config.get("market_holidays", []))
+    )
+    future_dates = pd.date_range(
+        frame.index[-1] + market_calendar,
         periods=sessions,
+        freq=market_calendar,
     )
     forecast = pd.DataFrame(
         {
@@ -37,9 +82,10 @@ def simulate_forecast(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
         },
         index=future_dates,
     )
-    forecast["prob_end_above_latest"] = float(
-        (simulated_prices[:, -1] > latest_close).mean()
-    )
+    forecast["prob_end_above_latest"] = (
+        simulated_prices > latest_close
+    ).mean(axis=0)
     forecast["latest_close"] = latest_close
+    forecast.attrs["method"] = method
+    forecast.attrs["drift_shrinkage"] = drift_shrinkage
     return forecast
-
