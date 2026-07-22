@@ -63,7 +63,10 @@ CREATE TABLE IF NOT EXISTS history_features (
     close DOUBLE PRECISION,
     volume DOUBLE PRECISION,
     return_1d DOUBLE PRECISION,
+    return_2d DOUBLE PRECISION,
+    return_3d DOUBLE PRECISION,
     return_5d DOUBLE PRECISION,
+    return_10d DOUBLE PRECISION,
     return_20d DOUBLE PRECISION,
     sma_5 DOUBLE PRECISION,
     sma_20 DOUBLE PRECISION,
@@ -73,6 +76,8 @@ CREATE TABLE IF NOT EXISTS history_features (
     macd DOUBLE PRECISION,
     macd_signal DOUBLE PRECISION,
     macd_hist DOUBLE PRECISION,
+    macd_pct DOUBLE PRECISION,
+    macd_hist_pct DOUBLE PRECISION,
     rsi_14 DOUBLE PRECISION,
     bb_mid_20 DOUBLE PRECISION,
     bb_std_20 DOUBLE PRECISION,
@@ -90,12 +95,16 @@ CREATE TABLE IF NOT EXISTS history_features (
     obv DOUBLE PRECISION,
     obv_sma_20 DOUBLE PRECISION,
     volatility_20d DOUBLE PRECISION,
+    return_skew_20d DOUBLE PRECISION,
+    return_kurtosis_20d DOUBLE PRECISION,
     volume_sma_20 DOUBLE PRECISION,
     volume_z_20 DOUBLE PRECISION,
     volume_ratio_20 DOUBLE PRECISION,
     range_pct DOUBLE PRECISION,
     close_vs_sma20 DOUBLE PRECISION,
     close_vs_sma60 DOUBLE PRECISION,
+    day_of_week DOUBLE PRECISION,
+    month_of_year DOUBLE PRECISION,
     target_next_up INTEGER,
     next_return DOUBLE PRECISION,
     PRIMARY KEY (run_id, symbol, trade_date)
@@ -111,7 +120,10 @@ CREATE TABLE IF NOT EXISTS model_test_predictions (
     close DOUBLE PRECISION,
     volume DOUBLE PRECISION,
     return_1d DOUBLE PRECISION,
+    return_2d DOUBLE PRECISION,
+    return_3d DOUBLE PRECISION,
     return_5d DOUBLE PRECISION,
+    return_10d DOUBLE PRECISION,
     return_20d DOUBLE PRECISION,
     sma_5 DOUBLE PRECISION,
     sma_20 DOUBLE PRECISION,
@@ -121,6 +133,8 @@ CREATE TABLE IF NOT EXISTS model_test_predictions (
     macd DOUBLE PRECISION,
     macd_signal DOUBLE PRECISION,
     macd_hist DOUBLE PRECISION,
+    macd_pct DOUBLE PRECISION,
+    macd_hist_pct DOUBLE PRECISION,
     rsi_14 DOUBLE PRECISION,
     bb_mid_20 DOUBLE PRECISION,
     bb_std_20 DOUBLE PRECISION,
@@ -138,12 +152,16 @@ CREATE TABLE IF NOT EXISTS model_test_predictions (
     obv DOUBLE PRECISION,
     obv_sma_20 DOUBLE PRECISION,
     volatility_20d DOUBLE PRECISION,
+    return_skew_20d DOUBLE PRECISION,
+    return_kurtosis_20d DOUBLE PRECISION,
     volume_sma_20 DOUBLE PRECISION,
     volume_z_20 DOUBLE PRECISION,
     volume_ratio_20 DOUBLE PRECISION,
     range_pct DOUBLE PRECISION,
     close_vs_sma20 DOUBLE PRECISION,
     close_vs_sma60 DOUBLE PRECISION,
+    day_of_week DOUBLE PRECISION,
+    month_of_year DOUBLE PRECISION,
     target_next_up INTEGER,
     next_return DOUBLE PRECISION,
     xgboost_prediction INTEGER,
@@ -268,6 +286,11 @@ ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS backtest_max_drawdown DOUBLE PRE
 
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS macd_signal DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS macd_hist DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS return_2d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS return_3d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS return_10d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS macd_pct DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS macd_hist_pct DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS bb_mid_20 DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS bb_std_20 DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS bb_upper_20 DOUBLE PRECISION;
@@ -283,10 +306,19 @@ ALTER TABLE history_features ADD COLUMN IF NOT EXISTS stoch_k_14 DOUBLE PRECISIO
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS stoch_d_3 DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS obv DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS obv_sma_20 DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS return_skew_20d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS return_kurtosis_20d DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS volume_ratio_20 DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS day_of_week DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS month_of_year DOUBLE PRECISION;
 
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS macd_signal DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS macd_hist DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS return_2d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS return_3d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS return_10d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS macd_pct DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS macd_hist_pct DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS bb_mid_20 DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS bb_std_20 DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS bb_upper_20 DOUBLE PRECISION;
@@ -302,7 +334,11 @@ ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS stoch_k_14 DOUBLE PR
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS stoch_d_3 DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS obv DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS obv_sma_20 DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS return_skew_20d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS return_kurtosis_20d DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS volume_ratio_20 DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS day_of_week DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS month_of_year DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS xgboost_prediction INTEGER;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS xgboost_prob_up DOUBLE PRECISION;
 

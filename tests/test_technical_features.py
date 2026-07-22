@@ -60,6 +60,48 @@ class TechnicalFeatureTests(unittest.TestCase):
         self.assertEqual(latest.index[0], featured.index[-1])
         self.assertTrue(np.isfinite(latest.to_numpy(dtype=float)).all())
 
+    def test_macd_model_features_are_scale_invariant(self) -> None:
+        base = _feature_ready_history()
+        scaled = base.copy()
+        for column in ["open", "high", "low", "close"]:
+            scaled[column] = scaled[column] * 10
+
+        base_featured = add_features(base)
+        scaled_featured = add_features(scaled)
+        comparable = base_featured[["macd_pct", "macd_hist_pct"]].dropna().index
+
+        np.testing.assert_allclose(
+            base_featured.loc[comparable, "macd_pct"],
+            scaled_featured.loc[comparable, "macd_pct"],
+        )
+        np.testing.assert_allclose(
+            base_featured.loc[comparable, "macd_hist_pct"],
+            scaled_featured.loc[comparable, "macd_hist_pct"],
+        )
+        self.assertFalse(
+            np.allclose(
+                base_featured.loc[comparable, "macd"],
+                scaled_featured.loc[comparable, "macd"],
+            )
+        )
+
+    def test_latest_model_features_include_new_lag_calendar_and_moments(self) -> None:
+        featured = add_features(_feature_ready_history())
+
+        latest = latest_model_features(featured)
+
+        for column in [
+            "return_2d",
+            "return_3d",
+            "return_10d",
+            "return_skew_20d",
+            "return_kurtosis_20d",
+            "day_of_week",
+            "month_of_year",
+        ]:
+            self.assertIn(column, latest.columns)
+            self.assertTrue(np.isfinite(latest.iloc[0][column]))
+
     def test_latest_model_features_rejects_leakage_and_invalid_features(self) -> None:
         featured = add_features(_feature_ready_history())
         featured.loc[featured.index[-1], "target_next_up"] = 1.0

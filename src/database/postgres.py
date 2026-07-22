@@ -8,6 +8,12 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import (
+    is_bool_dtype,
+    is_datetime64_any_dtype,
+    is_float_dtype,
+    is_integer_dtype,
+)
 
 from src.config import PROJECT_ROOT
 from src.utils import clean_json_value, safe_float
@@ -36,6 +42,78 @@ def _quote_identifier(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
+def _infer_postgres_type(series: pd.Series) -> str:
+    if isinstance(series.dtype, pd.DatetimeTZDtype):
+        return "TIMESTAMPTZ"
+    if is_datetime64_any_dtype(series):
+        return "TIMESTAMP"
+    if is_bool_dtype(series):
+        return "BOOLEAN"
+    if is_integer_dtype(series):
+        return "BIGINT"
+    if is_float_dtype(series):
+        return "DOUBLE PRECISION"
+
+    sample = next(
+        (
+            value
+            for value in series
+            if value is not None and not pd.isna(value)
+        ),
+        None,
+    )
+    if sample is None:
+        return "TEXT"
+    if hasattr(sample, "tzinfo") and sample.tzinfo is not None:
+        return "TIMESTAMPTZ"
+    if hasattr(sample, "hour") and hasattr(sample, "minute"):
+        return "TIMESTAMP"
+    if hasattr(sample, "year") and hasattr(sample, "month") and hasattr(sample, "day"):
+        return "DATE"
+    if isinstance(sample, (bool, np.bool_)):
+        return "BOOLEAN"
+    if isinstance(sample, (int, np.integer)):
+        return "BIGINT"
+    if isinstance(sample, (float, np.floating)):
+        return "DOUBLE PRECISION"
+    return "TEXT"
+
+
+def _missing_column_statements(
+    table: str,
+    frame: pd.DataFrame,
+    existing_columns: set[str],
+) -> list[str]:
+    statements: list[str] = []
+    for column in frame.columns:
+        if column in existing_columns:
+            continue
+        sql_type = _infer_postgres_type(frame[column])
+        statements.append(
+            f"ALTER TABLE {_quote_identifier(table)} "
+            f"ADD COLUMN IF NOT EXISTS {_quote_identifier(column)} {sql_type}"
+        )
+    return statements
+
+
+def _ensure_dataframe_columns(connection, table: str, frame: pd.DataFrame) -> None:
+    if frame.empty:
+        return
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = %s
+            """,
+            (table,),
+        )
+        existing_columns = {row[0] for row in cursor.fetchall()}
+        for statement in _missing_column_statements(table, frame, existing_columns):
+            cursor.execute(statement)
+
+
 def _upsert_dataframe(
     connection,
     table: str,
@@ -44,6 +122,7 @@ def _upsert_dataframe(
 ) -> None:
     if frame.empty:
         return
+    _ensure_dataframe_columns(connection, table, frame)
     columns = list(frame.columns)
     column_sql = ", ".join(_quote_identifier(column) for column in columns)
     placeholders = ", ".join(["%s"] * len(columns))

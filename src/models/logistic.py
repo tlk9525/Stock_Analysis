@@ -34,7 +34,7 @@ def fit_logistic(
         probability = sigmoid(augmented @ weights)
         error = (probability - labels) * row_weights
         gradient = (augmented.T @ error) / len(labels)
-        gradient[1:] += l2 * weights[1:] / len(labels)
+        gradient[1:] += l2 * weights[1:]
         weights -= learning_rate * gradient
 
     return {
@@ -49,4 +49,3 @@ def predict_logistic(model: dict, features: pd.DataFrame) -> np.ndarray:
     scaled = (values - model["mean"]) / model["standard_deviation"]
     augmented = np.column_stack([np.ones(len(scaled)), scaled])
     return sigmoid(augmented @ model["weights"])
-

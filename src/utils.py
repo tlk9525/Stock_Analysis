@@ -22,6 +22,15 @@ def safe_float(value, default: float | None = None) -> float | None:
         return default
 
 
+def resolve_price_multiplier(config: dict, default: float = 1000.0) -> float:
+    backtest = config.get("backtest", {}) or {}
+    raw_value = backtest.get("price_multiplier", config.get("price_multiplier", default))
+    multiplier = float(raw_value)
+    if multiplier <= 0:
+        raise ValueError("price_multiplier phải lớn hơn 0.")
+    return multiplier
+
+
 def clean_json_value(value):
     if isinstance(value, dict):
         return {str(key): clean_json_value(item) for key, item in value.items()}
@@ -50,4 +59,3 @@ def write_json(path: Path, data: dict | list) -> None:
         json.dumps(clean_json_value(data), indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
-

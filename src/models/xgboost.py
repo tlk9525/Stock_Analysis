@@ -10,6 +10,7 @@ from src.models.metrics import (
     binary_metrics,
     classification_metrics_by_fold,
 )
+from src.utils import resolve_price_multiplier
 
 
 def _integer_option(
@@ -235,6 +236,7 @@ def _xgboost_params(config: dict, labels: pd.Series) -> tuple[dict, dict]:
     options = config.get("xgboost", {})
     positives = max(float(labels.sum()), 1.0)
     negatives = max(float(len(labels) - labels.sum()), 1.0)
+    scale_pos_weight = negatives / positives
     params = {
         "objective": "binary:logistic",
         "eval_metric": "logloss",
@@ -246,13 +248,14 @@ def _xgboost_params(config: dict, labels: pd.Series) -> tuple[dict, dict]:
         "colsample_bytree": float(options.get("colsample_bytree", 0.8)),
         "lambda": float(options.get("reg_lambda", 1.0)),
         "alpha": float(options.get("reg_alpha", 0.05)),
-        "scale_pos_weight": negatives / positives,
+        "scale_pos_weight": scale_pos_weight,
         "seed": int(options.get("random_state", 42)),
         "nthread": int(options.get("n_jobs", 4)),
     }
     training = {
         "num_boost_round": int(options.get("num_boost_round", 400)),
         "early_stopping_rounds": int(options.get("early_stopping_rounds", 40)),
+        "scale_pos_weight": float(scale_pos_weight),
     }
     if training["num_boost_round"] < 1 or training["early_stopping_rounds"] < 1:
         raise ValueError("Số boosting round và early stopping phải lớn hơn 0.")
@@ -429,6 +432,7 @@ def train_models(
                 "best_iteration": int(best_iteration),
                 "num_boost_round": int(best_rounds),
                 "majority_class": majority_class,
+                "scale_pos_weight": float(training_options["scale_pos_weight"]),
                 "train_logloss_at_best": float(
                     evaluation_history["train"]["logloss"][best_iteration]
                 ),
@@ -510,6 +514,7 @@ def train_models(
             "best_iteration": int(selected_rounds - 1),
             "selected_num_boost_round": int(selected_rounds),
             "best_round_selection": "median_num_boost_round_across_walk_forward_folds",
+            "scale_pos_weight": float(final_params["scale_pos_weight"]),
             "feature_importance_gain": feature_importance,
             # Giữ các key cũ cho report/downstream hiện tại.
             "train_logloss_at_best": fold_records[-1]["train_logloss_at_best"],
@@ -645,7 +650,7 @@ def train_models(
             max_volume_fraction=float(
                 backtest_options.get("max_volume_fraction", 0.01)
             ),
-            price_multiplier=float(backtest_options.get("price_multiplier", 1000.0)),
+            price_multiplier=resolve_price_multiplier(config),
         )
         if explicit_round_trip_cost is None:
             cost_components = {

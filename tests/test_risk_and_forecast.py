@@ -58,6 +58,26 @@ class RiskPlanTests(unittest.TestCase):
         self.assertIsNone(plan["target_1"])
         self.assertIsNone(plan["position_shares"])
 
+    def test_price_multiplier_can_be_set_for_absolute_vnd_prices(self) -> None:
+        levels = {
+            "latest_close": 25_500.0,
+            "atr14": 500.0,
+            "support20": 25_000.0,
+            "sma60": 24_000.0,
+            "resistance20": 28_000.0,
+            "volume20": 1_000_000.0,
+        }
+        config = {
+            **self.config,
+            "backtest": {**self.config["backtest"], "price_multiplier": 1},
+        }
+
+        plan = build_risk_plan(levels, self.forecast, config)
+
+        self.assertEqual(plan["price_multiplier"], 1.0)
+        self.assertEqual(plan["position_shares"], 1100)
+        self.assertLess(plan["position_value_vnd"], config["risk_capital_vnd"])
+
     def test_publish_guard_clears_position_when_model_has_no_edge(self) -> None:
         plan = build_risk_plan(self.levels, self.forecast, self.config)
         metrics = {

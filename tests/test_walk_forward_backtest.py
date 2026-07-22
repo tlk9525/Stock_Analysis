@@ -273,6 +273,7 @@ class TrainModelsTests(unittest.TestCase):
         self.assertEqual(metrics["validation"]["scheme"], "expanding_walk_forward")
         self.assertIn("train_logloss_at_best", metrics["xgboost"])
         self.assertIn("validation_logloss_at_best", metrics["xgboost"])
+        self.assertGreater(metrics["xgboost"]["scale_pos_weight"], 0)
         self.assertTrue(metrics["backtest"]["available"])
         self.assertEqual(metrics["backtest"]["execution_lag_sessions"], 0)
         self.assertEqual(metrics["xgboost"]["threshold"], 0.55)

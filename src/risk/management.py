@@ -4,7 +4,7 @@ import math
 
 import pandas as pd
 
-from src.utils import safe_float
+from src.utils import resolve_price_multiplier, safe_float
 
 
 def build_risk_plan(levels: dict, forecast: pd.DataFrame, config: dict) -> dict:
@@ -22,6 +22,7 @@ def build_risk_plan(levels: dict, forecast: pd.DataFrame, config: dict) -> dict:
     buy_cost_rate = (commission_bps + slippage_bps) / 10_000
     sell_cost_rate = (commission_bps + slippage_bps + sell_tax_bps) / 10_000
     minimum_reward_risk = float(config.get("min_reward_risk", 1.5))
+    price_multiplier = resolve_price_multiplier(config)
 
     stop_candidates = []
     if atr is not None and atr > 0:
@@ -81,8 +82,8 @@ def build_risk_plan(levels: dict, forecast: pd.DataFrame, config: dict) -> dict:
     risk_budget = capital * risk_pct
     position_shares = None
     if risk_per_share and risk_per_share > 0 and reward_risk is not None:
-        risk_cap = math.floor(risk_budget / (risk_per_share * 1000))
-        capital_cap = math.floor(capital / (latest * 1000))
+        risk_cap = math.floor(risk_budget / (risk_per_share * price_multiplier))
+        capital_cap = math.floor(capital / (latest * price_multiplier))
         liquidity = safe_float(levels.get("volume20"))
         liquidity_cap = (
             math.floor(liquidity * max_volume_fraction)
@@ -94,7 +95,7 @@ def build_risk_plan(levels: dict, forecast: pd.DataFrame, config: dict) -> dict:
         if rounded_shares >= lot_size and reward_risk >= minimum_reward_risk:
             position_shares = rounded_shares
     position_value = (
-        position_shares * effective_entry * 1000
+        position_shares * effective_entry * price_multiplier
         if position_shares is not None
         else None
     )
@@ -121,6 +122,7 @@ def build_risk_plan(levels: dict, forecast: pd.DataFrame, config: dict) -> dict:
         "lot_size": lot_size,
         "max_volume_fraction": max_volume_fraction,
         "minimum_reward_risk": minimum_reward_risk,
+        "price_multiplier": price_multiplier,
         "commission_bps_per_side": commission_bps,
         "sell_tax_bps": sell_tax_bps,
         "slippage_bps_per_side": slippage_bps,

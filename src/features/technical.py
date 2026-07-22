@@ -10,12 +10,17 @@ from src.utils import safe_float
 
 MODEL_FEATURES = [
     "return_1d",
+    "return_2d",
+    "return_3d",
     "return_5d",
+    "return_10d",
     "return_20d",
     "rsi_14",
-    "macd",
-    "macd_hist",
+    "macd_pct",
+    "macd_hist_pct",
     "volatility_20d",
+    "return_skew_20d",
+    "return_kurtosis_20d",
     "volume_z_20",
     "volume_ratio_20",
     "range_pct",
@@ -25,6 +30,8 @@ MODEL_FEATURES = [
     "atr_pct_14",
     "adx_14",
     "stoch_k_14",
+    "day_of_week",
+    "month_of_year",
 ]
 
 
@@ -126,7 +133,10 @@ def max_drawdown(returns: pd.Series) -> tuple[float, pd.Timestamp, pd.Timestamp]
 def add_features(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
     out["return_1d"] = out["close"].pct_change()
+    out["return_2d"] = out["close"].pct_change(2)
+    out["return_3d"] = out["close"].pct_change(3)
     out["return_5d"] = out["close"].pct_change(5)
+    out["return_10d"] = out["close"].pct_change(10)
     out["return_20d"] = out["close"].pct_change(20)
     out["sma_5"] = out["close"].rolling(5).mean()
     out["sma_20"] = out["close"].rolling(20).mean()
@@ -136,6 +146,9 @@ def add_features(frame: pd.DataFrame) -> pd.DataFrame:
     out["macd"] = out["ema_12"] - out["ema_26"]
     out["macd_signal"] = out["macd"].ewm(span=9, adjust=False).mean()
     out["macd_hist"] = out["macd"] - out["macd_signal"]
+    close_base = out["close"].replace(0, np.nan)
+    out["macd_pct"] = out["macd"] / close_base
+    out["macd_hist_pct"] = out["macd_hist"] / close_base
     out["rsi_14"] = rsi(out["close"], 14)
     out["bb_mid_20"] = out["sma_20"]
     out["bb_std_20"] = out["close"].rolling(20).std()
@@ -152,6 +165,8 @@ def add_features(frame: pd.DataFrame) -> pd.DataFrame:
     out["obv"] = on_balance_volume(out)
     out["obv_sma_20"] = out["obv"].rolling(20).mean()
     out["volatility_20d"] = out["return_1d"].rolling(20).std() * math.sqrt(252)
+    out["return_skew_20d"] = out["return_1d"].rolling(20).skew()
+    out["return_kurtosis_20d"] = out["return_1d"].rolling(20).kurt()
     out["volume_sma_20"] = out["volume"].rolling(20).mean()
     out["volume_z_20"] = (out["volume"] - out["volume_sma_20"]) / out["volume"].rolling(
         20
@@ -160,6 +175,8 @@ def add_features(frame: pd.DataFrame) -> pd.DataFrame:
     out["range_pct"] = (out["high"] - out["low"]) / out["close"]
     out["close_vs_sma20"] = out["close"] / out["sma_20"] - 1
     out["close_vs_sma60"] = out["close"] / out["sma_60"] - 1
+    out["day_of_week"] = out.index.dayofweek.astype(float)
+    out["month_of_year"] = out.index.month.astype(float)
     next_open = out["open"].shift(-1)
     next_close = out["close"].shift(-1)
     out["next_return"] = next_close.div(next_open).sub(1)
