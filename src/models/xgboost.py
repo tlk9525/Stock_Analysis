@@ -4,7 +4,11 @@ import numpy as np
 import pandas as pd
 
 from src.backtest import run_long_only_backtest
-from src.features.technical import MODEL_FEATURES, latest_model_features
+from src.features.technical import (
+    MARKET_MODEL_FEATURES,
+    MODEL_FEATURES,
+    latest_model_features,
+)
 from src.models.logistic import fit_logistic, predict_logistic
 from src.models.metrics import (
     binary_metrics,
@@ -39,6 +43,15 @@ def _section_option(
             if name in section:
                 return section[name]
     return default
+
+
+def model_feature_columns(config: dict) -> list[str]:
+    options = config.get("market_features", {}) or {}
+    if not isinstance(options, dict):
+        raise ValueError("market_features trong config phải là object.")
+    if bool(options.get("enabled", False)):
+        return [*MODEL_FEATURES, *MARKET_MODEL_FEATURES]
+    return list(MODEL_FEATURES)
 
 
 def resolve_walk_forward_settings(row_count: int, config: dict) -> dict:
@@ -185,25 +198,27 @@ def build_walk_forward_splits(row_count: int, config: dict) -> tuple[list[dict],
 
 def _prepare_model_data(
     frame: pd.DataFrame,
+    feature_columns: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    features = MODEL_FEATURES if feature_columns is None else feature_columns
     missing = [
         column
-        for column in [*MODEL_FEATURES, "target_next_up"]
+        for column in [*features, "target_next_up"]
         if column not in frame.columns
     ]
     if missing:
         raise ValueError(f"Thiếu cột để train model: {', '.join(missing)}")
 
     # Helper này lấy frame.iloc[-1] trước khi target bị drop và từ chối stale row.
-    latest_features = latest_model_features(frame, MODEL_FEATURES)
+    latest_features = latest_model_features(frame, features)
     if latest_features.index[0] != frame.index[-1]:
         raise AssertionError("Feature latest không trùng với dòng cuối của frame.")
 
-    labeled = frame.dropna(subset=[*MODEL_FEATURES, "target_next_up"]).copy()
-    numeric_features = labeled[MODEL_FEATURES].apply(pd.to_numeric, errors="coerce")
+    labeled = frame.dropna(subset=[*features, "target_next_up"]).copy()
+    numeric_features = labeled[features].apply(pd.to_numeric, errors="coerce")
     finite_rows = np.isfinite(numeric_features.to_numpy(dtype=float)).all(axis=1)
     labeled = labeled.loc[finite_rows].copy()
-    labeled[MODEL_FEATURES] = numeric_features.loc[finite_rows]
+    labeled[features] = numeric_features.loc[finite_rows]
     labeled["target_next_up"] = pd.to_numeric(
         labeled["target_next_up"], errors="coerce"
     )
@@ -221,7 +236,8 @@ def _split_data(
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Compatibility helper: trả về train/validation/test của fold mới nhất."""
 
-    labeled, latest_features = _prepare_model_data(frame)
+    feature_columns = model_feature_columns(config or {})
+    labeled, latest_features = _prepare_model_data(frame, feature_columns)
     splits, _ = build_walk_forward_splits(len(labeled), config or {})
     latest_split = splits[-1]
     return (
@@ -317,7 +333,8 @@ def train_models(
             "Không nạp được XGBoost. Hãy chạy ./setup_env.sh và cài OpenMP trên macOS."
         ) from exc
 
-    labeled, latest_features = _prepare_model_data(frame)
+    feature_columns = model_feature_columns(config)
+    labeled, latest_features = _prepare_model_data(frame, feature_columns)
     splits, walk_forward_settings = build_walk_forward_splits(len(labeled), config)
     validation_options = config.get("validation", {}) or {}
     walk_forward_options = config.get("walk_forward", {}) or {}
@@ -347,14 +364,14 @@ def train_models(
 
         params, training_options = _xgboost_params(config, train["target_next_up"])
         train_matrix = xgb.DMatrix(
-            train[MODEL_FEATURES],
+            train[feature_columns],
             label=train["target_next_up"],
-            feature_names=MODEL_FEATURES,
+            feature_names=feature_columns,
         )
         validation_matrix = xgb.DMatrix(
-            validation[MODEL_FEATURES],
+            validation[feature_columns],
             label=validation["target_next_up"],
-            feature_names=MODEL_FEATURES,
+            feature_names=feature_columns,
         )
         evaluation_history: dict = {}
         tuning_booster = xgb.train(
@@ -380,9 +397,9 @@ def train_models(
             training_pool["target_next_up"],
         )
         pool_matrix = xgb.DMatrix(
-            training_pool[MODEL_FEATURES],
+            training_pool[feature_columns],
             label=training_pool["target_next_up"],
-            feature_names=MODEL_FEATURES,
+            feature_names=feature_columns,
         )
         evaluation_booster = xgb.train(
             params=evaluation_params,
@@ -391,19 +408,19 @@ def train_models(
             verbose_eval=False,
         )
         test_matrix = xgb.DMatrix(
-            test[MODEL_FEATURES],
+            test[feature_columns],
             label=test["target_next_up"],
-            feature_names=MODEL_FEATURES,
+            feature_names=feature_columns,
         )
         xgboost_probability = evaluation_booster.predict(test_matrix)
 
         logistic_model = fit_logistic(
-            training_pool[MODEL_FEATURES],
+            training_pool[feature_columns],
             training_pool["target_next_up"],
         )
         logistic_probability = predict_logistic(
             logistic_model,
-            test[MODEL_FEATURES],
+            test[feature_columns],
         )
         majority_class = int(training_pool["target_next_up"].mode().iloc[0])
         majority_classes.append(majority_class)
@@ -481,9 +498,9 @@ def train_models(
     selected_rounds = max(1, int(round(float(np.median(best_rounds_by_fold)))))
     final_params, _ = _xgboost_params(config, labeled["target_next_up"])
     final_matrix = xgb.DMatrix(
-        labeled[MODEL_FEATURES],
+        labeled[feature_columns],
         label=labeled["target_next_up"],
-        feature_names=MODEL_FEATURES,
+        feature_names=feature_columns,
     )
     final_booster = xgb.train(
         params=final_params,
@@ -491,11 +508,11 @@ def train_models(
         num_boost_round=selected_rounds,
         verbose_eval=False,
     )
-    latest_matrix = xgb.DMatrix(latest_features, feature_names=MODEL_FEATURES)
+    latest_matrix = xgb.DMatrix(latest_features, feature_names=feature_columns)
     latest_xgboost_probability = float(final_booster.predict(latest_matrix)[0])
 
     final_logistic = fit_logistic(
-        labeled[MODEL_FEATURES],
+        labeled[feature_columns],
         labeled["target_next_up"],
     )
     latest_logistic_probability = float(
@@ -504,7 +521,7 @@ def train_models(
 
     importance = final_booster.get_score(importance_type="gain")
     feature_importance = {
-        feature: float(importance.get(feature, 0.0)) for feature in MODEL_FEATURES
+        feature: float(importance.get(feature, 0.0)) for feature in feature_columns
     }
     feature_importance = dict(
         sorted(feature_importance.items(), key=lambda item: item[1], reverse=True)
@@ -572,6 +589,7 @@ def train_models(
             "fold_count": int(len(fold_records)),
             "gap_rows_each_boundary": walk_forward_settings["gap_rows"],
             "latest_feature_date": _date_text(latest_features.index[0]),
+            "feature_columns": feature_columns,
         },
         "walk_forward": {
             **walk_forward_settings,

@@ -16,7 +16,7 @@ Chạy một lần:
 ./setup_env.sh
 ```
 
-Script này sẽ tạo `.venv` và cài các thư viện:
+Script này sẽ tạo `.venv` và cài các thư viện cốt lõi:
 
 - `vnstock`
 - `pandas`
@@ -25,6 +25,12 @@ Script này sẽ tạo `.venv` và cài các thư viện:
 - `psycopg[binary]`
 - `xgboost`
 - `pytest`
+
+Nếu muốn style biểu đồ publication-ready thì cài thêm `cnsplots`:
+
+```bash
+.venv/bin/python -m pip install cnsplots
+```
 
 Trên macOS, nếu XGBoost báo thiếu `libomp.dylib`:
 
@@ -137,6 +143,7 @@ Nếu bạn chạy `./run_now.sh` mà không nhập mã, chương trình sẽ h�
 Luồng một mã hiện dùng:
 
 - Target có thể giao dịch: tạo tín hiệu sau `close[t]`, mua ở `open[t+1]` và bán ở `close[t+1]`.
+- Khi `market_features.enabled=true`, pipeline ghép `VNINDEX` theo ngày và thêm return thị trường, excess return, relative strength, beta và correlation; mọi feature chỉ dùng dữ liệu đến `close[t]`.
 - Expanding walk-forward nhiều fold theo thứ tự `train → gap → validation → gap → test`.
 - Early stopping chỉ dùng validation; metrics cuối chỉ lấy các block OOS.
 - Backtest tính commission, slippage, thuế bán, lô 100 cổ phiếu, vốn và giới hạn thanh khoản.

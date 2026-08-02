@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from src.backtest import run_long_only_backtest
-from src.features.technical import MODEL_FEATURES
+from src.features.technical import MARKET_MODEL_FEATURES, MODEL_FEATURES
 from src.models.metrics import binary_metrics, classification_metrics_by_fold
 from src.models.xgboost import (
     _split_data,
@@ -286,6 +286,33 @@ class TrainModelsTests(unittest.TestCase):
             metrics["backtest"]["sharpe_ratio"],
         )
         self.assertEqual(booster.feature_names, MODEL_FEATURES)
+
+    def test_train_models_can_include_market_features(self) -> None:
+        frame = _model_frame()
+        for feature_number, feature in enumerate(MARKET_MODEL_FEATURES, start=1):
+            frame[feature] = frame["return_1d"] * (1 + feature_number * 0.01)
+        config = {
+            "market_features": {"enabled": True},
+            "xgboost": {
+                "num_boost_round": 8,
+                "early_stopping_rounds": 3,
+                "max_depth": 2,
+                "n_jobs": 1,
+            },
+            "walk_forward": {
+                "min_train_rows": 60,
+                "validation_rows": 15,
+                "test_rows": 20,
+                "gap_rows": 1,
+                "max_folds": 2,
+            },
+        }
+
+        metrics, _, _, booster = train_models(frame, config)
+
+        expected = [*MODEL_FEATURES, *MARKET_MODEL_FEATURES]
+        self.assertEqual(booster.feature_names, expected)
+        self.assertEqual(metrics["split"]["feature_columns"], expected)
 
 
 if __name__ == "__main__":

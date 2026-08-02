@@ -15,7 +15,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from src.plotting_backend import configure_publication_style, save_figure
 from src.utils import safe_float
+
+configure_publication_style()
 
 
 SIGNAL_STATUS_LABELS = {
@@ -102,7 +105,7 @@ def make_history_chart(frame: pd.DataFrame, output_path: Path) -> None:
     axes[2].set_ylabel("Mức sụt giảm")
     axes[2].grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(output_path, dpi=170)
+    save_figure(figure, output_path)
     plt.close(figure)
 
 
@@ -128,7 +131,7 @@ def make_forecast_chart(
     axis.grid(alpha=0.25)
     axis.legend(loc="upper left", ncol=2)
     figure.tight_layout()
-    figure.savefig(output_path, dpi=170)
+    save_figure(figure, output_path)
     plt.close(figure)
 
 
@@ -174,7 +177,7 @@ def make_technical_chart(frame: pd.DataFrame, output_path: Path) -> None:
     axes[3].legend(loc="upper left", ncol=2)
     axes[3].grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(output_path, dpi=170)
+    save_figure(figure, output_path)
     plt.close(figure)
 
 

@@ -11,7 +11,12 @@ import pandas as pd
 from src.config import PROJECT_ROOT, load_config, resolve_config
 from src.data.fetch import fetch_fundamentals, fetch_history
 from src.database.postgres import save_postgres
-from src.features.technical import add_features, current_levels, technical_assessment
+from src.features.technical import (
+    add_features,
+    add_market_features,
+    current_levels,
+    technical_assessment,
+)
 from src.forecast.monte_carlo import simulate_forecast
 from src.metadata import build_run_metadata
 from src.models.xgboost import train_models
@@ -40,6 +45,14 @@ def run_once(config: dict) -> Path:
 
     print("Tính chỉ báo kỹ thuật...")
     data = add_features(history)
+    market_options = config.get("market_features", {}) or {}
+    if bool(market_options.get("enabled", False)):
+        benchmark_symbol = str(
+            market_options.get("benchmark_symbol", "VNINDEX")
+        ).upper()
+        print(f"Lấy benchmark {benchmark_symbol} và tính feature thị trường...")
+        benchmark = fetch_history({**config, "symbol": benchmark_symbol})
+        data = add_market_features(data, benchmark)
 
     print("Huấn luyện XGBoost và logistic baseline...")
     metrics, scored_test, latest_probabilities, booster = train_models(data, config)

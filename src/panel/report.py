@@ -14,7 +14,10 @@ os.environ.setdefault(
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from src.plotting_backend import configure_publication_style, has_cnsplots, save_figure
 from src.utils import safe_float
+
+configure_publication_style()
 
 
 def _percent(value: Any) -> str:
@@ -83,6 +86,43 @@ def build_panel_publish_guard(metrics: dict, config: dict) -> dict:
 def make_panel_performance_chart(
     artifacts: Mapping[int, Mapping[str, Any]], output_path: Path
 ) -> None:
+    if has_cnsplots():
+        import cnsplots as cns
+
+        mp = cns.multipanel(max_width=540, title="OOS performance", loc="left")
+        plotted = False
+        for horizon, artifact in sorted(artifacts.items()):
+            backtest = artifact["backtest"]
+            if backtest.empty:
+                continue
+
+            equity = (1 + backtest["net_return"].fillna(0)).cumprod()
+            drawdown = equity / equity.cummax().clip(lower=1.0) - 1
+
+            equity_label = f"h{horizon}_equity"
+            drawdown_label = f"h{horizon}_drawdown"
+
+            mp.panel(equity_label, width=240, height=120, pad_top=10)
+            ax_equity = mp.get_axes(equity_label)
+            ax_equity.plot(equity.index, equity, label=f"Top-k {horizon}d", linewidth=1.6)
+            ax_equity.set_title(f"{horizon}d OOS equity")
+            ax_equity.set_ylabel("Hệ số tài sản")
+            ax_equity.grid(alpha=0.25)
+            ax_equity.legend(loc="best")
+
+            mp.panel(drawdown_label, width=240, height=120, pad_top=10)
+            ax_drawdown = mp.get_axes(drawdown_label)
+            ax_drawdown.plot(drawdown.index, drawdown, label=f"{horizon}d", linewidth=1.3)
+            ax_drawdown.set_title(f"{horizon}d OOS drawdown")
+            ax_drawdown.set_ylabel("Drawdown")
+            ax_drawdown.grid(alpha=0.25)
+            ax_drawdown.legend(loc="best")
+            plotted = True
+
+        if plotted:
+            save_figure(mp.fig, output_path)
+            return
+
     figure, axes = plt.subplots(2, 1, figsize=(13, 8), sharex=False)
     plotted = False
     for horizon, artifact in sorted(artifacts.items()):
@@ -103,7 +143,7 @@ def make_panel_performance_chart(
         if plotted:
             axis.legend(loc="best")
     figure.tight_layout()
-    figure.savefig(output_path, dpi=170)
+    save_figure(figure, output_path)
     plt.close(figure)
 
 

@@ -34,6 +34,19 @@ MODEL_FEATURES = [
     "month_of_year",
 ]
 
+MARKET_MODEL_FEATURES = [
+    "market_return_1d",
+    "market_return_5d",
+    "market_return_20d",
+    "market_volatility_20d",
+    "excess_return_1d",
+    "excess_return_5d",
+    "excess_return_20d",
+    "relative_strength_20d",
+    "beta_60d",
+    "corr_60d",
+]
+
 
 def rsi(close: pd.Series, window: int = 14) -> pd.Series:
     diff = close.diff()
@@ -208,6 +221,75 @@ def add_features(frame: pd.DataFrame) -> pd.DataFrame:
     )
     out.attrs["targets_invalidated_by_quarantine"] = int(
         invalid_forward_target.sum()
+    )
+    return out
+
+
+def add_market_features(
+    frame: pd.DataFrame,
+    benchmark: pd.DataFrame,
+) -> pd.DataFrame:
+    """Add leakage-safe benchmark and relative-strength features at close[t]."""
+
+    if not frame.index.is_monotonic_increasing or not frame.index.is_unique:
+        raise ValueError("Dữ liệu cổ phiếu phải tăng dần và không trùng ngày.")
+    if not benchmark.index.is_monotonic_increasing or not benchmark.index.is_unique:
+        raise ValueError("Dữ liệu benchmark phải tăng dần và không trùng ngày.")
+    if "close" not in benchmark:
+        raise ValueError("Dữ liệu benchmark thiếu cột close.")
+    missing_stock_features = [
+        column
+        for column in ("return_1d", "return_5d", "return_20d")
+        if column not in frame
+    ]
+    if missing_stock_features:
+        raise ValueError(
+            "Phải chạy add_features trước khi thêm benchmark: "
+            + ", ".join(missing_stock_features)
+        )
+
+    out = frame.copy()
+    market = pd.DataFrame(
+        {
+            "market_close": pd.to_numeric(
+                benchmark["close"],
+                errors="coerce",
+            )
+        },
+        index=benchmark.index,
+    )
+    for horizon in (1, 5, 20):
+        market[f"market_return_{horizon}d"] = market["market_close"].pct_change(
+            horizon,
+            fill_method=None,
+        )
+    market["market_volatility_20d"] = (
+        market["market_return_1d"].rolling(20).std() * math.sqrt(252)
+    )
+    aligned_market = market.reindex(out.index)
+    for column in [
+        "market_return_1d",
+        "market_return_5d",
+        "market_return_20d",
+        "market_volatility_20d",
+    ]:
+        out[column] = aligned_market[column]
+    for horizon in (1, 5, 20):
+        out[f"excess_return_{horizon}d"] = (
+            out[f"return_{horizon}d"] - out[f"market_return_{horizon}d"]
+        )
+    out["relative_strength_20d"] = (
+        (1 + out["return_20d"]) / (1 + out["market_return_20d"]) - 1
+    )
+    market_variance = out["market_return_1d"].rolling(60).var()
+    covariance = out["return_1d"].rolling(60).cov(out["market_return_1d"])
+    out["beta_60d"] = covariance / market_variance.replace(0, np.nan)
+    out["corr_60d"] = out["return_1d"].rolling(60).corr(
+        out["market_return_1d"]
+    )
+    out.attrs.update(frame.attrs)
+    out.attrs["benchmark_feature_rows"] = int(
+        aligned_market["market_close"].notna().sum()
     )
     return out
 

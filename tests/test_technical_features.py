@@ -5,7 +5,12 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from src.features.technical import add_features, latest_model_features
+from src.features.technical import (
+    MARKET_MODEL_FEATURES,
+    add_features,
+    add_market_features,
+    latest_model_features,
+)
 
 
 def _feature_ready_history(rows: int = 100) -> pd.DataFrame:
@@ -101,6 +106,26 @@ class TechnicalFeatureTests(unittest.TestCase):
         ]:
             self.assertIn(column, latest.columns)
             self.assertTrue(np.isfinite(latest.iloc[0][column]))
+
+    def test_market_features_use_only_benchmark_data_available_at_each_date(self) -> None:
+        history = _feature_ready_history()
+        benchmark = history.copy()
+        benchmark["close"] = 200 + np.arange(len(benchmark), dtype=float)
+        featured = add_market_features(add_features(history), benchmark)
+
+        changed_future = benchmark.copy()
+        changed_future.loc[changed_future.index[-1], "close"] *= 10
+        changed = add_market_features(add_features(history), changed_future)
+
+        self.assertTrue(set(MARKET_MODEL_FEATURES).issubset(featured.columns))
+        pd.testing.assert_frame_equal(
+            featured.loc[featured.index[:-1], MARKET_MODEL_FEATURES],
+            changed.loc[changed.index[:-1], MARKET_MODEL_FEATURES],
+        )
+        self.assertNotEqual(
+            featured.iloc[-1]["market_return_1d"],
+            changed.iloc[-1]["market_return_1d"],
+        )
 
     def test_latest_model_features_rejects_leakage_and_invalid_features(self) -> None:
         featured = add_features(_feature_ready_history())
