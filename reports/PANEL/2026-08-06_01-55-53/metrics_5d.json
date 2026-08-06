@@ -1,0 +1,110 @@
+{
+  "rank_ic": {
+    "observations": 376,
+    "mean": 0.010137977472744109,
+    "std": 0.3371688236837894,
+    "information_ratio": 0.030067956348929566,
+    "positive_rate": 0.5053191489361702,
+    "hac_lag": 4,
+    "hac_t_stat": 0.36246202466392585
+  },
+  "top_k_portfolio": {
+    "observations": 76,
+    "total_return": 0.2968344875718132,
+    "annualized_return": 0.18811993145213513,
+    "annualized_volatility": 0.33845421729096464,
+    "sharpe": 0.6760084793272103,
+    "max_drawdown": -0.2899016641937169,
+    "win_rate": 0.5,
+    "top_k": 3,
+    "transaction_cost_bps": 50.0,
+    "cost_convention": "full_round_trip_each_cohort",
+    "full_round_trip_charged_each_cohort": true,
+    "terminal_liquidation_charged": true,
+    "rebalance_every": 5,
+    "min_symbols_per_date": 5,
+    "average_turnover": 0.4364035087719299,
+    "total_turnover": 33.16666666666667,
+    "average_cost_turnover": 1.0,
+    "mean_net_excess_return": 0.0012080945108748887
+  },
+  "by_regime": {
+    "bear": {
+      "observations": 16,
+      "total_return": 0.11357964297622969,
+      "annualized_return": 0.4033695266861521,
+      "annualized_volatility": 0.30268017614043957,
+      "sharpe": 1.2647528906021666,
+      "max_drawdown": -0.1242561104021459,
+      "win_rate": 0.5,
+      "rank_ic_observations": 75,
+      "rank_ic_mean": -0.09104338319341927
+    },
+    "bull": {
+      "observations": 34,
+      "total_return": 0.5326883365409136,
+      "annualized_return": 0.8832503799865583,
+      "annualized_volatility": 0.3775093738370356,
+      "sharpe": 1.8661335543510764,
+      "max_drawdown": -0.08685219933732147,
+      "win_rate": 0.5882352941176471,
+      "rank_ic_observations": 162,
+      "rank_ic_mean": 0.06564775931335733
+    },
+    "sideways": {
+      "observations": 26,
+      "total_return": -0.2401822832524334,
+      "annualized_return": -0.4128354993976311,
+      "annualized_volatility": 0.28906187479412326,
+      "sharpe": -1.6883299042718511,
+      "max_drawdown": -0.2475111978919292,
+      "win_rate": 0.38461538461538464,
+      "rank_ic_observations": 139,
+      "rank_ic_mean": 3.738316902404211e-05
+    }
+  },
+  "publish_guard": {
+    "status": "NO_EDGE",
+    "checks": {
+      "rank_ic_sample": true,
+      "portfolio_sample": true,
+      "positive_rank_ic": true,
+      "rank_ic_hac_significance": false,
+      "positive_net_return": true,
+      "positive_sharpe": true
+    },
+    "failed_checks": [
+      "rank_ic_hac_significance"
+    ],
+    "thresholds": {
+      "min_rank_ic_observations": 20,
+      "min_portfolio_observations": 12,
+      "min_mean_rank_ic": 0.0,
+      "min_rank_ic_hac_t_stat": 1.96,
+      "min_total_return": 0.0,
+      "min_sharpe": 0.0
+    },
+    "meaning": "Chỉ là bảng xếp hạng nghiên cứu; không tự động đặt lệnh."
+  },
+  "walk_forward": {
+    "layout": "train -> purge -> validation -> purge -> test",
+    "horizon": 5,
+    "gap": 5,
+    "fold_count": 6,
+    "min_symbols_per_date": 5,
+    "selected_num_boost_round": 91,
+    "latest_feature_date": "2026-08-05T00:00:00",
+    "execution": {
+      "signal": "after_close_t",
+      "entry": "open_t_plus_1",
+      "exit": "close_t_plus_5"
+    }
+  },
+  "execution": {
+    "signal": "after_close_t",
+    "entry": "open_t_plus_1",
+    "exit": "close_t_plus_5",
+    "target": "target_excess_return_5d",
+    "transaction_cost_bps_full_round_trip_each_cohort": 50.0
+  }
+}
