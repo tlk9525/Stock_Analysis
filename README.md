@@ -44,6 +44,7 @@ brew install libomp
 src/
 ├── data/
 │   ├── fetch.py
+│   ├── news.py
 │   └── transform.py
 ├── features/
 │   ├── technical.py
@@ -153,6 +154,24 @@ Luồng một mã hiện dùng:
 
 Các artifact kiểm toán bổ sung gồm `data_quality_report.json`, `signal_decision.json`, `resolved_config.json` và `run_metadata.json`.
 
+### Báo cáo tài chính và tin tức doanh nghiệp
+
+Mỗi lần chạy một mã, hệ thống lấy dữ liệu từ `vnstock` và tạo hai lớp phân tích bổ sung:
+
+- **BCTC:** tỷ số, báo cáo kết quả kinh doanh, bảng cân đối kế toán và lưu chuyển tiền tệ. Dashboard có thêm CFO, free cash flow, CFO/LNST, nợ vay ròng và khả năng trả lãi khi nguồn hỗ trợ.
+- **Tin tức:** `Company.news()` được chuẩn hóa thành tiêu đề, thời gian công bố, nguồn, sự kiện và sentiment keyword-based có thể audit.
+- Raw snapshot được lưu tại `reports/SYMBOL/TIMESTAMP/raw/financial_statements/` và `raw/news/articles.csv` để đối chiếu với báo cáo.
+
+Hai nhóm này hiện mặc định là `snapshot_only`/`research_only`: **chưa phải feature của XGBoost hay panel model**. BCTC từ provider chưa có lịch sử `published_at` chính thức nên không được backfill vào lịch sử giá; bài tin thiếu `published_at` cũng bị loại khỏi feature point-in-time. Điều này tránh dùng dữ liệu tương lai khi backtest.
+
+Muốn tắt lấy tin để chạy nhanh hoặc khi nguồn tạm lỗi, đặt trong `config.json`:
+
+```json
+{
+  "news": { "enabled": false }
+}
+```
+
 ## Giai đoạn 2: chạy panel nhiều cổ phiếu
 
 Chạy universe mặc định trong `config.json`:
@@ -246,7 +265,9 @@ Bên trong có:
 - `technical_assessment.json`: bias và các tín hiệu kỹ thuật.
 - `risk_plan.json`: stop, target, reward/risk và position sizing tham khảo.
 - `fundamental_summary.json`: tóm tắt phân tích cơ bản nếu lấy được từ `vnstock`.
-- `company_overview.csv`, `financial_ratios.csv`, `income_statement.csv`: dữ liệu cơ bản thô nếu nguồn hỗ trợ.
+- `company_overview.csv`, `financial_ratios.csv`, `income_statement.csv`, `balance_sheet.csv`, `cash_flow.csv`: dữ liệu cơ bản thô nếu nguồn hỗ trợ.
+- `news_articles.csv`, `news_features_latest.csv`, `news_summary.json`: tin tức, feature as-of mới nhất và metadata phân tích tin.
+- `raw/financial_statements/`, `raw/news/articles.csv`: snapshot dữ liệu gốc, không ghi đè giữa các lần chạy.
 - `model_test_predictions.csv`: dự đoán trên tập kiểm thử.
 - `backtest_oos.csv`: vị thế, số cổ phiếu, chi phí, P&L, equity và drawdown OOS theo từng phiên.
 
@@ -258,6 +279,8 @@ Bên trong có:
 - `model_test_predictions`: dự đoán trên tập kiểm thử.
 - `model_metrics`: điểm đánh giá mô hình.
 - `fundamental_metrics`: các chỉ số cơ bản đã tóm tắt.
+- `financial_statement_lines`: từng dòng BCTC theo kỳ, nguồn và thời điểm lấy; `available_at` để trống khi chưa có giờ công bố đáng tin cậy.
+- `news_articles`, `news_entities`: bài tin đã chuẩn hóa và bằng chứng gán mã cổ phiếu.
 - `panel_runs`: metadata mỗi lần chạy panel.
 - `panel_predictions`: dự đoán OOS theo ngày, horizon và mã.
 - `panel_latest_rankings`: ranking mới nhất theo horizon.
@@ -316,6 +339,108 @@ Chạy bộ kiểm thử:
 ```bash
 .venv/bin/python -m pytest -q
 ```
+
+## FinAI CLI: portfolio và Ollama
+
+Lớp CLI mới bọc lại pipeline ML hiện có; không train một model thứ hai. Cài
+dependencies rồi xem các lệnh:
+
+```bash
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m src.finai_cli --help
+.venv/bin/python -m src.finai_cli doctor
+```
+
+Phân tích một mã hoặc chạy panel nhiều mã:
+
+```bash
+.venv/bin/python -m src.finai_cli analyze FPT
+.venv/bin/python -m src.finai_cli rank --symbols FPT,VCB,HPG,VNM,MWG --horizons 5,20
+```
+
+Để gọi ngắn gọn từ bất kỳ thư mục nào trên macOS/Linux, cài launcher một lần:
+
+```bash
+ln -sfn "$(pwd)/bin/stockrun" "$HOME/.local/bin/stockrun"
+```
+
+Sau đó, một lệnh sẽ lần lượt tạo ML report, lấy tin web 7 ngày gần nhất và
+để Ollama đọc cả report lẫn tin vừa lưu. Terminal chỉ in đường dẫn báo cáo cuối;
+chi tiết chạy được lưu trong `stockrun.log` cùng thư mục report:
+
+```bash
+stockrun MBB
+stockrun HCM
+```
+
+Sau khi có live research hoặc AI analysis, `dashboard.html` trong report được
+bổ sung bảng headline có link nguồn, bảng News Reader với trích đoạn có thể mở,
+phần AI đã khóa theo artifact và ba mục BCTC mở rộng cho 4 kỳ gần nhất. Mỗi mục
+BCTC có link tới CSV đầy đủ; tin và trích đoạn vẫn chỉ phục vụ research, không
+được hiểu là tín hiệu mua/bán.
+
+`stockrun FPT --no-postgres` và `stockrun FPT --forecast-sessions 20` vẫn chuyển
+đúng option vào pipeline. Mặc định lấy tối đa 10 headline trong 168 giờ, đọc tối
+đa 5 bài gốc rồi dùng Ollama model `qwen3:1.7b`; có thể đổi bằng
+`stockrun FPT --hours 72 --limit 15 --read-limit 8 --model qwen3:4b`.
+Các tác vụ riêng lẻ vẫn giữ cú pháp rõ nghĩa, ví dụ `stockrun doctor`,
+`stockrun analyze FPT`, `stockrun research FPT` hoặc `stockrun ai analyze FPT`.
+
+Portfolio dùng PostgreSQL `stock_db` theo transaction ledger; giá trị vị thế
+được tính lại từ lệnh mua/bán, không lưu `current_value` có thể stale:
+
+```bash
+.venv/bin/python -m src.finai_cli portfolio create "Dai han"
+.venv/bin/python -m src.finai_cli portfolio buy "Dai han" FPT --qty 100 --price 70000 --fee 10
+.venv/bin/python -m src.finai_cli portfolio summary "Dai han"
+```
+
+AI chỉ đọc các artifact đã sinh ra (`signal_decision.json`, technical,
+fundamental và news summaries), không tự tạo dữ liệu giá. Cài Ollama native,
+khởi động service và tải model trước khi dùng:
+
+```bash
+ollama pull qwen3:1.7b
+.venv/bin/python -m src.finai_cli ai analyze FPT
+```
+
+Kết quả AI bị khóa theo `decision_status` của report gốc. `NO_EDGE` vẫn là
+`NO_EDGE`, không thể bị prompt biến thành khuyến nghị mua/bán. Sau khi Ollama
+phản hồi, các trường hiển thị cho người dùng gồm trạng thái, bằng chứng, nguồn,
+góc nhìn kỹ thuật/cơ bản, rủi ro và disclaimer đều được dựng lại từ artifact đã
+lưu; câu khẳng định hoặc rủi ro chỉ do model tự sinh sẽ bị loại bỏ.
+Model mặc định 1.7B được chọn cho máy 8 GB RAM; model được unload sau mỗi câu
+trả lời để tránh chiếm bộ nhớ khi chạy các tác vụ ML khác.
+
+### Live web research và News Reader có nguồn
+
+Lệnh này lấy headline, URL, publisher và thời gian công bố từ Google News RSS,
+lưu snapshot `live_research.json` vào report gần nhất của mã. Mặc định News
+Reader sẽ giải mã URL RSS, mở tối đa 5 bài gốc, trích đoạn HTML giới hạn, lọc
+bài quảng cáo/trùng/không đọc được và lưu `news_reader.json`. Mỗi trích đoạn
+giữ publisher, URL gốc/final URL, thời điểm và nhóm research: kết quả kinh
+doanh, cổ tức/hành động doanh nghiệp, vĩ mô, ngành, rủi ro.
+Mỗi nhóm có một checklist “tác động cần kiểm chứng” gắn với nguồn, thay vì tự
+suy luận tăng/giảm giá từ bài báo.
+
+```bash
+.venv/bin/python -m src.finai_cli research FPT --hours 72 --limit 10
+.venv/bin/python -m src.finai_cli ai analyze FPT
+```
+
+Tùy chỉnh số bài gốc cần đọc hoặc chỉ lấy headline:
+
+```bash
+.venv/bin/python -m src.finai_cli research MBB --hours 168 --limit 15 --read-limit 8
+.venv/bin/python -m src.finai_cli research HCM --no-read
+```
+
+Ollama chỉ được đọc các snapshot đã lưu, không tự do duyệt web hay thực thi chỉ
+dẫn xuất hiện trong tin. News Reader không đánh nhãn sentiment hay suy luận tác
+động giá; AI phải dẫn đúng URL có trong artifact và giữ nguyên `NO_EDGE`.
+Live research chỉ dùng để research/report. Không đưa headline, trích đoạn hoặc
+BCTC snapshot vào train/backtest cho tới khi từng bản ghi có lịch sử
+`available_at` đáng tin cậy.
 
 ## Lưu ý
 

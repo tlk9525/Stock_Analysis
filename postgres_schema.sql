@@ -205,6 +205,77 @@ CREATE TABLE IF NOT EXISTS fundamental_metrics (
     PRIMARY KEY (run_id, symbol, metric_name)
 );
 
+-- Raw financial lines are stored separately from summary ratios. ``available_at``
+-- stays NULL until an official disclosure timestamp is available, so these rows
+-- cannot silently enter a historical point-in-time model.
+CREATE TABLE IF NOT EXISTS financial_statement_lines (
+    symbol TEXT NOT NULL,
+    source TEXT NOT NULL,
+    statement_type TEXT NOT NULL,
+    period TEXT NOT NULL,
+    line_position INTEGER NOT NULL,
+    line_item_id TEXT,
+    line_item TEXT,
+    line_item_en TEXT,
+    metric_value DOUBLE PRECISION,
+    fetched_at TIMESTAMPTZ NOT NULL,
+    available_at TIMESTAMPTZ,
+    availability_basis TEXT NOT NULL,
+    PRIMARY KEY (symbol, source, statement_type, period, line_position, fetched_at)
+);
+
+CREATE TABLE IF NOT EXISTS news_articles (
+    article_key TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    source_name TEXT,
+    source_url TEXT,
+    title TEXT,
+    content_excerpt TEXT,
+    published_at TIMESTAMPTZ,
+    available_at TIMESTAMPTZ,
+    fetched_at TIMESTAMPTZ NOT NULL,
+    availability_basis TEXT NOT NULL,
+    event_type TEXT,
+    sentiment_score DOUBLE PRECISION,
+    sentiment_label TEXT,
+    analysis_method TEXT NOT NULL,
+    PRIMARY KEY (article_key, symbol)
+);
+
+CREATE TABLE IF NOT EXISTS news_entities (
+    article_key TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    entity_match_method TEXT NOT NULL,
+    entity_confidence DOUBLE PRECISION,
+    PRIMARY KEY (article_key, symbol)
+);
+
+-- Personal portfolio is a transaction ledger. Position values are derived at
+-- read time, so stale market values cannot be persisted as account balances.
+CREATE TABLE IF NOT EXISTS portfolios (
+    portfolio_id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    base_currency TEXT NOT NULL DEFAULT 'VND',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_transactions (
+    transaction_id BIGSERIAL PRIMARY KEY,
+    portfolio_id BIGINT NOT NULL REFERENCES portfolios(portfolio_id) ON DELETE CASCADE,
+    symbol TEXT NOT NULL,
+    market TEXT NOT NULL DEFAULT 'VN',
+    side TEXT NOT NULL CHECK (side IN ('BUY', 'SELL')),
+    quantity NUMERIC(20, 6) NOT NULL CHECK (quantity > 0),
+    price NUMERIC(20, 6) NOT NULL CHECK (price > 0),
+    fee NUMERIC(20, 6) NOT NULL DEFAULT 0 CHECK (fee >= 0),
+    currency TEXT NOT NULL DEFAULT 'VND',
+    executed_at TIMESTAMPTZ NOT NULL,
+    realized_pnl NUMERIC(20, 6),
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS panel_runs (
     run_id TEXT PRIMARY KEY,
     generated_at TIMESTAMPTZ NOT NULL,
@@ -353,6 +424,15 @@ CREATE INDEX IF NOT EXISTS idx_forecasts_symbol_date
 
 CREATE INDEX IF NOT EXISTS idx_fundamental_metrics_symbol_period
     ON fundamental_metrics (symbol, period);
+
+CREATE INDEX IF NOT EXISTS idx_financial_statement_lines_available
+    ON financial_statement_lines (symbol, available_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_news_articles_available
+    ON news_articles (symbol, available_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_portfolio_transactions_portfolio_time
+    ON portfolio_transactions (portfolio_id, executed_at, transaction_id);
 
 CREATE INDEX IF NOT EXISTS idx_panel_predictions_date_rank
     ON panel_predictions (horizon, trade_date DESC, predicted_rank);

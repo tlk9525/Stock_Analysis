@@ -10,6 +10,7 @@ import pandas as pd
 
 from src.config import PROJECT_ROOT, load_config, resolve_config
 from src.data.fetch import fetch_fundamentals, fetch_history
+from src.data.news import build_asof_news_features, fetch_company_news
 from src.database.postgres import save_postgres
 from src.features.technical import (
     add_features,
@@ -74,6 +75,18 @@ def run_once(config: dict) -> Path:
 
     print("Lấy phân tích cơ bản...")
     fundamentals, fundamental_frames = fetch_fundamentals(config)
+    print("Lấy và phân tích tin tức (research only)...")
+    news, news_articles = fetch_company_news(config)
+    latest_cutoff = pd.Timestamp(levels["latest_date"])
+    latest_cutoff = latest_cutoff.tz_localize(config.get("timezone", "Asia/Ho_Chi_Minh")) + pd.Timedelta(hours=15)
+    news_features = build_asof_news_features(
+        news_articles,
+        [latest_cutoff],
+        lookback_days=int((config.get("news", {}) or {}).get("lookback_days", 5)),
+        timezone=config.get("timezone", "Asia/Ho_Chi_Minh"),
+    )
+    if not news_features.empty:
+        news["latest_asof_features"] = news_features.iloc[-1].to_dict()
 
     data.reset_index().rename(columns={"time": "date"}).to_csv(
         run_directory / "history_features.csv",
@@ -95,6 +108,17 @@ def run_once(config: dict) -> Path:
     )
     for name, frame in fundamental_frames.items():
         frame.to_csv(run_directory / f"{name}.csv", index=False)
+    raw_directory = run_directory / "raw"
+    raw_fundamental_directory = raw_directory / "financial_statements"
+    raw_fundamental_directory.mkdir(parents=True, exist_ok=True)
+    for name, frame in fundamental_frames.items():
+        frame.to_csv(raw_fundamental_directory / f"{name}.csv", index=False)
+    raw_news_directory = raw_directory / "news"
+    raw_news_directory.mkdir(parents=True, exist_ok=True)
+    news_articles.to_csv(raw_news_directory / "articles.csv", index=False)
+    news_articles.to_csv(run_directory / "news_articles.csv", index=False)
+    if not news_features.empty:
+        news_features.reset_index().to_csv(run_directory / "news_features_latest.csv", index=False)
 
     booster.save_model(str(run_directory / "xgboost_model.json"))
     write_json(run_directory / "model_metrics.json", metrics)
@@ -110,6 +134,7 @@ def run_once(config: dict) -> Path:
         build_run_metadata(config, history, PROJECT_ROOT),
     )
     write_json(run_directory / "fundamental_summary.json", fundamentals)
+    write_json(run_directory / "news_summary.json", news)
 
     make_history_chart(data, run_directory / "history_chart.png")
     make_forecast_chart(data, forecast, levels, run_directory / "forecast_chart.png")
@@ -123,6 +148,7 @@ def run_once(config: dict) -> Path:
         latest_probabilities,
         technical,
         fundamentals,
+        news,
         risk_plan,
         decision,
         run_directory / "analysis_report.md",
@@ -136,6 +162,7 @@ def run_once(config: dict) -> Path:
         latest_probabilities,
         technical,
         fundamentals,
+        news,
         risk_plan,
         decision,
         run_directory / "dashboard.html",
@@ -154,6 +181,8 @@ def run_once(config: dict) -> Path:
             latest_probabilities,
             technical,
             fundamentals,
+            fundamental_frames,
+            news_articles,
             risk_plan,
             decision,
         )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 import os
 import tempfile
 from datetime import datetime
@@ -218,6 +219,7 @@ def write_report(
     latest_probabilities: dict,
     technical: dict,
     fundamentals: dict,
+    news: dict,
     risk_plan: dict,
     decision: dict,
     output_path: Path,
@@ -277,6 +279,20 @@ def write_report(
         )
     lines.extend(f"- {note}" for note in fundamentals.get("assessment", []))
     lines.extend(f"- Ghi chú dữ liệu: {note}" for note in fundamentals.get("notes", []))
+
+    lines.extend(["", "## Tin tức doanh nghiệp (research only)", ""])
+    if news.get("available"):
+        lines.extend(
+            [
+                f"- Nguồn: {news.get('provider')}; số bài lấy được: {news.get('article_count', 0)}.",
+                f"- Bài có timestamp đủ điều kiện point-in-time: {news.get('eligible_article_count', 0)}.",
+                f"- Sentiment trung bình: {format_number(safe_float(news.get('mean_sentiment')), 2)} ({news.get('analysis_method')}).",
+                f"- Bài mới nhất: {news.get('latest_published_at') or 'N/A'}.",
+            ]
+        )
+    else:
+        lines.append("- Chưa lấy được dữ liệu tin tức.")
+    lines.extend(f"- Ghi chú dữ liệu: {note}" for note in news.get("notes", []))
 
     xgboost_metrics = metrics["xgboost"]
     logistic_metrics = metrics["logistic_baseline"]
@@ -374,6 +390,171 @@ def _table(rows: list[tuple[str, str, str]]) -> str:
     return f"<table><tbody>{body}</tbody></table>"
 
 
+def _html_table(headers: list[str], rows: list[list[str]]) -> str:
+    """Render a responsive HTML table from already-escaped cells."""
+
+    head = "".join(f"<th>{_escape(header)}</th>" for header in headers)
+    body = "".join(
+        "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
+        for row in rows
+    )
+    return f'<div class="table-wrap"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+def _read_dashboard_json(path: Path) -> dict:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _external_link(url: object, label: str = "Mở nguồn") -> str:
+    value = str(url or "")
+    if not value.startswith(("https://", "http://")):
+        return "N/A"
+    return f'<a href="{_escape(value)}" target="_blank" rel="noopener noreferrer">{_escape(label)}</a>'
+
+
+def _list_items(items: list[object]) -> str:
+    if not items:
+        return "<p class=\"muted\">Chưa có dữ liệu.</p>"
+    return "<ul>" + "".join(f"<li>{_escape(item)}</li>" for item in items) + "</ul>"
+
+
+def _statement_detail(report_directory: Path, filename: str, label: str) -> str:
+    path = report_directory / filename
+    if not path.exists():
+        return ""
+    try:
+        frame = pd.read_csv(path)
+    except (OSError, pd.errors.ParserError, UnicodeDecodeError):
+        return ""
+    if frame.empty or "item" not in frame.columns:
+        return ""
+    periods = sorted(
+        (column for column in frame.columns if len(column) == 7 and column[4:6] == "-Q"),
+        reverse=True,
+    )[:4]
+    if not periods:
+        return ""
+    rows = []
+    for _, row in frame.head(35).iterrows():
+        values = [_escape(row.get("item", "N/A"))]
+        for period in periods:
+            value = safe_float(row.get(period))
+            values.append("N/A" if value is None else f"{value / 1_000_000_000:,.1f} tỷ")
+        rows.append(values)
+    table = _html_table(["Khoản mục", *periods], rows)
+    return (
+        "<details class=\"detail-section\">"
+        f"<summary>{_escape(label)} — 4 kỳ gần nhất</summary>"
+        f"<p class=\"muted\">Hiển thị 35 dòng đầu; <a href=\"{_escape(filename)}\" target=\"_blank\">mở CSV đầy đủ</a>.</p>"
+        f"{table}</details>"
+    )
+
+
+def enhance_dashboard_with_research(report_directory: Path, ai_result: dict | None = None) -> None:
+    """Append auditable AI, web-research and statement details to one report dashboard.
+
+    The base dashboard is created by the ML run. This function is deliberately
+    idempotent because research and AI may be run later as separate CLI commands.
+    """
+
+    dashboard_path = report_directory / "dashboard.html"
+    if not dashboard_path.exists():
+        return
+    document = dashboard_path.read_text(encoding="utf-8")
+    live_research = _read_dashboard_json(report_directory / "live_research.json")
+    news_reader = _read_dashboard_json(report_directory / "news_reader.json")
+    analysis = ai_result or _read_dashboard_json(report_directory / "ai_analysis.json")
+
+    live_rows = [
+        [
+            _escape(article.get("publisher") or "N/A"),
+            _escape(article.get("title") or "N/A"),
+            _escape(article.get("published_at") or "N/A"),
+            _external_link(article.get("url")),
+        ]
+        for article in live_research.get("articles", []) or []
+        if isinstance(article, dict)
+    ]
+    live_table = _html_table(
+        ["Nguồn", "Tiêu đề", "Thời điểm", "Link"],
+        live_rows,
+    ) if live_rows else "<p class=\"muted\">Chưa có snapshot live research cho report này.</p>"
+
+    reader_rows = []
+    for article in news_reader.get("articles", []) or []:
+        if not isinstance(article, dict):
+            continue
+        excerpt = str(article.get("content_excerpt") or article.get("description") or "Không trích được nội dung.")
+        reader_rows.append(
+            [
+                _escape(article.get("publisher") or "N/A"),
+                _escape(article.get("title") or "N/A"),
+                _escape(", ".join(article.get("topics") or []) or "khác"),
+                _escape(article.get("published_at") or "N/A"),
+                "<details><summary>Xem trích đoạn</summary>"
+                f"<p>{_escape(excerpt)}</p></details>",
+                _external_link(article.get("final_url") or article.get("publisher_url") or article.get("url")),
+            ]
+        )
+    reader_table = _html_table(
+        ["Nguồn", "Tiêu đề", "Nhóm", "Thời điểm", "Trích đoạn đã đọc", "Link"],
+        reader_rows,
+    ) if reader_rows else "<p class=\"muted\">News Reader chưa đọc được bài gốc nào.</p>"
+
+    ai_section = ""
+    if analysis:
+        decision = _escape(analysis.get("decision_status") or "UNKNOWN")
+        ai_section = f"""
+        <section>
+          <h2>Phân tích AI có kiểm chứng</h2>
+          <p><strong>Trạng thái quyết định:</strong> {decision}</p>
+          <p><strong>Tóm tắt:</strong> {_escape(analysis.get("summary") or "N/A")}</p>
+          <p><strong>Kỹ thuật:</strong> {_escape(analysis.get("technical_view") or "N/A")}</p>
+          <p><strong>Cơ bản:</strong> {_escape(analysis.get("fundamental_view") or "N/A")}</p>
+          <p><strong>Tin tức:</strong> {_escape(analysis.get("news_view") or "N/A")}</p>
+          <p><strong>Live research:</strong> {_escape(analysis.get("live_research_view") or "N/A")}</p>
+          <h3>Rủi ro cần kiểm chứng</h3>{_list_items(analysis.get("risks") or [])}
+          <h3>Bằng chứng</h3>{_list_items(analysis.get("evidence") or [])}
+          <p class="muted">{_escape(analysis.get("disclaimer") or "Không phải khuyến nghị mua/bán.")}</p>
+        </section>
+        """
+
+    statements = "".join(
+        _statement_detail(report_directory, filename, label)
+        for filename, label in (
+            ("income_statement.csv", "Kết quả kinh doanh"),
+            ("balance_sheet.csv", "Bảng cân đối kế toán"),
+            ("cash_flow.csv", "Lưu chuyển tiền tệ"),
+        )
+    )
+    statement_section = (
+        f"<section><h2>Chi tiết báo cáo tài chính</h2>{statements}</section>"
+        if statements
+        else ""
+    )
+    enrichment = f"""
+    <!-- FinAI dynamic enrichment start -->
+    {ai_section}
+    <section><h2>Tin web đã lấy</h2>{live_table}</section>
+    <section><h2>News Reader: bài đã đọc và trích đoạn</h2>{reader_table}</section>
+    {statement_section}
+    <!-- FinAI dynamic enrichment end -->
+    """
+    start = "<!-- FinAI dynamic enrichment start -->"
+    end = "<!-- FinAI dynamic enrichment end -->"
+    if start in document and end in document:
+        before, _, remainder = document.partition(start)
+        _, _, after = remainder.partition(end)
+        document = before + enrichment + after
+    else:
+        document = document.replace("</main>", enrichment + "\n  </main>", 1)
+    dashboard_path.write_text(document, encoding="utf-8")
+
+
 def write_dashboard(
     config: dict,
     frame: pd.DataFrame,
@@ -383,6 +564,7 @@ def write_dashboard(
     latest_probabilities: dict,
     technical: dict,
     fundamentals: dict,
+    news: dict,
     risk_plan: dict,
     decision: dict,
     output_path: Path,
@@ -488,6 +670,27 @@ def write_dashboard(
         for item in fundamentals.get("metrics", [])
     ] or [("Dữ liệu", "N/A", "Chưa lấy được dữ liệu cơ bản")]
     fundamental_table = _table(fundamental_rows)
+    latest_news = news.get("latest_asof_features", {}) or {}
+    news_rows = [
+        ("Trạng thái", "Có dữ liệu" if news.get("available") else "Chưa có dữ liệu", news.get("mode", "research_only")),
+        ("Nguồn / số bài", str(news.get("provider") or "N/A"), str(news.get("article_count", 0))),
+        (
+            "Bài đủ timestamp",
+            str(news.get("eligible_article_count", 0)),
+            "Chỉ các bài này mới được phép dùng point-in-time",
+        ),
+        (
+            "Sentiment 5 ngày",
+            format_number(safe_float(latest_news.get("news_sentiment_mean_lookback")), 2),
+            f"{latest_news.get('news_count_lookback', 0)} bài trước cutoff",
+        ),
+        (
+            "Phương pháp",
+            str(news.get("analysis_method") or "N/A"),
+            "Research only; chưa dùng làm tín hiệu mua/bán",
+        ),
+    ]
+    news_table = _table(news_rows)
     forecast_table = _table(
         [
             (str(index.date()), format_price(safe_float(row["p50"])), f"P10 {format_price(safe_float(row['p10']))} / P90 {format_price(safe_float(row['p90']))}")
@@ -527,10 +730,19 @@ def write_dashboard(
     .two {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }}
     h2 {{ margin:0 0 12px; font-size:18px; letter-spacing:0; }}
     table {{ width:100%; border-collapse:collapse; font-size:14px; }}
+    th {{ padding:10px 8px; border-bottom:2px solid var(--line); text-align:left; background:#f8fafc; font-size:12px; color:var(--muted); }}
     td {{ padding:10px 8px; border-top:1px solid var(--line); vertical-align:top; }}
     td:first-child {{ font-weight:700; width:28%; }}
     td:nth-child(2) {{ color:var(--blue); font-weight:650; width:24%; }}
     img {{ width:100%; height:auto; display:block; border-radius:6px; border:1px solid var(--line); background:#fff; }}
+    .table-wrap {{ overflow-x:auto; }}
+    .table-wrap table {{ min-width:680px; }}
+    .table-wrap td {{ white-space:normal; }}
+    .muted {{ color:var(--muted); line-height:1.55; }}
+    details {{ border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin:8px 0; }}
+    summary {{ cursor:pointer; font-weight:700; }}
+    details p {{ white-space:pre-wrap; line-height:1.55; }}
+    a {{ color:var(--blue); }}
     @media (max-width:1200px) {{ .result-metrics,.fundamental-metrics {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .grid,.two {{ grid-template-columns:1fr; }} }}
     @media (max-width:620px) {{ .result-metrics,.fundamental-metrics {{ grid-template-columns:1fr; }} td {{ display:block; width:100%!important; border:0; padding:6px 4px; }} tr {{ display:block; border-top:1px solid var(--line); padding:8px 0; }} }}
   </style>
@@ -548,7 +760,8 @@ def write_dashboard(
     <div class="metrics fundamental-metrics">{fundamental_cards}</div>
     <div class="grid"><section><h2>Biểu đồ kỹ thuật</h2><img src="technical_chart.png" alt="Biểu đồ kỹ thuật"></section><section><h2>Tín hiệu kỹ thuật</h2>{technical_table}</section></div>
     <div class="two"><section><h2>So sánh mô hình</h2>{model_table}<h2>Kiểm thử chiến lược ngoài mẫu sau chi phí</h2>{backtest_table}<h2>Mức độ quan trọng của đặc trưng</h2>{feature_table}</section><section><h2>Điều kiện phát hành tín hiệu</h2>{decision_table}<h2>Quản trị rủi ro</h2>{risk_table}</section></div>
-    <div class="two"><section><h2>Phân tích cơ bản</h2>{fundamental_table}</section><section><h2>Dự báo ngắn hạn</h2>{forecast_table}</section></div>
+    <div class="two"><section><h2>Phân tích cơ bản</h2>{fundamental_table}</section><section><h2>Tin tức doanh nghiệp</h2>{news_table}</section></div>
+    <section><h2>Dự báo ngắn hạn</h2>{forecast_table}</section>
     <section><h2>Biểu đồ dự báo</h2><img src="forecast_chart.png" alt="Biểu đồ dự báo"></section>
     <section><h2>Lịch sử giá và mức sụt giảm</h2><img src="history_chart.png" alt="Biểu đồ lịch sử giá"></section>
     <p class="disclaimer">Báo cáo dùng để học tập và lập kịch bản, không phải khuyến nghị mua/bán.</p>

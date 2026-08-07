@@ -47,6 +47,18 @@ def build_signal_decision(
     )
     min_backtest_sharpe = float(options.get("min_backtest_sharpe", 0.0))
     min_reward_risk = float(config.get("min_reward_risk", 1.5))
+    enable_near_threshold_watch = bool(
+        options.get("enable_near_threshold_watch", False)
+    )
+    max_auc_shortfall_for_watch = float(
+        options.get("max_auc_shortfall_for_watch", 0.0)
+    )
+    max_balanced_accuracy_shortfall_for_watch = float(
+        options.get("max_balanced_accuracy_shortfall_for_watch", 0.0)
+    )
+    max_probability_shortfall_for_watch = float(
+        options.get("max_probability_shortfall_for_watch", 0.0)
+    )
 
     auc = _metric(metrics, "xgboost", "roc_auc")
     balanced_accuracy = _metric(metrics, "xgboost", "balanced_accuracy")
@@ -112,9 +124,35 @@ def build_signal_decision(
         checks[name]
         for name in ("backtest_available", "backtest_sample", "backtest_net_edge")
     )
+    near_threshold_failures = {
+        "model_auc",
+        "model_balanced_accuracy",
+        "probability_edge",
+    }
+    other_checks_for_watch = (
+        "model_beats_logistic",
+        "technical_context",
+        "reward_risk",
+        "fresh_data",
+        "position_available",
+    )
+    near_threshold_watch = (
+        enable_near_threshold_watch
+        and backtest_is_credible
+        and all(checks[name] for name in other_checks_for_watch)
+        and bool(failures)
+        and set(failures).issubset(near_threshold_failures)
+        and auc is not None
+        and auc >= min_auc - max_auc_shortfall_for_watch
+        and balanced_accuracy is not None
+        and balanced_accuracy
+        >= min_balanced_accuracy - max_balanced_accuracy_shortfall_for_watch
+        and probability is not None
+        and probability >= min_probability - max_probability_shortfall_for_watch
+    )
     if not failures:
         status = "ACTIONABLE"
-    elif model_is_credible and backtest_is_credible:
+    elif (model_is_credible and backtest_is_credible) or near_threshold_watch:
         status = "WATCH"
     else:
         status = "NO_EDGE"
@@ -180,6 +218,12 @@ def build_signal_decision(
             "min_completed_round_trips": min_completed_round_trips,
             "min_backtest_total_return": min_backtest_total_return,
             "min_backtest_sharpe": min_backtest_sharpe,
+            "enable_near_threshold_watch": enable_near_threshold_watch,
+            "max_auc_shortfall_for_watch": max_auc_shortfall_for_watch,
+            "max_balanced_accuracy_shortfall_for_watch": (
+                max_balanced_accuracy_shortfall_for_watch
+            ),
+            "max_probability_shortfall_for_watch": max_probability_shortfall_for_watch,
         },
     }
 

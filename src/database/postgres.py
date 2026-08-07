@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -163,6 +164,48 @@ def _frame_with_date(
     return out
 
 
+def _financial_statement_lines(
+    frames: dict[str, pd.DataFrame],
+    symbol: str,
+    source: str,
+    fetched_at: datetime,
+) -> pd.DataFrame:
+    """Persist every supplied statement line with provenance, not only ratios."""
+
+    rows: list[dict] = []
+    period_pattern = re.compile(r"^\d{4}-Q[1-4]$")
+    for statement_type in ("income_statement", "balance_sheet", "cash_flow"):
+        frame = frames.get(statement_type)
+        if frame is None or frame.empty:
+            continue
+        period_columns = [
+            str(column) for column in frame.columns if period_pattern.fullmatch(str(column))
+        ]
+        for position, (_, row) in enumerate(frame.iterrows()):
+            for period in period_columns:
+                value = safe_float(row.get(period))
+                if value is None:
+                    continue
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "source": source,
+                        "statement_type": statement_type,
+                        "period": period,
+                        "line_position": position,
+                        "line_item_id": str(row.get("item_id") or ""),
+                        "line_item": str(row.get("item") or ""),
+                        "line_item_en": str(row.get("item_en") or ""),
+                        "metric_value": value,
+                        "fetched_at": fetched_at,
+                        # Do not manufacture an historical announcement time.
+                        "available_at": None,
+                        "availability_basis": "unverified_publication_time",
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
 def save_postgres(
     config: dict,
     run_directory: Path,
@@ -174,6 +217,8 @@ def save_postgres(
     latest_probabilities: dict,
     technical: dict,
     fundamentals: dict,
+    fundamental_frames: dict[str, pd.DataFrame],
+    news_articles: pd.DataFrame,
     risk_plan: dict,
     decision: dict | None = None,
 ) -> None:
@@ -287,6 +332,38 @@ def save_postgres(
             for item in fundamentals.get("metrics", [])
         ]
     )
+    statement_lines = _financial_statement_lines(
+        fundamental_frames,
+        symbol=symbol,
+        source=str(fundamentals.get("source") or config.get("source", "")),
+        fetched_at=datetime.now(timezone),
+    )
+    news_rows = news_articles.copy()
+    if not news_rows.empty:
+        news_rows = news_rows[
+            [
+                "article_key",
+                "symbol",
+                "provider",
+                "source_name",
+                "source_url",
+                "title",
+                "content_excerpt",
+                "published_at",
+                "available_at",
+                "fetched_at",
+                "availability_basis",
+                "event_type",
+                "sentiment_score",
+                "sentiment_label",
+                "analysis_method",
+            ]
+        ]
+    entity_rows = pd.DataFrame()
+    if not news_articles.empty:
+        entity_rows = news_articles[
+            ["article_key", "symbol", "entity_match_method", "entity_confidence"]
+        ].copy()
     history_features = _frame_with_date(data, symbol, run_id, "trade_date")
     test_predictions = _frame_with_date(scored_test, symbol, run_id, "trade_date")
     forecasts = _frame_with_date(forecast, symbol, run_id, "forecast_date")
@@ -299,6 +376,14 @@ def save_postgres(
         _upsert_dataframe(connection, "forecasts", forecasts, ["run_id", "symbol", "forecast_date"])
         _upsert_dataframe(connection, "model_metrics", metric_rows, ["run_id", "symbol", "metric_name"])
         _upsert_dataframe(connection, "fundamental_metrics", fundamental_rows, ["run_id", "symbol", "metric_name"])
+        _upsert_dataframe(
+            connection,
+            "financial_statement_lines",
+            statement_lines,
+            ["symbol", "source", "statement_type", "period", "line_position", "fetched_at"],
+        )
+        _upsert_dataframe(connection, "news_articles", news_rows, ["article_key", "symbol"])
+        _upsert_dataframe(connection, "news_entities", entity_rows, ["article_key", "symbol"])
 
 
 def save_panel_postgres(

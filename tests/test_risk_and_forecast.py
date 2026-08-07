@@ -146,6 +146,44 @@ class RiskPlanTests(unittest.TestCase):
         self.assertEqual(decision["status"], "ACTIONABLE")
         self.assertTrue(all(decision["checks"].values()))
 
+    def test_near_threshold_candidate_is_watch_without_position(self) -> None:
+        plan = build_risk_plan(self.levels, self.forecast, self.config)
+        metrics = {
+            "xgboost": {"roc_auc": 0.521, "balanced_accuracy": 0.53},
+            "logistic_baseline": {"roc_auc": 0.51},
+            "backtest": {
+                "available": True,
+                "observations": 252,
+                "completed_round_trips": 30,
+                "net_total_return": 0.12,
+                "sharpe_ratio": 0.8,
+            },
+        }
+        config = {
+            **self.config,
+            "signal_guard": {
+                "enable_near_threshold_watch": True,
+                "max_auc_shortfall_for_watch": 0.02,
+                "max_balanced_accuracy_shortfall_for_watch": 0.01,
+                "max_probability_shortfall_for_watch": 0.02,
+            },
+        }
+
+        decision = build_signal_decision(
+            metrics,
+            {"xgboost": 0.535},
+            {"score": 5},
+            plan,
+            str(pd.Timestamp.today().date()),
+            config,
+        )
+        guarded = enforce_signal_decision(plan, decision)
+
+        self.assertEqual(decision["status"], "WATCH")
+        self.assertEqual(decision["direction"], "NONE")
+        self.assertEqual(decision["failed_checks"], ["model_auc", "probability_edge"])
+        self.assertIsNone(guarded["position_shares"])
+
 
 class MonteCarloTests(unittest.TestCase):
     def test_block_bootstrap_is_reproducible_and_uses_market_holidays(self) -> None:

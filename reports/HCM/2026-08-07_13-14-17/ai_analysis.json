@@ -1,0 +1,53 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 3 bài để phân loại chủ đề (ket_qua_kinh_doanh: 1, nganh: 1, rui_ro: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Balanced accuracy 0.518 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.557401586588834, AUC logistic=0.5642535215952369",
+    "ML guard: Probability 47.5% < 55.0%",
+    "ML guard: Technical score 0 < 2",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.12580115000000103, Sharpe=-0.3378389084634233",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.518 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.557401586588834, AUC logistic=0.5642535215952369",
+    "ML decision artifact: NO_EDGE. Probability 47.5% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score 0 < 2",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.12580115000000103, Sharpe=-0.3378389084634233",
+    "News Reader [VOV.VN]: 57 mã cổ phiếu không đủ điều kiện giao dịch ký quỹ trên sàn Tp.HCM - VOV.VN | nhóm: rui_ro (2026-08-07T02:20:00+00:00)",
+    "News Reader [24HMoney]: Cổ phiếu MBS, HCM, VCK - Có nên mua? Đánh giá KQKD quý 2 và dự phóng lợi nhuận quý 3 năm 2026 - 24HMoney | nhóm: ket_qua_kinh_doanh, nganh (2026-08-06T06:54:33+00:00)",
+    "News Reader [nguoiquansat.vn]: 5 cổ phiếu hot LPB, ACB, HCM, POW và VNM dưới góc nhìn phân tích kỹ thuật: Mua được không? - nguoiquansat.vn | nhóm: rui_ro (2026-08-03T03:55:01+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "57 mã cổ phiếu không đủ điều kiện giao dịch ký quỹ trên sàn Tp.HCM - VOV.VN",
+      "publisher": "VOV.VN",
+      "url": "http://vov1.vov.vn/kinh-te/truoc-gio-mo-cua/57-ma-co-phieu-khong-du-dieu-kien-giao-dich-ky-quy-tren-san-tphcm-133490.vov",
+      "published_at": "2026-08-07T02:20:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu MBS, HCM, VCK - Có nên mua? Đánh giá KQKD quý 2 và dự phóng lợi nhuận quý 3 năm 2026 - 24HMoney",
+      "publisher": "24HMoney",
+      "url": "https://24hmoney.vn/news/co-phieu-mbs-hcm-vck-co-nen-mua-danh-gia-kqkd-quy-2-va-du-phong-loi-nhuan-quy-3-nam-2026-c30a2817334.html",
+      "published_at": "2026-08-06T06:54:33+00:00"
+    },
+    {
+      "title": "5 cổ phiếu hot LPB, ACB, HCM, POW và VNM dưới góc nhìn phân tích kỹ thuật: Mua được không? - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/5-co-phieu-hot-lpb-acb-hcm-pow-va-vnm-duoi-goc-nhin-phan-tich-ky-thuat-mua-duoc-khong-308053.html",
+      "published_at": "2026-08-03T03:55:01+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm 0. Chi tiết artifact: Xu hướng: Tích cực (Giá nằm trên SMA20 và SMA60.); MACD: Cẩn thận (MACD dưới signal, histogram âm.); RSI14: Tích cực (RSI 55.2.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 12.3.); Thanh khoản: Thấp (0.21 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Chứng khoán HSC; kỳ 2026-Q2; P/E 19.30; P/B 1.98; ROE 9.8%; ROA 3.1%; Debt/Equity 1.82; Revenue Growth 15.1%; Profit Growth 42.0%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 3 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 1, nganh: 1, rui_ro: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-07T06:28:15.412830+00:00; News Reader đọc được 3 bài. ML có 5 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

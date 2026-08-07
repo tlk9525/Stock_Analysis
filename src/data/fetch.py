@@ -8,6 +8,7 @@ from src.data.transform import clean_history
 from src.features.fundamental import (
     dataframe_first_record,
     fundamental_assessment,
+    summarize_financial_statements,
     summarize_income_growth,
     summarize_ratios,
 )
@@ -36,6 +37,7 @@ def fetch_fundamentals(config: dict) -> tuple[dict, dict[str, pd.DataFrame]]:
         "metrics": [],
         "latest_period": None,
         "growth_period": None,
+        "statement_quality": {},
         "notes": [],
     }
     frames: dict[str, pd.DataFrame] = {}
@@ -111,6 +113,30 @@ def fetch_fundamentals(config: dict) -> tuple[dict, dict[str, pd.DataFrame]]:
                 result["available"] = True
         except Exception as exc:
             result["notes"].append(f"Không lấy được income statement: {exc}")
+
+        # Dùng public API thay vì provider private để balance sheet/cash flow
+        # vẫn có fallback tương thích giữa các nguồn vnstock.
+        for frame_name, method_name, label in [
+            ("balance_sheet", "balance_sheet", "balance sheet"),
+            ("cash_flow", "cash_flow", "cash flow"),
+        ]:
+            try:
+                statement = getattr(finance, method_name)(
+                    period="quarter",
+                    lang="en",
+                    dropna=True,
+                )
+                if not statement.empty:
+                    frames[frame_name] = statement
+                    result["available"] = True
+            except Exception as exc:
+                result["notes"].append(f"Không lấy được {label}: {exc}")
+
+    statement_metrics, statement_quality = summarize_financial_statements(frames)
+    result["metrics"].extend(statement_metrics)
+    result["statement_quality"] = statement_quality
+    if statement_quality:
+        result["notes"].append(statement_quality["note"])
 
     result["assessment"] = fundamental_assessment(result)
     return result, frames

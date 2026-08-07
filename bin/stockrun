@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Run the FinAI single-symbol pipeline from any working directory.
+set -euo pipefail
+
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [[ -h "$SOURCE_PATH" ]]; do
+  SOURCE_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
+  SOURCE_PATH="$(readlink "$SOURCE_PATH")"
+  [[ "$SOURCE_PATH" != /* ]] && SOURCE_PATH="${SOURCE_DIR}/${SOURCE_PATH}"
+done
+PROJECT_DIR="$(cd "$(dirname "$SOURCE_PATH")/.." && pwd)"
+PYTHON_BIN="${PROJECT_DIR}/.venv/bin/python"
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  echo "Không tìm thấy Python virtual environment: ${PYTHON_BIN}" >&2
+  echo "Hãy tạo .venv và cài dependencies trước khi chạy stockrun." >&2
+  exit 1
+fi
+
+cd "$PROJECT_DIR"
+
+# The common case is intentionally terse: `stockrun FPT` runs ML, research and AI.
+# Named FinAI commands remain available for individual workflow steps.
+case "${1:-}" in
+  doctor|analyze|full|rank|research|portfolio|ai|--help|-h|help|"")
+    exec "$PYTHON_BIN" -m src.finai_cli "$@"
+    ;;
+  *)
+    exec "$PYTHON_BIN" -m src.finai_cli full "$@"
+    ;;
+esac
