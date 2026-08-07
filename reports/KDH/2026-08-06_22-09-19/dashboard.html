@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bảng điều khiển XGBoost - KDH</title>
+  <style>
+    :root { --bg:#f4f6f3; --ink:#1f2933; --muted:#687382; --line:#d6ddd5; --panel:#fff; --green:#0f7b68; --blue:#2563a8; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:28px clamp(18px,4vw,46px) 20px; background:#fff; border-bottom:1px solid var(--line); }
+    .eyebrow { color:var(--green); font-size:12px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
+    h1 { margin:8px 0 6px; font-size:clamp(28px,4vw,46px); line-height:1.05; letter-spacing:0; }
+    .subtitle,.disclaimer { color:var(--muted); line-height:1.55; }
+    main { padding:22px clamp(18px,4vw,46px) 44px; display:grid; gap:22px; }
+    .metrics { display:grid; gap:12px; }
+    .result-metrics { grid-template-columns:repeat(5,minmax(150px,1fr)); }
+    .fundamental-metrics { grid-template-columns:repeat(7,minmax(130px,1fr)); }
+    .metric,section { background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+    .metric { padding:14px; min-height:104px; }
+    .metric-label { color:var(--muted); font-size:12px; font-weight:750; text-transform:uppercase; }
+    .metric-value { margin-top:10px; font-size:23px; font-weight:760; line-height:1.1; }
+    .metric-detail { color:var(--muted); margin-top:7px; font-size:13px; }
+    section { padding:18px; }
+    .grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr); gap:22px; align-items:start; }
+    .two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+    h2 { margin:0 0 12px; font-size:18px; letter-spacing:0; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    td { padding:10px 8px; border-top:1px solid var(--line); vertical-align:top; }
+    td:first-child { font-weight:700; width:28%; }
+    td:nth-child(2) { color:var(--blue); font-weight:650; width:24%; }
+    img { width:100%; height:auto; display:block; border-radius:6px; border:1px solid var(--line); background:#fff; }
+    @media (max-width:1200px) { .result-metrics,.fundamental-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } .grid,.two { grid-template-columns:1fr; } }
+    @media (max-width:620px) { .result-metrics,.fundamental-metrics { grid-template-columns:1fr; } td { display:block; width:100%!important; border:0; padding:6px 4px; } tr { display:block; border-top:1px solid var(--line); padding:8px 0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">Phân tích cổ phiếu Việt Nam bằng XGBoost</div>
+    <h1>KDH - Nhà Khang Điền</h1>
+    <p class="subtitle">Dữ liệu 2010-02-01 → 2026-08-06. Nguồn vnstock/VCI. XGBoost là mô hình chính; Logistic và mô hình đa số được dùng làm đối chứng.</p>
+  </header>
+  <main>
+    <h2>Kết quả chính</h2>
+    <div class="metrics result-metrics"><div class="metric"><div class="metric-label">Giá hiện tại</div><div class="metric-value">17.80</div><div class="metric-detail">2026-08-06 - nghìn VND/cp</div></div><div class="metric"><div class="metric-label">Xu hướng kỹ thuật</div><div class="metric-value">Trung tính</div><div class="metric-detail">Điểm -1</div></div><div class="metric"><div class="metric-label">Trạng thái tín hiệu</div><div class="metric-value">CHƯA CÓ LỢI THẾ (NO_EDGE)</div><div class="metric-detail">AUC của mô hình; Độ chính xác cân bằng của mô hình; XGBoost vượt mô hình Logistic đối chứng; Xác suất tăng đạt ngưỡng; Bối cảnh kỹ thuật đạt ngưỡng</div></div><div class="metric"><div class="metric-label">Xác suất XGBoost</div><div class="metric-value">49.6%</div><div class="metric-detail">Xác suất giá đóng cửa phiên tới cao hơn giá mở cửa</div></div><div class="metric"><div class="metric-label">Dự báo</div><div class="metric-value">17.49</div><div class="metric-detail">P50 sau 20 phiên - -1.8%</div></div><div class="metric"><div class="metric-label">Quản trị rủi ro</div><div class="metric-value">Lợi nhuận/rủi ro 2.36</div><div class="metric-detail">Dừng lỗ 16.83 / Mục tiêu 20.40</div></div></div>
+    <h2>Tổng quan cơ bản</h2>
+    <div class="metrics fundamental-metrics"><div class="metric"><div class="metric-label">P/E</div><div class="metric-value">11.59</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">P/B</div><div class="metric-value">1.09</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">ROE</div><div class="metric-value">9.5%</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">ROA</div><div class="metric-value">4.8%</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">Vốn hóa thị trường</div><div class="metric-value">20,368.2 tỷ</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">Tăng trưởng doanh thu</div><div class="metric-value">-84.7%</div><div class="metric-detail">2026-Q2 YoY</div></div><div class="metric"><div class="metric-label">Tăng trưởng lợi nhuận</div><div class="metric-value">276.7%</div><div class="metric-detail">2026-Q2 YoY</div></div></div>
+    <div class="grid"><section><h2>Biểu đồ kỹ thuật</h2><img src="technical_chart.png" alt="Biểu đồ kỹ thuật"></section><section><h2>Tín hiệu kỹ thuật</h2><table><tbody><tr><td>Xu hướng</td><td>Cẩn thận</td><td>Giá nằm dưới SMA60.</td></tr><tr><td>MACD</td><td>Tích cực</td><td>MACD trên signal, histogram dương.</td></tr><tr><td>RSI14</td><td>Yếu</td><td>RSI 37.2.</td></tr><tr><td>Bollinger</td><td>Ổn định</td><td>Giá nằm trong dải Bollinger.</td></tr><tr><td>ADX</td><td>Xu hướng giảm</td><td>ADX 48.8, -DI vượt +DI.</td></tr><tr><td>Thanh khoản</td><td>Bình thường</td><td>0.74 lần trung bình.</td></tr><tr><td>Stochastic</td><td>Hồi phục</td><td>%K nằm trên %D.</td></tr></tbody></table></section></div>
+    <div class="two"><section><h2>So sánh mô hình</h2><table><tbody><tr><td>XGBoost</td><td>0.499</td><td>AUC 0.494</td></tr><tr><td>Logistic</td><td>0.499</td><td>AUC 0.497</td></tr><tr><td>Đa số</td><td>0.500</td><td>Mốc so sánh</td></tr></tbody></table><h2>Kiểm thử chiến lược ngoài mẫu sau chi phí</h2><table><tbody><tr><td>Lợi nhuận ròng</td><td>2.5%</td><td>735 quan sát ngoài mẫu</td></tr><tr><td>Sharpe</td><td>0.16</td><td>Sau chi phí</td></tr><tr><td>Mức sụt giảm tối đa</td><td>-8.8%</td><td>22 vòng giao dịch</td></tr><tr><td>Chi phí giả định</td><td>50.0 bps</td><td>Một vòng mua và bán</td></tr></tbody></table><h2>Mức độ quan trọng của đặc trưng</h2><table><tbody><tr><td>return_5d</td><td>13.68</td><td>Mức đóng góp</td></tr><tr><td>return_1d</td><td>12.17</td><td>Mức đóng góp</td></tr><tr><td>return_3d</td><td>11.55</td><td>Mức đóng góp</td></tr><tr><td>macd_hist_pct</td><td>10.36</td><td>Mức đóng góp</td></tr><tr><td>volatility_20d</td><td>10.08</td><td>Mức đóng góp</td></tr><tr><td>relative_strength_20d</td><td>9.91</td><td>Mức đóng góp</td></tr><tr><td>adx_14</td><td>9.81</td><td>Mức đóng góp</td></tr><tr><td>corr_60d</td><td>9.80</td><td>Mức đóng góp</td></tr></tbody></table></section><section><h2>Điều kiện phát hành tín hiệu</h2><table><tbody><tr><td>AUC của mô hình</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Độ chính xác cân bằng của mô hình</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>XGBoost vượt mô hình Logistic đối chứng</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Xác suất tăng đạt ngưỡng</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Bối cảnh kỹ thuật đạt ngưỡng</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Tỷ lệ lợi nhuận/rủi ro đạt ngưỡng</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Dữ liệu còn mới</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Có khối lượng vị thế hợp lệ</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Có kết quả kiểm thử chiến lược ngoài mẫu</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Mẫu kiểm thử chiến lược đủ lớn</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Kiểm thử chiến lược có lợi thế ròng</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr></tbody></table><h2>Quản trị rủi ro</h2><table><tbody><tr><td>Rủi ro/lệnh</td><td>1.0%</td><td>1,000,000 VND</td></tr><tr><td>Mức dừng lỗ</td><td>16.83</td><td>Rủi ro mỗi cổ phiếu 1.06</td></tr><tr><td>Mục tiêu 1</td><td>20.40</td><td>Lợi nhuận/rủi ro 2.36</td></tr><tr><td>Mục tiêu 2</td><td>20.75</td><td>Dự báo/kháng cự</td></tr></tbody></table></section></div>
+    <div class="two"><section><h2>Phân tích cơ bản</h2><table><tbody><tr><td>P/E</td><td>11.59</td><td>2026-Q2</td></tr><tr><td>P/B</td><td>1.09</td><td>2026-Q2</td></tr><tr><td>P/S</td><td>6.11</td><td>2026-Q2</td></tr><tr><td>ROE</td><td>9.5%</td><td>2026-Q2</td></tr><tr><td>ROA</td><td>4.8%</td><td>2026-Q2</td></tr><tr><td>Gross margin</td><td>69.2%</td><td>2026-Q2</td></tr><tr><td>Net margin</td><td>72.3%</td><td>2026-Q2</td></tr><tr><td>Debt/Equity</td><td>0.98</td><td>2026-Q2</td></tr><tr><td>Current ratio</td><td>10.06</td><td>2026-Q2</td></tr><tr><td>NPL</td><td>0.0%</td><td>2026-Q2</td></tr><tr><td>Dividend yield</td><td>0.0%</td><td>2026-Q2</td></tr><tr><td>Market cap</td><td>20,368.2 tỷ</td><td>2026-Q2</td></tr><tr><td>Revenue Growth</td><td>-84.7%</td><td>2026-Q2 YoY</td></tr><tr><td>Profit Growth</td><td>276.7%</td><td>2026-Q2 YoY</td></tr></tbody></table></section><section><h2>Dự báo ngắn hạn</h2><table><tbody><tr><td>2026-08-07</td><td>17.79</td><td>P10 17.32 / P90 18.39</td></tr><tr><td>2026-08-10</td><td>17.77</td><td>P10 17.09 / P90 18.64</td></tr><tr><td>2026-08-11</td><td>17.75</td><td>P10 16.87 / P90 18.77</td></tr><tr><td>2026-08-12</td><td>17.71</td><td>P10 16.86 / P90 18.90</td></tr><tr><td>2026-08-13</td><td>17.66</td><td>P10 16.82 / P90 19.05</td></tr><tr><td>2026-08-14</td><td>17.66</td><td>P10 16.60 / P90 19.10</td></tr><tr><td>2026-08-17</td><td>17.66</td><td>P10 16.48 / P90 19.25</td></tr><tr><td>2026-08-18</td><td>17.65</td><td>P10 16.37 / P90 19.39</td></tr></tbody></table></section></div>
+    <section><h2>Biểu đồ dự báo</h2><img src="forecast_chart.png" alt="Biểu đồ dự báo"></section>
+    <section><h2>Lịch sử giá và mức sụt giảm</h2><img src="history_chart.png" alt="Biểu đồ lịch sử giá"></section>
+    <p class="disclaimer">Báo cáo dùng để học tập và lập kịch bản, không phải khuyến nghị mua/bán.</p>
+  </main>
+</body>
+</html>
