@@ -6,6 +6,7 @@ import pandas.testing as pdt
 
 from src.panel.data import assemble_price_panel, fetch_price_frames
 from src.panel.features import PANEL_MODEL_FEATURES, add_panel_features
+from src.panel.news import NEWS_MODEL_FEATURES, add_panel_news_features
 
 
 def make_history(
@@ -99,3 +100,36 @@ def test_panel_features_are_point_in_time_and_labels_keep_unknown_tail_nan() -> 
         featured.loc[(cutoff, "AAA"), "target_excess_return_20d"]
         != changed.loc[(cutoff, "AAA"), "target_excess_return_20d"]
     )
+
+
+def test_panel_news_features_respect_market_close_cutoff() -> None:
+    dates = pd.bdate_range("2024-01-02", periods=8)
+    stocks = {"AAA": make_history(dates, start=10, daily_return=0.001)}
+    benchmark = make_history(dates, start=1000, daily_return=0.0005)
+    featured = add_panel_features(
+        assemble_price_panel(stocks, benchmark), horizons=[5]
+    )
+    articles = pd.DataFrame(
+        {
+            "symbol": ["AAA", "AAA", "AAA"],
+            "available_at": [
+                "2024-01-02T07:00:00Z",  # before 15:00 local: included on Jan 2
+                "2024-01-02T09:00:00Z",  # after 16:00 local: excluded on Jan 2
+                "2024-01-03T07:00:00Z",
+            ],
+            "sentiment_score": [1.0, -1.0, -1.0],
+            "sentiment_label": ["positive", "negative", "negative"],
+            "event_type": ["earnings", "legal", "legal"],
+            "source_name": ["A", "B", "B"],
+        }
+    )
+    enriched = add_panel_news_features(featured, articles, lookback_days=5)
+
+    jan2 = enriched.loc[(pd.Timestamp("2024-01-02"), "AAA")]
+    jan3 = enriched.loc[(pd.Timestamp("2024-01-03"), "AAA")]
+    assert set(NEWS_MODEL_FEATURES).issubset(enriched.columns)
+    assert jan2["news_count_lookback"] == 1
+    assert jan2["news_sentiment_mean_lookback"] == 1.0
+    assert jan2["news_legal_count_lookback"] == 0
+    assert jan3["news_count_lookback"] == 3
+    assert jan3["news_negative_count_lookback"] == 2

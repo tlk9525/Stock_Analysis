@@ -160,6 +160,16 @@ def rank(
     symbols: str | None = typer.Option(None, help="Danh sách ngăn cách bởi dấu phẩy."),
     horizons: str | None = typer.Option(None, help="Ví dụ: 5,20."),
     top_k: int | None = typer.Option(None, min=1),
+    news_articles_csv: Path | None = typer.Option(
+        None,
+        "--news-articles-csv",
+        help="CSV lịch sử tin có available_at để huấn luyện Base + News.",
+    ),
+    use_news: bool = typer.Option(
+        False,
+        "--use-news",
+        help="Bật feature tin; cần --news-articles-csv.",
+    ),
     no_postgres: bool = typer.Option(False),
 ) -> None:
     """Chạy panel XGBoost/ranking trên nhiều mã VN."""
@@ -180,6 +190,8 @@ def rank(
         min_symbols_per_date=None,
         model_kind=None,
         transaction_cost_bps=None,
+        news_articles_csv=news_articles_csv,
+        use_news=use_news,
         database_url=None,
         no_postgres=no_postgres,
     )

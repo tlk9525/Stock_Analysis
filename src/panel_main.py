@@ -15,7 +15,8 @@ from src.database.postgres import save_panel_postgres
 from src.metadata import build_run_metadata
 from src.panel.data import load_price_panel
 from src.panel.evaluation import evaluate_panel_predictions
-from src.panel.features import add_panel_features
+from src.panel.features import PANEL_MODEL_FEATURES, add_panel_features
+from src.panel.news import NEWS_MODEL_FEATURES, add_panel_news_features, load_news_articles
 from src.panel.model import walk_forward_predict
 from src.panel.report import (
     build_panel_publish_guard,
@@ -71,6 +72,14 @@ def resolve_panel_config(config: dict, args: argparse.Namespace) -> dict:
         resolved["database_url"] = args.database_url
     if args.no_postgres:
         resolved["save_to_postgres"] = False
+    news_model = panel.setdefault("news_model", {})
+    news_path = getattr(args, "news_articles_csv", None)
+    use_news = bool(getattr(args, "use_news", False))
+    if news_path:
+        news_model["articles_csv"] = str(news_path)
+        news_model["enabled"] = True
+    elif use_news:
+        news_model["enabled"] = True
 
     required = [
         "symbols",
@@ -150,6 +159,28 @@ def run_panel_once(
         price_panel,
         horizons=panel_options["horizons"],
     )
+    news_model = panel_options.get("news_model", {}) or {}
+    news_enabled = bool(news_model.get("enabled", False))
+    feature_columns = list(PANEL_MODEL_FEATURES)
+    if news_enabled:
+        news_path = news_model.get("articles_csv")
+        if not news_path:
+            raise ValueError(
+                "panel.news_model.enabled=true nhưng chưa có articles_csv. "
+                "Truyền --news-articles-csv PATH."
+            )
+        news_path = Path(news_path)
+        if not news_path.is_absolute():
+            news_path = PROJECT_ROOT / news_path
+        print(f"Nối feature tin point-in-time từ {news_path}...")
+        news_articles = load_news_articles(news_path)
+        featured = add_panel_news_features(
+            featured,
+            news_articles,
+            lookback_days=int(news_model.get("lookback_days", 5)),
+            timezone=config.get("timezone", "Asia/Ho_Chi_Minh"),
+        )
+        feature_columns.extend(NEWS_MODEL_FEATURES)
 
     artifacts: dict[int, dict] = {}
     aggregate_latest: list[pd.DataFrame] = []
@@ -159,6 +190,7 @@ def run_panel_once(
         result = walk_forward_predict(
             featured,
             target=f"target_excess_return_{horizon}d",
+            feature_columns=feature_columns,
             min_train_dates=int(panel_options["min_train_dates"]),
             validation_dates=int(panel_options["validation_dates"]),
             test_dates=int(panel_options["test_dates"]),
@@ -231,6 +263,16 @@ def run_panel_once(
         {f"{horizon}d": artifact["metrics"] for horizon, artifact in artifacts.items()},
     )
     write_json(run_directory / "data_quality_report.json", data_quality)
+    write_json(
+        run_directory / "news_model_summary.json",
+        {
+            "enabled": news_enabled,
+            "feature_columns": NEWS_MODEL_FEATURES if news_enabled else [],
+            "articles_csv": str(news_model.get("articles_csv")) if news_enabled else None,
+            "lookback_days": int(news_model.get("lookback_days", 5)) if news_enabled else None,
+            "point_in_time_rule": "available_at <= local market close of date t",
+        },
+    )
     write_json(run_directory / "resolved_config.json", config)
     metadata_config = {**config, "symbol": "PANEL"}
     metadata = build_run_metadata(metadata_config, price_panel, PROJECT_ROOT)
@@ -282,6 +324,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-symbols-per-date", type=int)
     parser.add_argument("--model-kind", choices=["regression", "ranking"])
     parser.add_argument("--transaction-cost-bps", type=float)
+    parser.add_argument("--news-articles-csv", help="CSV lịch sử tin đã có available_at.")
+    parser.add_argument("--use-news", action="store_true", help="Bật news features; cần --news-articles-csv.")
     parser.add_argument("--database-url")
     parser.add_argument("--no-postgres", action="store_true")
     return parser
