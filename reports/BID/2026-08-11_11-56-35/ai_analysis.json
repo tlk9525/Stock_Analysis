@@ -1,0 +1,44 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 2 bài để phân loại chủ đề (ket_qua_kinh_doanh: 1, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 1, nganh: 2, rui_ro: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Balanced accuracy 0.503 < 0.520",
+    "ML guard: Probability 54.5% < 55.0%",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.2526562499999999, Sharpe=-1.1429277374127638",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.503 < 0.520",
+    "ML decision artifact: NO_EDGE. Probability 54.5% < 55.0%",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.2526562499999999, Sharpe=-1.1429277374127638",
+    "News Reader [Chứng khoán DNSE]: Quyết định 40 mở sóng cổ phiếu vốn Nhà nước: Chuyên gia chỉ cách chọn doanh nghiệp - Chứng khoán DNSE | nhóm: nganh (2026-08-10T01:32:00+00:00)",
+    "News Reader [MoneyF]: BIDV sắp phát hành gần 500 triệu cổ phiếu, vốn điều lệ tiến sát 78.000 tỷ đồng - MoneyF | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-06T05:45:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Quyết định 40 mở sóng cổ phiếu vốn Nhà nước: Chuyên gia chỉ cách chọn doanh nghiệp - Chứng khoán DNSE",
+      "publisher": "Chứng khoán DNSE",
+      "url": "https://www.dnse.com.vn/senses/tin-tuc/quyet-dinh-40-mo-song-co-phieu-von-nha-nuoc-chuyen-gia-chi-cach-chon-doanh-nghiep-35265867?from=BID",
+      "published_at": "2026-08-10T01:32:00+00:00"
+    },
+    {
+      "title": "BIDV sắp phát hành gần 500 triệu cổ phiếu, vốn điều lệ tiến sát 78.000 tỷ đồng - MoneyF",
+      "publisher": "MoneyF",
+      "url": "https://moneyf.vn/bidv-sap-phat-hanh-gan-500-trieu-co-phieu-von-dieu-a268geso",
+      "published_at": "2026-08-06T05:45:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 3. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Tích cực (RSI 58.2.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng tăng (ADX 25.9, +DI vượt -DI.); Thanh khoản: Thấp (0.48 lần trung bình.); Stochastic: Cực trị (%K 94.6, %D 94.3.)",
+  "fundamental_view": "Artifact cơ bản: BIDV; kỳ 2026-Q2; P/E 8.68; P/B 1.49; ROE 17.7%; ROA 1.0%; Debt/Equity 16.31; Revenue Growth 7.0%; Profit Growth 20.6%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 2 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 1, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 1, nganh: 2, rui_ro: 1. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-11T04:57:36.017006+00:00; News Reader đọc được 2 bài. ML có 3 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

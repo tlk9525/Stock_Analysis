@@ -49,9 +49,14 @@ def model_feature_columns(config: dict) -> list[str]:
     options = config.get("market_features", {}) or {}
     if not isinstance(options, dict):
         raise ValueError("market_features trong config phải là object.")
+    extra_features = [
+        str(column)
+        for column in (config.get("extra_model_features") or [])
+        if str(column).strip()
+    ]
     if bool(options.get("enabled", False)):
-        return [*MODEL_FEATURES, *MARKET_MODEL_FEATURES]
-    return list(MODEL_FEATURES)
+        return list(dict.fromkeys([*MODEL_FEATURES, *MARKET_MODEL_FEATURES, *extra_features]))
+    return list(dict.fromkeys([*MODEL_FEATURES, *extra_features]))
 
 
 def resolve_walk_forward_settings(row_count: int, config: dict) -> dict:

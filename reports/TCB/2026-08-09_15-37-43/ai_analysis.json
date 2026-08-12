@@ -1,0 +1,99 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 9 bài để phân loại chủ đề (ket_qua_kinh_doanh: 9, co_tuc_va_hanh_dong_doanh_nghiep: 7, vi_mo: 6, nganh: 8, rui_ro: 6), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: AUC 0.498 < 0.540",
+    "ML guard: Balanced accuracy 0.486 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.4975284097502108, AUC logistic=0.5018604615182294",
+    "ML guard: Probability 50.9% < 55.0%",
+    "ML guard: Technical score 0 < 2",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.2705657999999995, Sharpe=-1.6492225771903177",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. AUC 0.498 < 0.540",
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.486 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.4975284097502108, AUC logistic=0.5018604615182294",
+    "ML decision artifact: NO_EDGE. Probability 50.9% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score 0 < 2",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.2705657999999995, Sharpe=-1.6492225771903177",
+    "News Reader [bnews.vn]: Khuyến nghị cổ phiếu HVN và TCB: Góc nhìn từ chuyên gia - bnews.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-07-24T07:00:00+00:00)",
+    "News Reader [Vietnam.vn]: Chứng khoán AGR khuyến nghị tăng tỷ trọng cổ phiếu TCB - Vietnam.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh, rui_ro (2026-07-29T16:33:13+00:00)",
+    "News Reader [VietstockFinance]: TCB: Khuyến nghị MUA với giá mục tiêu 37,700 đồng/cổ phiếu - VietstockFinance | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-07-28T18:44:58+00:00)",
+    "News Reader [nguoiquansat.vn]: Cổ phiếu đáng chú ý ngày 27/7: VPB, NT2, TCB - nguoiquansat.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-07-26T07:00:00+00:00)",
+    "News Reader [24HMoney]: Cổ phiếu TCB - Lợi nhuận chạm đỉnh - Động lực đa chiều? Bóc tách BCTC Q2/2026 - 24HMoney | nhóm: ket_qua_kinh_doanh (2026-07-28T12:32:51+00:00)",
+    "News Reader [hangthat.thuonghieucongluan.com.vn]: Cổ phiếu cần lưu ý ngày 30/7: TCB tiếp tục được nâng kỳ vọng, SAB giữ biên lợi nhuận tích cực - hangthat.thuonghieucongluan.com.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh, rui_ro (2026-07-29T23:19:00+00:00)",
+    "News Reader [hangthat.thuonghieucongluan.com.vn]: Dự báo chứng khoán ngày 30/7: TCB được khuyến nghị tăng tỷ trọng, giá mục tiêu 33.000 đồng/cổ phiếu - hangthat.thuonghieucongluan.com.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-07-30T01:33:00+00:00)",
+    "News Reader [bnews.vn]: Chứng khoán ngày 28/7: Khuyến nghị cổ phiếu VPB và NT2, cập nhật KQKD ACB và TCB - bnews.vn | nhóm: ket_qua_kinh_doanh, vi_mo, nganh (2026-07-28T02:22:00+00:00)",
+    "News Reader [hangthat.thuonghieucongluan.com.vn]: Cổ phiếu ngày 24/7: HVN chờ lực đẩy mới, TCB ghi dấu ấn với tăng trưởng tín dụng - hangthat.thuonghieucongluan.com.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-07-24T07:00:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Khuyến nghị cổ phiếu HVN và TCB: Góc nhìn từ chuyên gia - bnews.vn",
+      "publisher": "bnews.vn",
+      "url": "https://bnews.vn/khuyen-nghi-co-phieu-hvn-va-tcb-goc-nhin-tu-chuyen-gia/429965.html",
+      "published_at": "2026-07-24T07:00:00+00:00"
+    },
+    {
+      "title": "Chứng khoán AGR khuyến nghị tăng tỷ trọng cổ phiếu TCB - Vietnam.vn",
+      "publisher": "Vietnam.vn",
+      "url": "https://www.vietnam.vn/chung-khoan-agr-khuyen-nghi-tang-ty-trong-co-phieu-tcb",
+      "published_at": "2026-07-29T16:33:13+00:00"
+    },
+    {
+      "title": "TCB: Khuyến nghị MUA với giá mục tiêu 37,700 đồng/cổ phiếu - VietstockFinance",
+      "publisher": "VietstockFinance",
+      "url": "https://finance.vietstock.vn/bao-cao-phan-tich/21219/tcb-khuyen-nghi-mua-voi-gia-muc-tieu-37700-dongco-phieu.htm",
+      "published_at": "2026-07-28T18:44:58+00:00"
+    },
+    {
+      "title": "Cổ phiếu đáng chú ý ngày 27/7: VPB, NT2, TCB - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/co-phieu-dang-chu-y-ngay-27-7-vpb-nt2-tcb-306439.html",
+      "published_at": "2026-07-26T07:00:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu TCB - Lợi nhuận chạm đỉnh - Động lực đa chiều? Bóc tách BCTC Q2/2026 - 24HMoney",
+      "publisher": "24HMoney",
+      "url": "https://24hmoney.vn/news/co-phieu-tcb-loi-nhuan-cham-dinh-dong-luc-da-chieu-boc-tach-bctc-q2-2026-c30a2813126.html",
+      "published_at": "2026-07-28T12:32:51+00:00"
+    },
+    {
+      "title": "Cổ phiếu cần lưu ý ngày 30/7: TCB tiếp tục được nâng kỳ vọng, SAB giữ biên lợi nhuận tích cực - hangthat.thuonghieucongluan.com.vn",
+      "publisher": "hangthat.thuonghieucongluan.com.vn",
+      "url": "https://hangthat.thuonghieucongluan.com.vn/co-phieu-can-luu-y-ngay-30-7-tcb-tiep-tuc-duoc-nang-ky-vong-sab-giu-bien-loi-nhuan-tich-cuc-a292198.html",
+      "published_at": "2026-07-29T23:19:00+00:00"
+    },
+    {
+      "title": "Dự báo chứng khoán ngày 30/7: TCB được khuyến nghị tăng tỷ trọng, giá mục tiêu 33.000 đồng/cổ phiếu - hangthat.thuonghieucongluan.com.vn",
+      "publisher": "hangthat.thuonghieucongluan.com.vn",
+      "url": "https://hangthat.thuonghieucongluan.com.vn/du-bao-chung-khoan-ngay-30-7-tcb-duoc-khuyen-nghi-tang-ty-trong-gia-muc-tieu-33-000-dong-co-phieu-a292202.html",
+      "published_at": "2026-07-30T01:33:00+00:00"
+    },
+    {
+      "title": "Chứng khoán ngày 28/7: Khuyến nghị cổ phiếu VPB và NT2, cập nhật KQKD ACB và TCB - bnews.vn",
+      "publisher": "bnews.vn",
+      "url": "https://bnews.vn/chung-khoan-ngay-28-7-khuyen-nghi-co-phieu-vpb-va-nt2-cap-nhat-kqkd-acb-va-tcb/430358.html",
+      "published_at": "2026-07-28T02:22:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu ngày 24/7: HVN chờ lực đẩy mới, TCB ghi dấu ấn với tăng trưởng tín dụng - hangthat.thuonghieucongluan.com.vn",
+      "publisher": "hangthat.thuonghieucongluan.com.vn",
+      "url": "https://hangthat.thuonghieucongluan.com.vn/co-phieu-ngay-24-7-hvn-cho-luc-day-moi-tcb-ghi-dau-an-voi-tang-truong-tin-dung-a291970.html",
+      "published_at": "2026-07-24T07:00:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm 0. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 44.6.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 32.8, -DI vượt +DI.); Thanh khoản: Đột biến (1.74 lần trung bình.); Stochastic: Hồi phục (%K nằm trên %D.)",
+  "fundamental_view": "Artifact cơ bản: Techcombank; kỳ 2026-Q2; P/E 7.76; P/B 1.17; ROE 14.8%; ROA 2.3%; Debt/Equity 5.74; Revenue Growth 17.3%; Profit Growth 17.7%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 9 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 9, co_tuc_va_hanh_dong_doanh_nghiep: 7, vi_mo: 6, nganh: 8, rui_ro: 6. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-09T09:12:21.451594+00:00; News Reader đọc được 9 bài. ML có 6 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

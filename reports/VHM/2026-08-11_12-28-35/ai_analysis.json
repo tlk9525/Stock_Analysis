@@ -1,0 +1,66 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 5 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 2, nganh: 1, rui_ro: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: AUC 0.523 < 0.540",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5229698912648313, AUC logistic=0.5453944541758932",
+    "ML guard: Probability 49.8% < 55.0%",
+    "ML guard: Technical score 0 < 2",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. AUC 0.523 < 0.540",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5229698912648313, AUC logistic=0.5453944541758932",
+    "ML decision artifact: NO_EDGE. Probability 49.8% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score 0 < 2",
+    "News Reader [nguoiquansat.vn]: Vingroup chuyển nhượng gần 5 triệu cổ phiếu VHM - nguoiquansat.vn | nhóm: khác (2026-08-10T08:50:01+00:00)",
+    "News Reader [24HMoney]: Vingroup vừa chuyển gần 5 triệu cổ phiếu VHM, chuyện gì đang xảy ra? - 24HMoney | nhóm: khác (2026-08-10T09:00:20+00:00)",
+    "News Reader [MoneyF]: Vingroup chuyển quyền sở hữu hơn 4,8 triệu cổ phiếu VHM, hạ sở hữu tại Vinhomes - MoneyF | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh, rui_ro (2026-08-10T09:48:00+00:00)",
+    "News Reader [VietnamBiz]: Vingroup chuyển nhượng hơn 4,8 triệu cổ phiếu VHM - VietnamBiz | nhóm: khác (2026-08-10T08:10:00+00:00)",
+    "News Reader [VnEconomy]: Trụ tiếp tục “chìm” sâu, cổ phiếu vẫn tăng bùng nổ - VnEconomy | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, rui_ro (2026-08-10T08:30:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Vingroup chuyển nhượng gần 5 triệu cổ phiếu VHM - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/vingroup-chuyen-nhuong-gan-5-trieu-co-phieu-vhm-309619.html",
+      "published_at": "2026-08-10T08:50:01+00:00"
+    },
+    {
+      "title": "Vingroup vừa chuyển gần 5 triệu cổ phiếu VHM, chuyện gì đang xảy ra? - 24HMoney",
+      "publisher": "24HMoney",
+      "url": "https://24hmoney.vn/news/vingroup-vua-chuyen-gan-5-trieu-co-phieu-vhm-chuyen-gi-dang-xay-ra-c1a2818779.html",
+      "published_at": "2026-08-10T09:00:20+00:00"
+    },
+    {
+      "title": "Vingroup chuyển quyền sở hữu hơn 4,8 triệu cổ phiếu VHM, hạ sở hữu tại Vinhomes - MoneyF",
+      "publisher": "MoneyF",
+      "url": "https://moneyf.vn/vingroup-chuyen-quyen-so-huu-hon-48-trieu-co-phieu-cg6e6wqa",
+      "published_at": "2026-08-10T09:48:00+00:00"
+    },
+    {
+      "title": "Vingroup chuyển nhượng hơn 4,8 triệu cổ phiếu VHM - VietnamBiz",
+      "publisher": "VietnamBiz",
+      "url": "https://vietnambiz.vn/vingroup-chuyen-nhuong-hon-48-trieu-co-phieu-vhm-202681014242741.htm",
+      "published_at": "2026-08-10T08:10:00+00:00"
+    },
+    {
+      "title": "Trụ tiếp tục “chìm” sâu, cổ phiếu vẫn tăng bùng nổ - VnEconomy",
+      "publisher": "VnEconomy",
+      "url": "https://vneconomy.vn/tru-tiep-tuc-chim-sau-co-phieu-van-tang-bung-no.htm",
+      "published_at": "2026-08-10T08:30:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm 0. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 50.3.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 23.4.); Thanh khoản: Bình thường (0.73 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Vinhomes; kỳ 2026-Q2; P/E 7.37; P/B 2.26; ROE 32.7%; ROA 9.0%; Debt/Equity 3.05; Revenue Growth 177.8%; Profit Growth 200.8%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 5 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 2, nganh: 1, rui_ro: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-11T05:28:56.070035+00:00; News Reader đọc được 5 bài. ML có 4 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

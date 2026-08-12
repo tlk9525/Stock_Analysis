@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
@@ -40,8 +39,13 @@ def load_news_articles(path: str | Path) -> pd.DataFrame:
     ).fillna(0.0)
     articles["sentiment_label"] = articles["sentiment_label"].astype(str).str.lower()
     articles["event_type"] = articles["event_type"].astype(str).str.lower()
+    dedupe_columns = [
+        column
+        for column in ["symbol", "available_at", "title", "source_url"]
+        if column in articles.columns
+    ]
     return articles.dropna(subset=["available_at"]).drop_duplicates(
-        subset=["symbol", "available_at", "title", "source_url"],
+        subset=dedupe_columns,
         keep="last",
     )
 

@@ -1,0 +1,65 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 5 bài để phân loại chủ đề (ket_qua_kinh_doanh: 5, co_tuc_va_hanh_dong_doanh_nghiep: 4, vi_mo: 4, nganh: 4, rui_ro: 3), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Balanced accuracy 0.510 < 0.520",
+    "ML guard: Probability 48.6% < 55.0%",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.2579965400000007, Sharpe=-0.8598343376559678",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.510 < 0.520",
+    "ML decision artifact: NO_EDGE. Probability 48.6% < 55.0%",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.2579965400000007, Sharpe=-0.8598343376559678",
+    "News Reader [dautucophieu.net]: Cập nhật cổ phiếu FPT – Cuộc gặp với chuyên viên phân tích: Nắm bắt cơ hội từ AI - dautucophieu.net | nhóm: ket_qua_kinh_doanh, vi_mo, nganh (2026-08-11T05:00:51+00:00)",
+    "News Reader [Chungta]: Cổ phiếu FPT tăng 7 trong 10 phiên gần nhất - Chungta | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep (2026-08-07T07:14:00+00:00)",
+    "News Reader [Thời báo Tài chính Việt Nam]: Gần 20 doanh nghiệp chốt quyền cổ tức trong tuần, mức cao nhất lên tới 100% - Thời báo Tài chính Việt Nam | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-10T19:54:15+00:00)",
+    "News Reader [Tạp chí Kinh tế - Tài chính Online]: Ba doanh nghiệp trả cổ tức bằng tiền, FPT Online chi 10.000 đồng/cổ phiếu - Tạp chí Kinh tế - Tài chính Online | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-09T13:05:49+00:00)",
+    "News Reader [thuonghieucongluan.com.vn]: Cổ phiếu đáng chú ý ngày 7/8: FPT, GMD, SAB - thuonghieucongluan.com.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-06T23:23:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Cập nhật cổ phiếu FPT – Cuộc gặp với chuyên viên phân tích: Nắm bắt cơ hội từ AI - dautucophieu.net",
+      "publisher": "dautucophieu.net",
+      "url": "https://dautucophieu.net/cap-nhat-co-phieu-fpt-cuoc-gap-voi-chuyen-vien-phan-tich-nam-bat-co-hoi-tu-ai/",
+      "published_at": "2026-08-11T05:00:51+00:00"
+    },
+    {
+      "title": "Cổ phiếu FPT tăng 7 trong 10 phiên gần nhất - Chungta",
+      "publisher": "Chungta",
+      "url": "https://chungta.vn/kinh-doanh/co-phieu-fpt-tang-7-trong-10-phien-gan-nhat-1141876.html",
+      "published_at": "2026-08-07T07:14:00+00:00"
+    },
+    {
+      "title": "Gần 20 doanh nghiệp chốt quyền cổ tức trong tuần, mức cao nhất lên tới 100% - Thời báo Tài chính Việt Nam",
+      "publisher": "Thời báo Tài chính Việt Nam",
+      "url": "https://thoibaotaichinhvietnam.vn/gan-20-doanh-nghiep-chot-quyen-co-tuc-trong-tuan-muc-cao-nhat-len-toi-100-202075.html",
+      "published_at": "2026-08-10T19:54:15+00:00"
+    },
+    {
+      "title": "Ba doanh nghiệp trả cổ tức bằng tiền, FPT Online chi 10.000 đồng/cổ phiếu - Tạp chí Kinh tế - Tài chính Online",
+      "publisher": "Tạp chí Kinh tế - Tài chính Online",
+      "url": "https://tapchikinhtetaichinh.vn/ba-doanh-nghiep-tra-co-tuc-bang-tien-fpt-online-chi-10-000-dong-co-phieu-164034.html",
+      "published_at": "2026-08-09T13:05:49+00:00"
+    },
+    {
+      "title": "Cổ phiếu đáng chú ý ngày 7/8: FPT, GMD, SAB - thuonghieucongluan.com.vn",
+      "publisher": "thuonghieucongluan.com.vn",
+      "url": "https://thuonghieucongluan.com.vn/co-phieu-dang-chu-y-ngay-7-8-fpt-gmd-sab-a329496.html",
+      "published_at": "2026-08-06T23:23:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 2. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Tích cực (RSI 56.1.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng tăng (ADX 25.2, +DI vượt -DI.); Thanh khoản: Thấp (0.53 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: FPT Corp; kỳ 2026-Q2; P/E 12.14; P/B 3.05; ROE 26.5%; ROA 12.8%; Debt/Equity 0.80; Revenue Growth -17.1%; Profit Growth 13.7%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 5 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 5, co_tuc_va_hanh_dong_doanh_nghiep: 4, vi_mo: 4, nganh: 4, rui_ro: 3. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-12T15:09:45.731796+00:00; News Reader đọc được 5 bài. ML có 3 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

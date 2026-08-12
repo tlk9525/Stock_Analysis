@@ -1,0 +1,57 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 4 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 1, nganh: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: AUC 0.523 < 0.540",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5228247319870356, AUC logistic=0.5447685531455165",
+    "ML guard: Probability 52.6% < 55.0%",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. AUC 0.523 < 0.540",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5228247319870356, AUC logistic=0.5447685531455165",
+    "ML decision artifact: NO_EDGE. Probability 52.6% < 55.0%",
+    "News Reader [nguoiquansat.vn]: Sau VIC, VHM cũng tăng mạnh ngay ngày chia cổ phiếu, kịch bản cũ đang lặp lại? - nguoiquansat.vn | nhóm: khác (2026-08-06T04:38:01+00:00)",
+    "News Reader [Báo Dân trí]: Nhóm cổ phiếu Vingroup dẫn dắt thị trường, khối ngoại mua VIC bán VHM - Báo Dân trí | nhóm: khác (2026-08-05T09:25:00+00:00)",
+    "News Reader [24HMoney]: VHM vừa làm điều VIC từng làm trước cú tăng 60%: Lịch sử có lặp lại? - 24HMoney | nhóm: ket_qua_kinh_doanh, nganh (2026-08-06T07:48:33+00:00)",
+    "News Reader [VietstockFinance]: VHM: Khuyến nghị NẮM GIỮ với giá mục tiêu 150,000 đồng/cổ phiếu - VietstockFinance | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-05T23:06:37+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Sau VIC, VHM cũng tăng mạnh ngay ngày chia cổ phiếu, kịch bản cũ đang lặp lại? - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/sau-vic-vhm-cung-tang-manh-ngay-ngay-chia-co-phieu-kich-ban-cu-dang-lap-lai-308783.html",
+      "published_at": "2026-08-06T04:38:01+00:00"
+    },
+    {
+      "title": "Nhóm cổ phiếu Vingroup dẫn dắt thị trường, khối ngoại mua VIC bán VHM - Báo Dân trí",
+      "publisher": "Báo Dân trí",
+      "url": "https://dantri.com.vn/kinh-doanh/nhom-co-phieu-vingroup-dan-dat-thi-truong-khoi-ngoai-mua-vic-ban-vhm-20260508155217795.htm",
+      "published_at": "2026-08-05T09:25:00+00:00"
+    },
+    {
+      "title": "VHM vừa làm điều VIC từng làm trước cú tăng 60%: Lịch sử có lặp lại? - 24HMoney",
+      "publisher": "24HMoney",
+      "url": "https://24hmoney.vn/news/vhm-vua-lam-dieu-vic-tung-lam-truoc-cu-tang-60-lich-su-co-lap-lai-c1a2817395.html",
+      "published_at": "2026-08-06T07:48:33+00:00"
+    },
+    {
+      "title": "VHM: Khuyến nghị NẮM GIỮ với giá mục tiêu 150,000 đồng/cổ phiếu - VietstockFinance",
+      "publisher": "VietstockFinance",
+      "url": "https://finance.vietstock.vn/bao-cao-phan-tich/21364/vhm-khuyen-nghi-nam-giu-voi-gia-muc-tieu-150000-dongco-phieu.htm?languageid=1",
+      "published_at": "2026-08-05T23:06:37+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Tích cực; điểm 5. Chi tiết artifact: Xu hướng: Trung tính (Giá trên SMA60 nhưng chưa vượt SMA20.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 52.3.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng tăng (ADX 25.1, +DI vượt -DI.); Thanh khoản: Đột biến (1.56 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Vinhomes; kỳ 2026-Q2; P/E 7.51; P/B 2.31; ROE 32.7%; ROA 9.0%; Debt/Equity 3.05; Revenue Growth 177.8%; Profit Growth 200.8%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 4 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 1, nganh: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-09T08:39:30.166897+00:00; News Reader đọc được 4 bài. ML có 3 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

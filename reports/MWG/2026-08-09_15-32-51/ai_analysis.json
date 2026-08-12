@@ -1,0 +1,63 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 4 bài để phân loại chủ đề (ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 3, nganh: 4), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: AUC 0.510 < 0.540",
+    "ML guard: Balanced accuracy 0.511 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5103149093506439, AUC logistic=0.5203041952900149",
+    "ML guard: Probability 45.0% < 55.0%",
+    "ML guard: Technical score -3 < 2",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.06561506000000039, Sharpe=-0.1927899940362305",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. AUC 0.510 < 0.540",
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.511 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5103149093506439, AUC logistic=0.5203041952900149",
+    "ML decision artifact: NO_EDGE. Probability 45.0% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score -3 < 2",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.06561506000000039, Sharpe=-0.1927899940362305",
+    "News Reader [Tin nhanh chứng khoán]: Thế giới Di động (MWG) sẽ không mua cổ phiếu quỹ trong năm 2026 - Tin nhanh chứng khoán | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-05T00:21:38+00:00)",
+    "News Reader [VietstockFinance]: MWG: Khuyến nghị MUA với giá mục tiêu 107,300 đồng/cổ phiếu - VietstockFinance | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-06T08:54:35+00:00)",
+    "News Reader [dautucophieu.net]: Cập nhật cổ phiếu MWG - Q2/2026: Lợi nhuận thuần tăng gấp đôi so với cùng kỳ, vượt xa dự báo - dautucophieu.net | nhóm: ket_qua_kinh_doanh, nganh (2026-08-05T04:31:03+00:00)",
+    "News Reader [VietnamBiz]: Tổng Giám đốc MWG: Không mua cổ phiếu quỹ trong năm nay, lợi nhuận có thể về đích sớm 2-3 tháng - VietnamBiz | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-05T04:43:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Thế giới Di động (MWG) sẽ không mua cổ phiếu quỹ trong năm 2026 - Tin nhanh chứng khoán",
+      "publisher": "Tin nhanh chứng khoán",
+      "url": "https://www.tinnhanhchungkhoan.vn/the-gioi-di-dong-mwg-se-khong-mua-co-phieu-quy-trong-nam-2026-post395305.html",
+      "published_at": "2026-08-05T00:21:38+00:00"
+    },
+    {
+      "title": "MWG: Khuyến nghị MUA với giá mục tiêu 107,300 đồng/cổ phiếu - VietstockFinance",
+      "publisher": "VietstockFinance",
+      "url": "https://finance.vietstock.vn/bao-cao-phan-tich/21390/mwg-khuyen-nghi-mua-voi-gia-muc-tieu-107300-dongco-phieu.htm",
+      "published_at": "2026-08-06T08:54:35+00:00"
+    },
+    {
+      "title": "Cập nhật cổ phiếu MWG - Q2/2026: Lợi nhuận thuần tăng gấp đôi so với cùng kỳ, vượt xa dự báo - dautucophieu.net",
+      "publisher": "dautucophieu.net",
+      "url": "https://dautucophieu.net/cap-nhat-co-phieu-mwg-q2-2026-loi-nhuan-thuan-tang-gap-doi-so-voi-cung-ky-vuot-xa-du-bao/",
+      "published_at": "2026-08-05T04:31:03+00:00"
+    },
+    {
+      "title": "Tổng Giám đốc MWG: Không mua cổ phiếu quỹ trong năm nay, lợi nhuận có thể về đích sớm 2-3 tháng - VietnamBiz",
+      "publisher": "VietnamBiz",
+      "url": "https://vietnambiz.vn/tong-giam-doc-mwg-khong-mua-co-phieu-quy-trong-nam-nay-loi-nhuan-co-the-ve-dich-som-2-3-thang-20268511123902.htm",
+      "published_at": "2026-08-05T04:43:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -3. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 46.7.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 31.4, -DI vượt +DI.); Thanh khoản: Thấp (0.59 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Thế giới di động; kỳ 2026-Q2; P/E 10.65; P/B 2.93; ROE 29.2%; ROA 11.2%; Debt/Equity 1.89; Revenue Growth 29.6%; Profit Growth 100.4%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 4 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 3, nganh: 4. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-09T08:33:03.197818+00:00; News Reader đọc được 4 bài. ML có 6 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

@@ -208,7 +208,70 @@ reports/PANEL/YYYY-MM-DD_HH-MM-SS/
 
 Các file chính gồm `panel_report.md`, `panel_dashboard.html`, `panel_performance.png`, `latest_rankings.csv`, `predictions_5d.csv`, `predictions_20d.csv`, `panel_backtests.csv`, metrics, fold metadata và model XGBoost theo từng horizon.
 
-Lãi suất, dữ liệu vĩ mô và news sentiment chưa được trộn vào target/model của hai giai đoạn này; nên triển khai ở giai đoạn tiếp theo với timestamp công bố point-in-time để tránh look-ahead bias.
+### Train panel với sentiment tin tức
+
+Mặc định panel vẫn dùng feature giá/kỹ thuật/benchmark để giữ baseline sạch. Khi đã có file tin lịch sử có timestamp công bố thật, có thể bật thêm feature tin tức point-in-time:
+
+```bash
+./run_panel.sh \
+  --symbols FPT,VCB,MBB,TCB,HPG,VNM,MWG,SSI,HCM,VIC,VHM,GAS \
+  --benchmark VNINDEX \
+  --horizons 5,20 \
+  --top-k 3 \
+  --news-articles-csv data/news_history.csv \
+  --use-news \
+  --no-postgres
+```
+
+CSV tin tối thiểu cần các cột:
+
+```text
+symbol,available_at,sentiment_score,sentiment_label,event_type
+```
+
+Các cột khuyến nghị để audit/deduplicate tốt hơn:
+
+```text
+source_name,title,source_url
+```
+
+Quy tắc chống leakage: feature ngày `t` chỉ dùng tin có `available_at` không muộn hơn 15:00 giờ Việt Nam của ngày `t`; tin ra sau giờ đóng cửa sẽ chỉ đi vào feature của ngày giao dịch kế tiếp. Output có thêm `news_model_summary.json` để ghi lại cột feature tin đã bật, file nguồn và lookback.
+
+Để biết tin tức có thật sự giúp model hay không, chạy hai lần:
+
+```bash
+./run_panel.sh --no-postgres
+./run_panel.sh --news-articles-csv data/news_history.csv --use-news --no-postgres
+```
+
+Sau đó so sánh `metrics_5d.json`, `metrics_20d.json`, Rank IC, top-k return sau chi phí và publish guard giữa hai report trong `reports/PANEL/`.
+
+### Train riêng từng mã với tin tức
+
+Nếu muốn mỗi mã có một model riêng, trước hết gom tin tích lũy vào một CSV chung:
+
+```bash
+stockrun collect-news \
+  --symbols VCB,MBB,TCB,ACB,BID,CTG,STB \
+  --output data/news_articles.csv \
+  --hours 720 \
+  --limit 20 \
+  --read-limit 10
+```
+
+Sau đó train riêng từng mã:
+
+```bash
+stockrun train-symbol-news MBB \
+  --news-articles-csv data/news_articles.csv \
+  --lookback-days 5
+```
+
+Output nằm trong `reports/SYMBOL/YYYY-MM-DD_HH-MM-SS_news_model/`, gồm `model_metrics.json`, `latest_probabilities.json`, `feature_importance.json`, `history_features_with_news.csv` và `symbol_news_model_summary.json`.
+
+Lưu ý: lệnh này dùng target một phiên kế tiếp (`target_next_up`) của pipeline một mã hiện tại. Nếu CSV tin chỉ dựng từ snapshot live gần đây, kết quả chỉ dùng để smoke test/research; muốn đánh giá nghiêm túc cần chạy `collect-news` đều đặn hoặc nhập nguồn tin lịch sử có `available_at` nhiều tháng/năm.
+
+Lãi suất và dữ liệu vĩ mô chưa được trộn vào target/model của hai giai đoạn này; nên triển khai ở giai đoạn tiếp theo với timestamp công bố point-in-time để tránh look-ahead bias.
 
 Giới hạn còn lại: universe hiện là danh sách mã cố định trong cấu hình nên có survivorship bias. Trước khi dùng cho nghiên cứu production, cần universe point-in-time gồm cả mã niêm yết/hủy niêm yết theo từng ngày và nguồn giá đã điều chỉnh corporate action nhất quán.
 

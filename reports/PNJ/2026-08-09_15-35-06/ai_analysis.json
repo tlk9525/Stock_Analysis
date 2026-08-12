@@ -1,0 +1,85 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 7 bài để phân loại chủ đề (ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 2, nganh: 7, rui_ro: 3), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: AUC 0.490 < 0.540",
+    "ML guard: Balanced accuracy 0.492 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.4904799385318866, AUC logistic=0.5037574258353479",
+    "ML guard: Probability 47.9% < 55.0%",
+    "ML guard: Technical score -4 < 2",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.05460289999999968, Sharpe=-0.19220090248872881",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. AUC 0.490 < 0.540",
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.492 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.4904799385318866, AUC logistic=0.5037574258353479",
+    "ML decision artifact: NO_EDGE. Probability 47.9% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score -4 < 2",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.05460289999999968, Sharpe=-0.19220090248872881",
+    "News Reader [VietnamFinance]: Cổ phiếu tăng mạnh: PNJ tạo đáy, nhóm vốn hoá lớn hồi phục - VietnamFinance | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh, rui_ro (2026-08-09T08:30:00+00:00)",
+    "News Reader [Nhadautu.vn]: PNJ tính điều chỉnh kế hoạch kinh doanh, cổ phiếu quay đầu giảm mạnh - Nhadautu.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-06T08:46:23+00:00)",
+    "News Reader [VnExpress]: Cổ phiếu PNJ giao dịch với khối lượng kỷ lục - VnExpress | nhóm: nganh (2026-07-24T07:00:00+00:00)",
+    "News Reader [Tin tức 24h]: Cổ phiếu PNJ liên tục tăng trần - Tin tức 24h | nhóm: nganh (2026-08-04T10:02:00+00:00)",
+    "News Reader [Tuổi Trẻ]: PNJ tiếp tục tăng trần, cổ phiếu Vietcap dậy sóng sau tin về giao dịch cổ phiếu của lãnh đạo - Tuổi Trẻ | nhóm: nganh (2026-07-28T07:00:00+00:00)",
+    "News Reader [Thời báo Tài chính Việt Nam]: Khối ngoại nối dài đà mua ròng, tiếp tục \"gom\" cổ phiếu PNJ - Thời báo Tài chính Việt Nam | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-05T11:41:59+00:00)",
+    "News Reader [baonghean.vn]: Cổ phiếu PNJ bật tăng gần 6% - baonghean.vn | nhóm: nganh (2026-08-04T05:19:01+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Cổ phiếu tăng mạnh: PNJ tạo đáy, nhóm vốn hoá lớn hồi phục - VietnamFinance",
+      "publisher": "VietnamFinance",
+      "url": "https://vietnamfinance.vn/co-phieu-tang-manh-pnj-tao-day-nhom-von-hoa-lon-hoi-phuc-d148805.html",
+      "published_at": "2026-08-09T08:30:00+00:00"
+    },
+    {
+      "title": "PNJ tính điều chỉnh kế hoạch kinh doanh, cổ phiếu quay đầu giảm mạnh - Nhadautu.vn",
+      "publisher": "Nhadautu.vn",
+      "url": "https://nhadautu.vn/pnj-tinh-dieu-chinh-ke-hoach-kinh-doanh-co-phieu-quay-dau-giam-manh-d106820.html",
+      "published_at": "2026-08-06T08:46:23+00:00"
+    },
+    {
+      "title": "Cổ phiếu PNJ giao dịch với khối lượng kỷ lục - VnExpress",
+      "publisher": "VnExpress",
+      "url": "https://vnexpress.net/co-phieu-pnj-giao-dich-voi-khoi-luong-ky-luc-5101274.html",
+      "published_at": "2026-07-24T07:00:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu PNJ liên tục tăng trần - Tin tức 24h",
+      "publisher": "Tin tức 24h",
+      "url": "https://www.24h.com.vn/kinh-doanh/co-phieu-pnj-lien-tuc-tang-tran-c161a1783850.html",
+      "published_at": "2026-08-04T10:02:00+00:00"
+    },
+    {
+      "title": "PNJ tiếp tục tăng trần, cổ phiếu Vietcap dậy sóng sau tin về giao dịch cổ phiếu của lãnh đạo - Tuổi Trẻ",
+      "publisher": "Tuổi Trẻ",
+      "url": "https://tuoitre.vn/pnj-tiep-tuc-tang-tran-co-phieu-vietcap-day-song-sau-tin-lanh-dao-muon-mua-31-trieu-co-phieu-100260728115026549.htm",
+      "published_at": "2026-07-28T07:00:00+00:00"
+    },
+    {
+      "title": "Khối ngoại nối dài đà mua ròng, tiếp tục \"gom\" cổ phiếu PNJ - Thời báo Tài chính Việt Nam",
+      "publisher": "Thời báo Tài chính Việt Nam",
+      "url": "https://thoibaotaichinhvietnam.vn/khoi-ngoai-noi-dai-da-mua-rong-tiep-tuc-gom-co-phieu-pnj-201834.html",
+      "published_at": "2026-08-05T11:41:59+00:00"
+    },
+    {
+      "title": "Cổ phiếu PNJ bật tăng gần 6% - baonghean.vn",
+      "publisher": "baonghean.vn",
+      "url": "https://baonghean.vn/co-phieu-pnj-bat-tang-gan-6-10346869.html",
+      "published_at": "2026-08-04T05:19:01+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -4. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 37.9.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 43.5, -DI vượt +DI.); Thanh khoản: Thấp (0.38 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Vàng Phú Nhuận; kỳ 2026-Q2; P/E 6.35; P/B 1.33; ROE 21.6%; ROA 14.9%; Debt/Equity 0.51; Revenue Growth 11.9%; Profit Growth -164.7%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 7 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 2, nganh: 7, rui_ro: 3. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-09T09:23:26.395558+00:00; News Reader đọc được 7 bài. ML có 6 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

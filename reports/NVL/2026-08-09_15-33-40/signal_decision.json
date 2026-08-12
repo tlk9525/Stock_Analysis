@@ -1,0 +1,50 @@
+{
+  "status": "NO_EDGE",
+  "direction": "NONE",
+  "checks": {
+    "model_auc": false,
+    "model_balanced_accuracy": false,
+    "model_beats_logistic": true,
+    "probability_edge": false,
+    "technical_context": true,
+    "reward_risk": true,
+    "fresh_data": true,
+    "position_available": true,
+    "backtest_available": true,
+    "backtest_sample": true,
+    "backtest_net_edge": false
+  },
+  "failed_checks": [
+    "model_auc",
+    "model_balanced_accuracy",
+    "probability_edge",
+    "backtest_net_edge"
+  ],
+  "reasons": [
+    "AUC 0.534 < 0.540",
+    "Balanced accuracy 0.497 < 0.520",
+    "Probability 48.6% < 55.0%",
+    "Lợi thế OOS ròng không đạt: return=-0.31516711, Sharpe=-0.9029764969369246"
+  ],
+  "latest_data_age_days": 2,
+  "allowed_position_shares": null,
+  "thresholds": {
+    "min_roc_auc": 0.54,
+    "min_balanced_accuracy": 0.52,
+    "min_probability_up": 0.55,
+    "min_technical_score": 2,
+    "min_reward_risk": 1.5,
+    "max_data_age_days": 5,
+    "require_model_outperform_baseline": true,
+    "min_auc_improvement_over_logistic": 0.0,
+    "require_profitable_backtest": true,
+    "min_backtest_observations": 126,
+    "min_completed_round_trips": 5,
+    "min_backtest_total_return": 0.0,
+    "min_backtest_sharpe": 0.0,
+    "enable_near_threshold_watch": true,
+    "max_auc_shortfall_for_watch": 0.02,
+    "max_balanced_accuracy_shortfall_for_watch": 0.01,
+    "max_probability_shortfall_for_watch": 0.02
+  }
+}

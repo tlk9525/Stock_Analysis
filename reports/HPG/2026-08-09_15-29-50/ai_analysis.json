@@ -1,0 +1,67 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 5 bài để phân loại chủ đề (ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 4, vi_mo: 4, nganh: 4, rui_ro: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Balanced accuracy 0.520 < 0.520",
+    "ML guard: Probability 52.7% < 55.0%",
+    "ML guard: Technical score -1 < 2",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.29859459999999893, Sharpe=-1.4159739939095883",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.520 < 0.520",
+    "ML decision artifact: NO_EDGE. Probability 52.7% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score -1 < 2",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.29859459999999893, Sharpe=-1.4159739939095883",
+    "News Reader [VOV.VN]: Một số cổ phiếu cần quan tâm 5/8: Cơ hội đầu tư tiềm năng với HPG và MBB - VOV.VN | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-04T22:00:00+00:00)",
+    "News Reader [nguoiquansat.vn]: Tiết lộ bất ngờ về lượng sở hữu cổ phiếu HPG của con gái tỷ phú Trần Đình Long - nguoiquansat.vn | nhóm: co_tuc_va_hanh_dong_doanh_nghiep (2026-08-07T04:27:01+00:00)",
+    "News Reader [thuonghieucongluan.com.vn]: Cổ phiếu 5/8: HPG hưởng lợi chu kỳ thép, BMP giữ lợi thế biên lợi nhuận - thuonghieucongluan.com.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-04T23:04:00+00:00)",
+    "News Reader [bnews.vn]: Khuyến nghị mua cổ phiếu SHS, PVT, HPG với giá mục tiêu hấp dẫn - bnews.vn | nhóm: ket_qua_kinh_doanh, vi_mo, nganh (2026-08-05T01:32:00+00:00)",
+    "News Reader [Tin nhanh chứng khoán]: Cổ phiếu cần quan tâm ngày 5/8 - Tin nhanh chứng khoán | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-04T10:22:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Một số cổ phiếu cần quan tâm 5/8: Cơ hội đầu tư tiềm năng với HPG và MBB - VOV.VN",
+      "publisher": "VOV.VN",
+      "url": "https://vov.vn/thi-truong/mot-so-co-phieu-can-quan-tam-58-co-hoi-dau-tu-tiem-nang-voi-hpg-va-mbb-post1321179.vov",
+      "published_at": "2026-08-04T22:00:00+00:00"
+    },
+    {
+      "title": "Tiết lộ bất ngờ về lượng sở hữu cổ phiếu HPG của con gái tỷ phú Trần Đình Long - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/tiet-lo-bat-ngo-ve-luong-so-huu-co-phieu-hpg-cua-con-gai-ty-phu-tran-dinh-long-309030.html",
+      "published_at": "2026-08-07T04:27:01+00:00"
+    },
+    {
+      "title": "Cổ phiếu 5/8: HPG hưởng lợi chu kỳ thép, BMP giữ lợi thế biên lợi nhuận - thuonghieucongluan.com.vn",
+      "publisher": "thuonghieucongluan.com.vn",
+      "url": "https://thuonghieucongluan.com.vn/co-phieu-5-8-hpg-huong-loi-chu-ky-thep-bmp-giu-loi-the-bien-loi-nhuan-a329226.html",
+      "published_at": "2026-08-04T23:04:00+00:00"
+    },
+    {
+      "title": "Khuyến nghị mua cổ phiếu SHS, PVT, HPG với giá mục tiêu hấp dẫn - bnews.vn",
+      "publisher": "bnews.vn",
+      "url": "https://bnews.vn/khuyen-nghi-mua-co-phieu-shs-pvt-hpg-voi-gia-muc-tieu-hap-dan/431424.html",
+      "published_at": "2026-08-05T01:32:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu cần quan tâm ngày 5/8 - Tin nhanh chứng khoán",
+      "publisher": "Tin nhanh chứng khoán",
+      "url": "https://www.tinnhanhchungkhoan.vn/co-phieu-can-quan-tam-ngay-58-post395300.html",
+      "published_at": "2026-08-04T10:22:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm -1. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 49.1.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 36.1, -DI vượt +DI.); Thanh khoản: Thấp (0.47 lần trung bình.); Stochastic: Hồi phục (%K nằm trên %D.)",
+  "fundamental_view": "Artifact cơ bản: Hòa Phát; kỳ 2026-Q2; P/E 8.00; P/B 1.32; ROE 17.4%; ROA 8.9%; Debt/Equity 0.97; Revenue Growth 53.6%; Profit Growth 49.7%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 5 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 4, vi_mo: 4, nganh: 4, rui_ro: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-09T08:30:03.164578+00:00; News Reader đọc được 5 bài. ML có 4 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

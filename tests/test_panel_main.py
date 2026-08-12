@@ -37,6 +37,18 @@ def test_panel_runner_creates_end_to_end_artifacts(tmp_path, monkeypatch) -> Non
         "CCC": _history(dates, start=30, phase=1.4),
         "VNINDEX": _history(dates, start=1000, phase=0.3),
     }
+    news_csv = tmp_path / "news_history.csv"
+    news_csv.write_text(
+        "\n".join(
+            [
+                "symbol,available_at,sentiment_score,sentiment_label,event_type,source_name,title,source_url",
+                "AAA,2023-02-01T07:00:00Z,1.0,positive,earnings,Test,AAA beats plan,https://example.test/aaa",
+                "BBB,2023-02-01T09:00:00Z,-1.0,negative,legal,Test,BBB investigation,https://example.test/bbb",
+                "CCC,2023-02-02T07:00:00Z,0.5,positive,corporate_action,Test,CCC dividend,https://example.test/ccc",
+            ]
+        ),
+        encoding="utf-8",
+    )
     config = {
         "source": "VCI",
         "start_date": "2023-01-01",
@@ -63,6 +75,11 @@ def test_panel_runner_creates_end_to_end_artifacts(tmp_path, monkeypatch) -> Non
             "min_symbols_per_date": 3,
             "model_kind": "regression",
             "transaction_cost_bps": 50,
+            "news_model": {
+                "enabled": True,
+                "articles_csv": str(news_csv),
+                "lookback_days": 5,
+            },
         },
     }
     monkeypatch.setattr(panel_main, "PROJECT_ROOT", tmp_path)
@@ -81,9 +98,16 @@ def test_panel_runner_creates_end_to_end_artifacts(tmp_path, monkeypatch) -> Non
         "metrics_5d.json",
         "xgboost_panel_5d.json",
         "data_quality_report.json",
+        "news_model_summary.json",
         "run_metadata.json",
     }
     assert expected.issubset({path.name for path in run_directory.iterdir()})
+    panel_features = pd.read_csv(run_directory / "panel_features.csv")
+    assert "news_count_lookback" in panel_features.columns
+    assert panel_features["news_count_lookback"].max() > 0
+    news_summary = json.loads((run_directory / "news_model_summary.json").read_text())
+    assert news_summary["enabled"] is True
+    assert "news_sentiment_mean_lookback" in news_summary["feature_columns"]
     metrics = json.loads((run_directory / "metrics_5d.json").read_text())
     assert metrics["execution"]["entry"] == "open_t_plus_1"
     assert metrics["walk_forward"]["fold_count"] == 2

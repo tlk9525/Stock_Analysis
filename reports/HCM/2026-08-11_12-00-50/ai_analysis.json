@@ -1,0 +1,95 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 9 bài để phân loại chủ đề (ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 6, vi_mo: 3, nganh: 5, rui_ro: 3), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Balanced accuracy 0.518 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5584911271934173, AUC logistic=0.562002247116751",
+    "ML guard: Probability 48.4% < 55.0%",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.12580115000000103, Sharpe=-0.3373570968837999",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.518 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5584911271934173, AUC logistic=0.562002247116751",
+    "ML decision artifact: NO_EDGE. Probability 48.4% < 55.0%",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.12580115000000103, Sharpe=-0.3373570968837999",
+    "News Reader [vietnamfinance.vn]: Cổ phiếu HCM đi ngược nhóm chứng khoán, lập đỉnh lịch sử với mức tăng gần 40% từ đầu năm - vietnamfinance.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh, rui_ro (2026-08-11T09:14:28+00:00)",
+    "News Reader [nguoiquansat.vn]: Chứng khoán HSC: HCM đạt đỉnh lịch sử, người thân lãnh đạo bán thành công lượng lớn cổ phiếu - nguoiquansat.vn | nhóm: co_tuc_va_hanh_dong_doanh_nghiep (2026-08-11T12:03:01+00:00)",
+    "News Reader [An ninh Tiền tệ]: Người nội bộ HSC bán thành công 600.000 cổ phiếu HCM - An ninh Tiền tệ | nhóm: co_tuc_va_hanh_dong_doanh_nghiep (2026-08-11T07:55:00+00:00)",
+    "News Reader [kinhtechungkhoan.vn]: Một cổ phiếu chứng khoán ngược dòng số đông tăng hơn 42% kể từ đầu năm - kinhtechungkhoan.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-11T08:30:00+00:00)",
+    "News Reader [tinnhanhchungkhoan.vn]: Cổ phiếu cần quan tâm ngày 31/7 - tinnhanhchungkhoan.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-07-30T10:35:00+00:00)",
+    "News Reader [nguoiquansat.vn]: Cổ phiếu chứng khoán 'chạy' trước nâng hạng: HCM phá đỉnh, VCI, VIX, SHS... cùng tăng mạnh - nguoiquansat.vn | nhóm: vi_mo, nganh (2026-08-11T04:48:01+00:00)",
+    "News Reader [VOV.VN]: 57 mã cổ phiếu không đủ điều kiện giao dịch ký quỹ trên sàn Tp.HCM - VOV.VN | nhóm: rui_ro (2026-08-07T02:20:00+00:00)",
+    "News Reader [24hmoney.vn]: Cổ phiếu MBS, HCM, VCK - Có nên mua? Đánh giá KQKD quý 2 và dự phóng lợi nhuận quý 3 năm 2026 - 24hmoney.vn | nhóm: ket_qua_kinh_doanh, nganh (2026-08-06T06:54:33+00:00)",
+    "News Reader [dnse.com.vn]: Người nội bộ của HSC đăng ký bán cổ phiếu HCM - dnse.com.vn | nhóm: co_tuc_va_hanh_dong_doanh_nghiep (2026-07-21T07:00:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Cổ phiếu HCM đi ngược nhóm chứng khoán, lập đỉnh lịch sử với mức tăng gần 40% từ đầu năm - vietnamfinance.vn",
+      "publisher": "vietnamfinance.vn",
+      "url": "https://vietnamfinance.vn/co-phieu-hcm-di-nguoc-nhom-chung-khoan-lap-dinh-lich-su-voi-muc-tang-gan-40-tu-dau-nam-d148930.html",
+      "published_at": "2026-08-11T09:14:28+00:00"
+    },
+    {
+      "title": "Chứng khoán HSC: HCM đạt đỉnh lịch sử, người thân lãnh đạo bán thành công lượng lớn cổ phiếu - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/chung-khoan-hsc-hcm-dat-dinh-lich-su-nguoi-than-lanh-dao-ban-thanh-cong-luong-lon-co-phieu-309905.html",
+      "published_at": "2026-08-11T12:03:01+00:00"
+    },
+    {
+      "title": "Người nội bộ HSC bán thành công 600.000 cổ phiếu HCM - An ninh Tiền tệ",
+      "publisher": "An ninh Tiền tệ",
+      "url": "https://antt.nguoiduatin.vn/nguoi-noi-bo-hsc-ban-thanh-cong-600000-co-phieu-hcm-20526081114320226.htm",
+      "published_at": "2026-08-11T07:55:00+00:00"
+    },
+    {
+      "title": "Một cổ phiếu chứng khoán ngược dòng số đông tăng hơn 42% kể từ đầu năm - kinhtechungkhoan.vn",
+      "publisher": "kinhtechungkhoan.vn",
+      "url": "https://kinhtechungkhoan.vn/mot-co-phieu-chung-khoan-nguoc-dong-so-dong-tang-hon-42-ke-tu-dau-nam",
+      "published_at": "2026-08-11T08:30:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu cần quan tâm ngày 31/7 - tinnhanhchungkhoan.vn",
+      "publisher": "tinnhanhchungkhoan.vn",
+      "url": "https://www.tinnhanhchungkhoan.vn/co-phieu-can-quan-tam-ngay-317-post394999.html",
+      "published_at": "2026-07-30T10:35:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu chứng khoán 'chạy' trước nâng hạng: HCM phá đỉnh, VCI, VIX, SHS... cùng tăng mạnh - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/co-phieu-chung-khoan-chay-truoc-nang-hang-hcm-pha-dinh-vci-vix-shs-cung-tang-manh-309801.html",
+      "published_at": "2026-08-11T04:48:01+00:00"
+    },
+    {
+      "title": "57 mã cổ phiếu không đủ điều kiện giao dịch ký quỹ trên sàn Tp.HCM - VOV.VN",
+      "publisher": "VOV.VN",
+      "url": "https://vov1.vov.vn/kinh-te/truoc-gio-mo-cua/57-ma-co-phieu-khong-du-dieu-kien-giao-dich-ky-quy-tren-san-tphcm-133490.vov",
+      "published_at": "2026-08-07T02:20:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu MBS, HCM, VCK - Có nên mua? Đánh giá KQKD quý 2 và dự phóng lợi nhuận quý 3 năm 2026 - 24hmoney.vn",
+      "publisher": "24hmoney.vn",
+      "url": "https://24hmoney.vn/news/co-phieu-mbs-hcm-vck-co-nen-mua-danh-gia-kqkd-quy-2-va-du-phong-loi-nhuan-quy-3-nam-2026-c30a2817334.html",
+      "published_at": "2026-08-06T06:54:33+00:00"
+    },
+    {
+      "title": "Người nội bộ của HSC đăng ký bán cổ phiếu HCM - dnse.com.vn",
+      "publisher": "dnse.com.vn",
+      "url": "https://www.dnse.com.vn/senses/tin-tuc/nguoi-noi-bo-cua-hsc-dang-ky-ban-co-phieu-hcm-35249038",
+      "published_at": "2026-07-21T07:00:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Tích cực; điểm 5. Chi tiết artifact: Xu hướng: Tích cực (Giá nằm trên SMA20 và SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Tích cực (RSI 67.3.); Bollinger: Gần biên trên (Giá sát/vượt biên trên.); ADX: Đi ngang (ADX 13.9.); Thanh khoản: Bình thường (1.23 lần trung bình.); Stochastic: Cực trị (%K 89.2, %D 77.8.)",
+  "fundamental_view": "Artifact cơ bản: Chứng khoán HSC; kỳ 2026-Q2; P/E 19.74; P/B 2.02; ROE 9.8%; ROA 3.1%; Debt/Equity 1.82; Revenue Growth 15.1%; Profit Growth 42.0%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 9 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 6, vi_mo: 3, nganh: 5, rui_ro: 3. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-11T14:05:12.631560+00:00; News Reader đọc được 9 bài. ML có 4 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

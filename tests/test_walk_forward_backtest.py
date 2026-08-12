@@ -12,6 +12,7 @@ from src.models.xgboost import (
     _split_data,
     build_walk_forward_splits,
     _liquidity_estimate_at_signal,
+    model_feature_columns,
     resolve_walk_forward_settings,
     train_models,
 )
@@ -313,6 +314,21 @@ class TrainModelsTests(unittest.TestCase):
         expected = [*MODEL_FEATURES, *MARKET_MODEL_FEATURES]
         self.assertEqual(booster.feature_names, expected)
         self.assertEqual(metrics["split"]["feature_columns"], expected)
+
+    def test_model_feature_columns_can_include_extra_news_features(self) -> None:
+        columns = model_feature_columns(
+            {
+                "market_features": {"enabled": True},
+                "extra_model_features": [
+                    "news_count_lookback",
+                    "news_sentiment_mean_lookback",
+                ],
+            }
+        )
+
+        self.assertIn("market_return_1d", columns)
+        self.assertIn("news_count_lookback", columns)
+        self.assertIn("news_sentiment_mean_lookback", columns)
 
 
 if __name__ == "__main__":
