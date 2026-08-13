@@ -32,6 +32,34 @@ def _integer_option(
     return value
 
 
+def _threshold_grid(backtest_options: dict, base_threshold: float) -> list[float]:
+    raw_values = backtest_options.get("threshold_sensitivity")
+    if raw_values is None:
+        raw_values = backtest_options.get("signal_threshold_sensitivity")
+    if raw_values is None:
+        raw_values = [base_threshold, 0.58, 0.60, 0.62]
+    values = raw_values.split(",") if isinstance(raw_values, str) else raw_values
+    thresholds = {round(float(value), 4) for value in values}
+    thresholds.add(round(float(base_threshold), 4))
+    ordered = sorted(thresholds)
+    if any(value <= 0 or value >= 1 for value in ordered):
+        raise ValueError("backtest.threshold_sensitivity phải nằm trong khoảng (0, 1).")
+    return ordered
+
+
+def _top_n_trade_counts(backtest_options: dict) -> list[int]:
+    raw_values = backtest_options.get("top_n_trade_sensitivity")
+    if raw_values is None:
+        raw_values = backtest_options.get("trade_count_sensitivity")
+    if raw_values is None:
+        raw_values = [10, 5, 1]
+    values = raw_values.split(",") if isinstance(raw_values, str) else raw_values
+    counts = sorted({int(value) for value in values}, reverse=True)
+    if any(value <= 0 for value in counts):
+        raise ValueError("backtest.top_n_trade_sensitivity phải là số nguyên dương.")
+    return counts
+
+
 def _section_option(
     primary: dict,
     fallback: dict,
@@ -705,6 +733,109 @@ def train_models(
             "cost_components_bps": cost_components,
             **backtest_metrics,
         }
+        sensitivity = []
+        for threshold in _threshold_grid(backtest_options, backtest_signal_threshold):
+            scenario_frame = backtest_frame.copy()
+            scenario_frame["backtest_signal"] = (
+                scenario_frame["xgboost_prob_up"] >= threshold
+            ).astype(int)
+            scenario_metrics, _ = run_long_only_backtest(
+                scenario_frame,
+                signal_column="backtest_signal",
+                return_column="next_return",
+                execution_lag=execution_lag,
+                round_trip_cost_bps=round_trip_cost_bps,
+                entry_cost_bps=entry_cost_bps,
+                exit_cost_bps=exit_cost_bps,
+                periods_per_year=int(backtest_options.get("periods_per_year", 252)),
+                round_trip_each_signal=True,
+                entry_price_column="execution_open" if has_execution_data else None,
+                volume_column=(
+                    "execution_volume_estimate" if has_execution_data else None
+                ),
+                initial_capital=initial_capital,
+                lot_size=int(backtest_options.get("lot_size", 100)),
+                max_volume_fraction=float(
+                    backtest_options.get("max_volume_fraction", 0.01)
+                ),
+                price_multiplier=resolve_price_multiplier(config),
+            )
+            sensitivity.append(
+                {
+                    "signal_threshold": float(threshold),
+                    "active_sessions": scenario_metrics["active_sessions"],
+                    "completed_round_trips": scenario_metrics["completed_round_trips"],
+                    "exposure": scenario_metrics["exposure"],
+                    "gross_total_return": scenario_metrics["gross_total_return"],
+                    "net_total_return": scenario_metrics["net_total_return"],
+                    "sharpe_ratio": scenario_metrics["sharpe_ratio"],
+                    "max_drawdown": scenario_metrics["max_drawdown"],
+                    "transaction_cost_sum": scenario_metrics["transaction_cost_sum"],
+                    "transaction_cost_value_sum": scenario_metrics.get(
+                        "transaction_cost_value_sum"
+                    ),
+                    "round_trip_cost_bps": scenario_metrics["round_trip_cost_bps"],
+                    "final_capital": scenario_metrics.get("final_capital"),
+                }
+            )
+        metrics["backtest"]["threshold_sensitivity"] = sensitivity
+        top_n_sensitivity = []
+        ranked_signals = (
+            backtest_frame[["xgboost_prob_up"]]
+            .dropna()
+            .sort_values("xgboost_prob_up", ascending=False)
+        )
+        for trade_count in _top_n_trade_counts(backtest_options):
+            scenario_frame = backtest_frame.copy()
+            selected_index = ranked_signals.head(trade_count).index
+            scenario_frame["backtest_signal"] = 0
+            scenario_frame.loc[selected_index, "backtest_signal"] = 1
+            scenario_metrics, _ = run_long_only_backtest(
+                scenario_frame,
+                signal_column="backtest_signal",
+                return_column="next_return",
+                execution_lag=execution_lag,
+                round_trip_cost_bps=round_trip_cost_bps,
+                entry_cost_bps=entry_cost_bps,
+                exit_cost_bps=exit_cost_bps,
+                periods_per_year=int(backtest_options.get("periods_per_year", 252)),
+                round_trip_each_signal=True,
+                entry_price_column="execution_open" if has_execution_data else None,
+                volume_column=(
+                    "execution_volume_estimate" if has_execution_data else None
+                ),
+                initial_capital=initial_capital,
+                lot_size=int(backtest_options.get("lot_size", 100)),
+                max_volume_fraction=float(
+                    backtest_options.get("max_volume_fraction", 0.01)
+                ),
+                price_multiplier=resolve_price_multiplier(config),
+            )
+            min_probability = (
+                float(ranked_signals.head(trade_count)["xgboost_prob_up"].min())
+                if len(ranked_signals.head(trade_count))
+                else None
+            )
+            top_n_sensitivity.append(
+                {
+                    "top_n": int(trade_count),
+                    "min_probability_included": min_probability,
+                    "active_sessions": scenario_metrics["active_sessions"],
+                    "completed_round_trips": scenario_metrics["completed_round_trips"],
+                    "exposure": scenario_metrics["exposure"],
+                    "gross_total_return": scenario_metrics["gross_total_return"],
+                    "net_total_return": scenario_metrics["net_total_return"],
+                    "sharpe_ratio": scenario_metrics["sharpe_ratio"],
+                    "max_drawdown": scenario_metrics["max_drawdown"],
+                    "transaction_cost_sum": scenario_metrics["transaction_cost_sum"],
+                    "transaction_cost_value_sum": scenario_metrics.get(
+                        "transaction_cost_value_sum"
+                    ),
+                    "round_trip_cost_bps": scenario_metrics["round_trip_cost_bps"],
+                    "final_capital": scenario_metrics.get("final_capital"),
+                }
+            )
+        metrics["backtest"]["top_n_trade_sensitivity"] = top_n_sensitivity
         scored_test.attrs["backtest_details"] = backtest_details
     else:
         metrics["backtest"] = {

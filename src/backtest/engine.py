@@ -397,3 +397,340 @@ def run_long_only_backtest(
         ),
     }
     return summary, details
+
+
+def run_stateful_long_only_backtest(
+    frame: pd.DataFrame,
+    *,
+    prediction_column: str = "predicted_excess_return",
+    entry_price_column: str = "swing_execution_open",
+    mark_price_column: str = "swing_execution_close",
+    volume_column: str | None = None,
+    entry_margin: float = 0.0,
+    entry_margin_column: str | None = None,
+    exit_threshold: float = 0.0,
+    fixed_holding_sessions: int | None = None,
+    minimum_holding_sessions: int = 2,
+    entry_cost_bps: float = 20.0,
+    exit_cost_bps: float = 30.0,
+    periods_per_year: int = 252,
+    initial_capital: float = 100_000_000,
+    lot_size: int = 100,
+    max_volume_fraction: float = 0.01,
+    price_multiplier: float = 1000.0,
+    force_close_at_end: bool = True,
+) -> tuple[dict, pd.DataFrame]:
+    """Backtest one cash/long position with settlement-aware holding rules.
+
+    Decisions are made after the signal-date close and executed at the next
+    session open supplied by ``entry_price_column``.  A newly bought position
+    cannot be sold until ``minimum_holding_sessions`` later signal sessions;
+    use at least two for Vietnamese cash equities.  This is deliberately a
+    separate engine from the legacy one-period round-trip simulator.
+
+    When ``fixed_holding_sessions`` is supplied, the backtest exits at the
+    row's close/mark price exactly after that many sessions.  This is the
+    correct mode for validating a fixed-horizon return target; score-based
+    exits are deliberately disabled so the executed return matches the label.
+    """
+
+    if frame.empty:
+        raise ValueError("Không có dữ liệu để backtest stateful.")
+    if minimum_holding_sessions < 2:
+        raise ValueError(
+            "minimum_holding_sessions phải >= 2 cho cổ phiếu cơ sở T+2."
+        )
+    if fixed_holding_sessions is not None and fixed_holding_sessions < minimum_holding_sessions:
+        raise ValueError(
+            "fixed_holding_sessions phải >= minimum_holding_sessions để tôn trọng T+2."
+        )
+    if initial_capital <= 0 or lot_size < 1 or price_multiplier <= 0:
+        raise ValueError("Vốn, lot_size và price_multiplier phải dương.")
+    if not 0 < max_volume_fraction <= 1:
+        raise ValueError("max_volume_fraction phải nằm trong (0, 1].")
+    required = [prediction_column, entry_price_column, mark_price_column]
+    if entry_margin_column:
+        required.append(entry_margin_column)
+    if volume_column:
+        required.append(volume_column)
+    missing = [column for column in required if column not in frame]
+    if missing:
+        raise ValueError("Thiếu cột stateful backtest: " + ", ".join(missing))
+
+    predictions = pd.to_numeric(frame[prediction_column], errors="coerce")
+    entries = pd.to_numeric(frame[entry_price_column], errors="coerce")
+    marks = pd.to_numeric(frame[mark_price_column], errors="coerce")
+    if predictions.isna().any() or entries.isna().any() or marks.isna().any():
+        raise ValueError("Prediction/giá execution stateful không được thiếu.")
+    if (entries <= 0).any() or (marks <= 0).any():
+        raise ValueError("Giá execution stateful phải dương.")
+    volumes = None
+    if volume_column:
+        volumes = pd.to_numeric(frame[volume_column], errors="coerce")
+        if volumes.isna().any() or (volumes < 0).any():
+            raise ValueError("Ước lượng thanh khoản stateful không hợp lệ.")
+
+    entry_rate = float(entry_cost_bps) / 10_000.0
+    exit_rate = float(exit_cost_bps) / 10_000.0
+    if entry_rate < 0 or exit_rate < 0:
+        raise ValueError("Chi phí stateful không được âm.")
+    margins = (
+        pd.to_numeric(frame[entry_margin_column], errors="coerce")
+        if entry_margin_column
+        else pd.Series(float(entry_margin), index=frame.index)
+    )
+    if margins.isna().any():
+        raise ValueError("entry margin stateful không được thiếu.")
+
+    cash = float(initial_capital)
+    gross_cash = float(initial_capital)
+    shares = 0
+    entry_row: int | None = None
+    entry_date = None
+    entry_price = None
+    entry_notional = 0.0
+    entry_cost_value = 0.0
+    total_cost = 0.0
+    liquidity_limited = 0
+    trade_records: list[dict] = []
+    rows: list[dict] = []
+    previous_equity = float(initial_capital)
+
+    for row_number, (current_date, prediction) in enumerate(predictions.items()):
+        execution_price = float(entries.loc[current_date]) * price_multiplier
+        mark_price = float(marks.loc[current_date]) * price_multiplier
+        margin = float(margins.loc[current_date])
+        volume_cap = None
+        if volumes is not None:
+            volume_cap = int(
+                math.floor(
+                    float(volumes.loc[current_date]) * max_volume_fraction / lot_size
+                )
+                * lot_size
+            )
+
+        action = "HOLD"
+        realized_trade_return = np.nan
+        transaction_cost_value = 0.0
+        sell_eligible = (
+            shares > 0
+            and entry_row is not None
+            and row_number - entry_row >= minimum_holding_sessions
+        )
+
+        fixed_exit_due = (
+            fixed_holding_sessions is not None
+            and shares > 0
+            and entry_row is not None
+            and row_number - entry_row >= fixed_holding_sessions
+        )
+        # Fixed-horizon validation exits at the stated close.  Otherwise an
+        # exit signal known after close[t] is executed at open[t+1].
+        model_exit_due = fixed_holding_sessions is None and float(prediction) <= float(exit_threshold)
+        if sell_eligible and (fixed_exit_due or model_exit_due):
+            sell_shares = shares if volume_cap is None or volume_cap >= shares else 0
+            if sell_shares <= 0:
+                liquidity_limited += 1
+            else:
+                exit_price = mark_price if fixed_exit_due else execution_price
+                proceeds = sell_shares * exit_price
+                exit_cost_value = proceeds * exit_rate
+                cash += proceeds - exit_cost_value
+                gross_cash += proceeds
+                shares -= sell_shares
+                total_cost += exit_cost_value
+                transaction_cost_value += exit_cost_value
+                action = "SELL"
+                if shares == 0 and entry_price is not None:
+                    gross_pnl = proceeds - entry_notional
+                    net_pnl = cash - gross_cash + gross_pnl
+                    # net_pnl above would include earlier trades; derive per-trade
+                    # costs directly to keep the audit record independent.
+                    net_pnl = gross_pnl - entry_cost_value - exit_cost_value
+                    realized_trade_return = net_pnl / max(
+                        entry_notional + entry_cost_value, 1e-12
+                    )
+                    trade_records.append(
+                        {
+                            "entry_date": entry_date,
+                            "exit_date": current_date,
+                            "entry_price": entry_price / price_multiplier,
+                            "exit_price": exit_price / price_multiplier,
+                            "shares": sell_shares,
+                            "holding_sessions": int(row_number - entry_row),
+                            "gross_pnl": gross_pnl,
+                            "net_pnl": net_pnl,
+                            "net_return": realized_trade_return,
+                            "exit_reason": "fixed_horizon_exit" if fixed_exit_due else "model_exit",
+                        }
+                    )
+                    entry_row = None
+                    entry_date = None
+                    entry_price = None
+                    entry_notional = 0.0
+                    entry_cost_value = 0.0
+
+        # Never reverse from LONG to LONG in one session: a sale settles first.
+        if shares == 0 and action == "HOLD":
+            threshold = entry_rate + exit_rate + margin
+            if float(prediction) > threshold:
+                affordable = int(
+                    math.floor(cash / (execution_price * (1.0 + entry_rate)) / lot_size)
+                    * lot_size
+                )
+                buy_shares = affordable if volume_cap is None else min(affordable, volume_cap)
+                if buy_shares <= 0:
+                    if affordable > 0:
+                        liquidity_limited += 1
+                else:
+                    if volume_cap is not None and buy_shares < affordable:
+                        liquidity_limited += 1
+                    notional = buy_shares * execution_price
+                    buy_cost = notional * entry_rate
+                    cash -= notional + buy_cost
+                    gross_cash -= notional
+                    shares = buy_shares
+                    entry_row = row_number
+                    entry_date = current_date
+                    entry_price = execution_price
+                    entry_notional = notional
+                    entry_cost_value = buy_cost
+                    total_cost += buy_cost
+                    transaction_cost_value += buy_cost
+                    action = "BUY"
+
+        equity = cash + shares * mark_price
+        gross_equity = gross_cash + shares * mark_price
+        net_return = equity / previous_equity - 1.0 if previous_equity > 0 else 0.0
+        previous_equity = equity
+        rows.append(
+            {
+                "prediction": float(prediction),
+                "entry_margin": margin,
+                "action": action,
+                "position_shares": int(shares),
+                "sell_eligible": bool(sell_eligible),
+                "holding_sessions": (
+                    int(row_number - entry_row) if entry_row is not None else 0
+                ),
+                "transaction_cost_value": transaction_cost_value,
+                "transaction_cost": transaction_cost_value / max(initial_capital, 1e-12),
+                "equity_curve": equity / initial_capital,
+                "gross_equity_curve": gross_equity / initial_capital,
+                "net_strategy_return": net_return,
+                "realized_trade_return": realized_trade_return,
+            }
+        )
+
+    forced_exit = False
+    unsettled_position_at_end = shares > 0
+    if shares and force_close_at_end and entry_row is not None:
+        last_row = len(rows) - 1
+        if last_row - entry_row >= minimum_holding_sessions:
+            forced_exit = True
+            final_price = float(marks.iloc[-1]) * price_multiplier
+            proceeds = shares * final_price
+            exit_cost_value = proceeds * exit_rate
+            cash += proceeds - exit_cost_value
+            gross_cash += proceeds
+            total_cost += exit_cost_value
+            gross_pnl = proceeds - entry_notional
+            net_pnl = gross_pnl - entry_cost_value - exit_cost_value
+            trade_records.append(
+                {
+                    "entry_date": entry_date,
+                    "exit_date": frame.index[-1],
+                    "entry_price": entry_price / price_multiplier,
+                    "exit_price": final_price / price_multiplier,
+                    "shares": shares,
+                    "holding_sessions": int(last_row - entry_row),
+                    "gross_pnl": gross_pnl,
+                    "net_pnl": net_pnl,
+                    "net_return": net_pnl / max(entry_notional + entry_cost_value, 1e-12),
+                    "exit_reason": "forced_terminal_exit",
+                }
+            )
+            shares = 0
+            unsettled_position_at_end = False
+            rows[-1]["action"] = "FORCED_SELL"
+            rows[-1]["transaction_cost_value"] += exit_cost_value
+            rows[-1]["transaction_cost"] += exit_cost_value / initial_capital
+            rows[-1]["position_shares"] = 0
+            rows[-1]["equity_curve"] = cash / initial_capital
+            rows[-1]["gross_equity_curve"] = gross_cash / initial_capital
+            rows[-1]["net_strategy_return"] = cash / max(
+                initial_capital * (rows[-2]["equity_curve"] if len(rows) > 1 else 1.0),
+                1e-12,
+            ) - 1.0
+
+    details = pd.DataFrame(rows, index=frame.index)
+    trades = pd.DataFrame(trade_records)
+    net_returns = details["net_strategy_return"].replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    gross_total_return = float(details["gross_equity_curve"].iloc[-1] - 1.0)
+    net_total_return = float(details["equity_curve"].iloc[-1] - 1.0)
+    holdings = trades["holding_sessions"] if not trades.empty else pd.Series(dtype=float)
+    trade_returns = trades["net_return"] if not trades.empty else pd.Series(dtype=float)
+    closed_gross_pnl = float(trades["gross_pnl"].sum()) if not trades.empty else 0.0
+    closed_net_pnl = float(trades["net_pnl"].sum()) if not trades.empty else 0.0
+    positive_pnl = (
+        float(trades.loc[trades["net_pnl"] > 0, "net_pnl"].sum())
+        if not trades.empty
+        else 0.0
+    )
+    negative_pnl = (
+        float(-trades.loc[trades["net_pnl"] < 0, "net_pnl"].sum())
+        if not trades.empty
+        else 0.0
+    )
+    summary = {
+        "strategy": "stateful_cash_long_swing",
+        "execution_rule": "signal after close[t]; execute next-session open; cash -> long -> cash",
+        "settlement_rule": f"minimum holding {minimum_holding_sessions} sessions before sale eligibility",
+        "minimum_holding_sessions": int(minimum_holding_sessions),
+        "entry_margin": float(entry_margin),
+        "exit_threshold": float(exit_threshold),
+        "exit_rule": (
+            f"fixed close exit after {fixed_holding_sessions} sessions"
+            if fixed_holding_sessions is not None
+            else "score-based next-open exit"
+        ),
+        "fixed_holding_sessions": fixed_holding_sessions,
+        "entry_cost_bps": float(entry_cost_bps),
+        "exit_cost_bps": float(exit_cost_bps),
+        "round_trip_cost_bps": float(entry_cost_bps + exit_cost_bps),
+        "periods_per_year": int(periods_per_year),
+        "observations": int(len(details)),
+        "entries": int(len(trades) + (1 if unsettled_position_at_end else 0)),
+        "exits": int(len(trades)),
+        "completed_round_trips": int(len(trades)),
+        "active_sessions": int((details["position_shares"] > 0).sum()),
+        "exposure": float((details["position_shares"] > 0).mean()),
+        "gross_total_return": gross_total_return,
+        "net_total_return": net_total_return,
+        "total_return": net_total_return,
+        "annualized_return": _annualized_return(net_returns, periods_per_year),
+        "annualized_volatility": float(net_returns.std(ddof=1) * math.sqrt(periods_per_year)) if len(net_returns) > 1 else 0.0,
+        "sharpe_ratio": _sharpe_ratio(net_returns, periods_per_year),
+        "sharpe": _sharpe_ratio(net_returns, periods_per_year),
+        "max_drawdown": _max_drawdown(net_returns),
+        "hit_rate": float((trade_returns > 0).mean()) if len(trade_returns) else None,
+        "profit_factor": positive_pnl / negative_pnl if negative_pnl > 0 else None,
+        "average_holding_sessions": float(holdings.mean()) if len(holdings) else None,
+        "median_holding_sessions": float(holdings.median()) if len(holdings) else None,
+        "gross_pnl_sum": closed_gross_pnl,
+        "net_pnl_sum": closed_net_pnl,
+        "transaction_cost_value_sum": float(total_cost),
+        "transaction_cost_sum": float(total_cost / initial_capital),
+        "total_turnover": None,
+        "annualized_turnover": None,
+        "liquidity_limited_trades": int(liquidity_limited),
+        "forced_exit": bool(forced_exit),
+        "unsettled_position_at_end": bool(unsettled_position_at_end),
+        "initial_capital": float(initial_capital),
+        "final_capital": float(details["equity_curve"].iloc[-1] * initial_capital),
+        "lot_size": int(lot_size),
+        "max_volume_fraction": float(max_volume_fraction),
+        "price_multiplier": float(price_multiplier),
+    }
+    details.attrs["trades"] = trades
+    return summary, details

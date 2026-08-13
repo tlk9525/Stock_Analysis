@@ -103,10 +103,19 @@ CREATE TABLE IF NOT EXISTS history_features (
     range_pct DOUBLE PRECISION,
     close_vs_sma20 DOUBLE PRECISION,
     close_vs_sma60 DOUBLE PRECISION,
+    market_open DOUBLE PRECISION,
+    market_close DOUBLE PRECISION,
     day_of_week DOUBLE PRECISION,
     month_of_year DOUBLE PRECISION,
     target_next_up INTEGER,
     next_return DOUBLE PRECISION,
+    target_entry_open_5d DOUBLE PRECISION,
+    target_exit_close_5d DOUBLE PRECISION,
+    target_return_5d DOUBLE PRECISION,
+    target_market_return_5d DOUBLE PRECISION,
+    target_excess_return_5d DOUBLE PRECISION,
+    swing_execution_open DOUBLE PRECISION,
+    swing_execution_close DOUBLE PRECISION,
     PRIMARY KEY (run_id, symbol, trade_date)
 );
 
@@ -160,10 +169,19 @@ CREATE TABLE IF NOT EXISTS model_test_predictions (
     range_pct DOUBLE PRECISION,
     close_vs_sma20 DOUBLE PRECISION,
     close_vs_sma60 DOUBLE PRECISION,
+    market_open DOUBLE PRECISION,
+    market_close DOUBLE PRECISION,
     day_of_week DOUBLE PRECISION,
     month_of_year DOUBLE PRECISION,
     target_next_up INTEGER,
     next_return DOUBLE PRECISION,
+    target_entry_open_5d DOUBLE PRECISION,
+    target_exit_close_5d DOUBLE PRECISION,
+    target_return_5d DOUBLE PRECISION,
+    target_market_return_5d DOUBLE PRECISION,
+    target_excess_return_5d DOUBLE PRECISION,
+    swing_execution_open DOUBLE PRECISION,
+    swing_execution_close DOUBLE PRECISION,
     xgboost_prediction INTEGER,
     xgboost_prob_up DOUBLE PRECISION,
     logistic_prediction INTEGER,
@@ -382,6 +400,15 @@ ALTER TABLE history_features ADD COLUMN IF NOT EXISTS return_kurtosis_20d DOUBLE
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS volume_ratio_20 DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS day_of_week DOUBLE PRECISION;
 ALTER TABLE history_features ADD COLUMN IF NOT EXISTS month_of_year DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS market_open DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS market_close DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS target_entry_open_5d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS target_exit_close_5d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS target_return_5d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS target_market_return_5d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS target_excess_return_5d DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS swing_execution_open DOUBLE PRECISION;
+ALTER TABLE history_features ADD COLUMN IF NOT EXISTS swing_execution_close DOUBLE PRECISION;
 
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS macd_signal DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS macd_hist DOUBLE PRECISION;
@@ -412,6 +439,15 @@ ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS day_of_week DOUBLE P
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS month_of_year DOUBLE PRECISION;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS xgboost_prediction INTEGER;
 ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS xgboost_prob_up DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS market_open DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS market_close DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS target_entry_open_5d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS target_exit_close_5d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS target_return_5d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS target_market_return_5d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS target_excess_return_5d DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS swing_execution_open DOUBLE PRECISION;
+ALTER TABLE model_test_predictions ADD COLUMN IF NOT EXISTS swing_execution_close DOUBLE PRECISION;
 
 CREATE INDEX IF NOT EXISTS idx_daily_runs_symbol_generated
     ON daily_runs (symbol, generated_at DESC);

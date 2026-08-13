@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from pandas.tseries.offsets import CustomBusinessDay
+
+from src.market_calendar import (
+    build_market_calendar,
+    market_calendar_note,
+    market_holidays,
+)
 
 
 def _moving_block_bootstrap(
@@ -64,9 +69,7 @@ def simulate_forecast(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
     simulated_returns = np.clip(simulated_returns, -0.99, None)
     simulated_prices = latest_close * np.cumprod(1 + simulated_returns, axis=1)
     percentiles = np.percentile(simulated_prices, [10, 25, 50, 75, 90], axis=0)
-    market_calendar = CustomBusinessDay(
-        holidays=pd.to_datetime(config.get("market_holidays", []))
-    )
+    market_calendar = build_market_calendar(config)
     future_dates = pd.date_range(
         frame.index[-1] + market_calendar,
         periods=sessions,
@@ -88,4 +91,6 @@ def simulate_forecast(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
     forecast["latest_close"] = latest_close
     forecast.attrs["method"] = method
     forecast.attrs["drift_shrinkage"] = drift_shrinkage
+    forecast.attrs["market_calendar_note"] = market_calendar_note(config)
+    forecast.attrs["market_holidays"] = market_holidays(config)
     return forecast

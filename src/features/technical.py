@@ -258,6 +258,10 @@ def add_market_features(
         },
         index=benchmark.index,
     )
+    if "open" in benchmark:
+        # Không phải model feature: giữ lại để tạo target swing cùng execution
+        # với cổ phiếu (vào open[t+1], ra close[t+horizon]).
+        market["market_open"] = pd.to_numeric(benchmark["open"], errors="coerce")
     for horizon in (1, 5, 20):
         market[f"market_return_{horizon}d"] = market["market_close"].pct_change(
             horizon,
@@ -268,12 +272,15 @@ def add_market_features(
     )
     aligned_market = market.reindex(out.index)
     for column in [
+        "market_open",
+        "market_close",
         "market_return_1d",
         "market_return_5d",
         "market_return_20d",
         "market_volatility_20d",
     ]:
-        out[column] = aligned_market[column]
+        if column in aligned_market:
+            out[column] = aligned_market[column]
     for horizon in (1, 5, 20):
         out[f"excess_return_{horizon}d"] = (
             out[f"return_{horizon}d"] - out[f"market_return_{horizon}d"]
@@ -290,6 +297,57 @@ def add_market_features(
     out.attrs.update(frame.attrs)
     out.attrs["benchmark_feature_rows"] = int(
         aligned_market["market_close"].notna().sum()
+    )
+    return out
+
+
+def add_swing_target(
+    frame: pd.DataFrame,
+    *,
+    horizon_sessions: int = 5,
+) -> pd.DataFrame:
+    """Add a tradable, point-in-time  multi-session excess-return target.
+
+    The signal is known after ``close[t]``.  The target enters at
+    ``open[t+1]`` and exits at ``close[t+horizon]``.  Benchmark values use the
+    identical execution window.  Future prices are kept exclusively in
+    explicitly named target columns and remain missing at the tail.
+    """
+
+    horizon = int(horizon_sessions)
+    if horizon < 2:
+        raise ValueError("horizon_sessions phải >= 2 cho chiến lược swing.")
+    required = {"open", "close", "market_open", "market_close"}
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise ValueError(
+            "Thiếu dữ liệu benchmark để tạo swing excess-return target: "
+            + ", ".join(missing)
+        )
+
+    out = frame.copy()
+    entry_open = pd.to_numeric(out["open"], errors="coerce").shift(-1)
+    exit_close = pd.to_numeric(out["close"], errors="coerce").shift(-horizon)
+    market_entry_open = pd.to_numeric(out["market_open"], errors="coerce").shift(-1)
+    market_exit_close = pd.to_numeric(out["market_close"], errors="coerce").shift(-horizon)
+
+    out[f"target_entry_open_{horizon}d"] = entry_open
+    out[f"target_exit_close_{horizon}d"] = exit_close
+    out[f"target_return_{horizon}d"] = exit_close.div(entry_open).sub(1)
+    out[f"target_market_return_{horizon}d"] = market_exit_close.div(
+        market_entry_open
+    ).sub(1)
+    out[f"target_excess_return_{horizon}d"] = (
+        out[f"target_return_{horizon}d"]
+        - out[f"target_market_return_{horizon}d"]
+    )
+    # Executable next-session prices are useful to the stateful backtest but
+    # are not model inputs.
+    out["swing_execution_open"] = entry_open
+    out["swing_execution_close"] = pd.to_numeric(out["close"], errors="coerce").shift(-1)
+    out.attrs["swing_target_definition"] = (
+        f"signal after close[t]; enter open[t+1]; exit close[t+{horizon}] ; "
+        "target is stock return minus VNINDEX return over the same window"
     )
     return out
 

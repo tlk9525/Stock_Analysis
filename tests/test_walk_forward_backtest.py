@@ -286,6 +286,23 @@ class TrainModelsTests(unittest.TestCase):
             metrics["backtest"]["sharpe"],
             metrics["backtest"]["sharpe_ratio"],
         )
+        sensitivity = metrics["backtest"]["threshold_sensitivity"]
+        self.assertEqual(
+            [item["signal_threshold"] for item in sensitivity],
+            [0.55, 0.58, 0.6, 0.62],
+        )
+        self.assertTrue(
+            all(
+                item["completed_round_trips"] <= metrics["backtest"]["completed_round_trips"]
+                for item in sensitivity
+                if item["signal_threshold"] >= metrics["backtest"]["signal_threshold"]
+            )
+        )
+        top_n = metrics["backtest"]["top_n_trade_sensitivity"]
+        self.assertEqual([item["top_n"] for item in top_n], [10, 5, 1])
+        self.assertTrue(
+            all(item["completed_round_trips"] <= item["top_n"] for item in top_n)
+        )
         self.assertEqual(booster.feature_names, MODEL_FEATURES)
 
     def test_train_models_can_include_market_features(self) -> None:

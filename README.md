@@ -154,6 +154,46 @@ Luồng một mã hiện dùng:
 
 Các artifact kiểm toán bổ sung gồm `data_quality_report.json`, `signal_decision.json`, `resolved_config.json` và `run_metadata.json`.
 
+### Chiến lược swing 5 phiên và ràng buộc T+2
+
+Luồng một mã còn chạy thêm một strategy research riêng, mặc định bật trong
+`swing_strategy` của `config.json`. Khi bật, đây là **contract duy nhất** dùng
+để phát hành tín hiệu; classifier phiên-kế-tiếp và sensitivity của nó chỉ còn
+là diagnostic/legacy. Strategy học **excess return 5 phiên** theo contract:
+
+```text
+signal sau close[t]
+entry = open[t+1]
+exit target = close[t+5]
+target = stock return - VNINDEX return trong cùng cửa sổ
+```
+
+Backtest dùng trạng thái `CASH → LONG → CASH`, không biến mỗi signal thành một
+round-trip: lệnh mua tại `open[t+1]` được đóng đúng tại `close[t+5]`. T+2 là ràng
+buộc tối thiểu đã được thỏa bởi horizon 5D, không phải một rule kéo dài vị thế
+theo score. Margin vào lệnh được chọn trong validation của từng fold; holdout
+cuối được khóa, chỉ dùng để đánh giá. Publish gate yêu cầu development/frozen
+đủ số trade, correlation dự báo-return dương, net và Sharpe dương sau phí, và
+không âm ở stress chi phí 1.5×.
+
+Các artifact bổ sung của mỗi run:
+
+```text
+swing_model_metrics.json
+xgboost_swing_5d.json
+swing_development_oos.csv
+swing_development_backtest.csv
+swing_development_trades.csv
+swing_frozen_holdout.csv
+swing_frozen_backtest.csv
+swing_frozen_trades.csv
+```
+
+Nếu strategy chưa qua toàn bộ gate, `signal_decision.json` vẫn giữ `NO_EDGE` và
+dashboard trả `INSUFFICIENT_EDGE` khi sample/ranking chưa đủ, thay vì diễn giải
+0 trade là lợi nhuận 0%. Không dùng bảng sensitivity/top-N của classifier cũ để
+chọn rule swing, theo dõi ngưỡng live, hoặc suy ra “lệnh tốt nhất”.
+
 ### Báo cáo tài chính và tin tức doanh nghiệp
 
 Mỗi lần chạy một mã, hệ thống lấy dữ liệu từ `vnstock` và tạo hai lớp phân tích bổ sung:

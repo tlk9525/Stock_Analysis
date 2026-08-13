@@ -184,6 +184,61 @@ class RiskPlanTests(unittest.TestCase):
         self.assertEqual(decision["failed_checks"], ["model_auc", "probability_edge"])
         self.assertIsNone(guarded["position_shares"])
 
+    def test_swing_contract_ignores_positive_legacy_classifier_when_holdout_is_empty(self) -> None:
+        plan = build_risk_plan(self.levels, self.forecast, self.config)
+        config = {
+            **self.config,
+            "swing_strategy": {
+                "enabled": True,
+                "min_completed_round_trips": 10,
+            },
+        }
+        metrics = {
+            # These legacy metrics must not turn a 5D strategy actionable.
+            "xgboost": {"roc_auc": 0.99, "balanced_accuracy": 0.99},
+            "backtest": {
+                "available": True,
+                "observations": 999,
+                "completed_round_trips": 99,
+                "net_total_return": 0.99,
+                "sharpe_ratio": 9.0,
+            },
+            "swing_strategy": {
+                "available": True,
+                "selected_entry_margin": 0.005,
+                "latest_expected_excess_return": 0.02,
+                "development_oos": {"backtest": {"completed_round_trips": 1}},
+                "frozen_holdout": {
+                    "backtest": {
+                        "completed_round_trips": 0,
+                        "round_trip_cost_bps": 50,
+                    }
+                },
+                "publish_gate": {
+                    "margin_selected_in_validation": False,
+                    "development_sufficient_trades": False,
+                    "sufficient_trades": False,
+                    "development_ranking_edge": False,
+                    "frozen_ranking_edge": False,
+                    "net_edge": False,
+                    "cost_stress_1_5x": False,
+                },
+            },
+        }
+
+        decision = build_signal_decision(
+            metrics,
+            {"xgboost": 0.99},
+            {"score": 5},
+            plan,
+            str(pd.Timestamp.today().date()),
+            config,
+        )
+
+        self.assertEqual(decision["status"], "NO_EDGE")
+        self.assertEqual(decision["execution_contract"], "fixed_horizon_swing_5d")
+        self.assertFalse(decision["checks"]["swing_frozen_holdout"])
+
 
 class MonteCarloTests(unittest.TestCase):
     def test_block_bootstrap_is_reproducible_and_uses_market_holidays(self) -> None:
@@ -208,6 +263,29 @@ class MonteCarloTests(unittest.TestCase):
         self.assertNotIn(next_business_day, first.index)
         self.assertEqual(first.attrs["method"], "moving_block_bootstrap")
         self.assertTrue(first["prob_end_above_latest"].between(0, 1).all())
+
+    def test_forecast_uses_default_vietnam_market_holidays(self) -> None:
+        index = pd.bdate_range("2026-07-06", periods=40)
+        returns = np.tile([0.01, -0.005, 0.002, -0.003], 10)
+        close = 100 * np.cumprod(1 + returns)
+        frame = pd.DataFrame({"close": close, "return_1d": returns}, index=index)
+        config = {
+            "forecast_sessions": 8,
+            "simulations": 200,
+            "lookback_sessions": 40,
+            "random_seed": 7,
+            "monte_carlo_method": "moving_block_bootstrap",
+            "monte_carlo_block_size": 4,
+            "monte_carlo_drift_shrinkage": 0.0,
+        }
+
+        forecast = simulate_forecast(frame, config)
+
+        self.assertNotIn(pd.Timestamp("2026-08-31"), forecast.index)
+        self.assertNotIn(pd.Timestamp("2026-09-01"), forecast.index)
+        self.assertNotIn(pd.Timestamp("2026-09-02"), forecast.index)
+        self.assertTrue((forecast.index.dayofweek < 5).all())
+        self.assertIn("Thứ Bảy/Chủ Nhật", forecast.attrs["market_calendar_note"])
 
 
 if __name__ == "__main__":

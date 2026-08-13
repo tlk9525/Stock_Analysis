@@ -1,0 +1,64 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 4 bài để phân loại chủ đề (ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 1, nganh: 2, rui_ro: 3), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: AUC 0.487 < 0.540",
+    "ML guard: Balanced accuracy 0.492 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.4871697237055955, AUC logistic=0.5025029022521477",
+    "ML guard: Probability 48.2% < 55.0%",
+    "ML guard: Technical score -4 < 2",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.05460289999999968, Sharpe=-0.1917641851198188",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. AUC 0.487 < 0.540",
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.492 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.4871697237055955, AUC logistic=0.5025029022521477",
+    "ML decision artifact: NO_EDGE. Probability 48.2% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score -4 < 2",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.05460289999999968, Sharpe=-0.1917641851198188",
+    "News Reader [VietnamFinance]: Cổ phiếu tăng mạnh: PNJ tạo đáy, nhóm vốn hoá lớn hồi phục - VietnamFinance | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh, rui_ro (2026-08-09T08:30:00+00:00)",
+    "News Reader [Tin nhanh chứng khoán]: Top 10 cổ phiếu tăng/giảm mạnh nhất tuần: Dòng tiền lan tỏa, nhiều cổ phiếu bật tăng từ đáy - Tin nhanh chứng khoán | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-07T23:55:47+00:00)",
+    "News Reader [Chứng khoán DNSE]: PNJ tính điều chỉnh kế hoạch kinh doanh, cổ phiếu quay đầu giảm mạnh - Chứng khoán DNSE | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep (2026-08-06T08:46:00+00:00)",
+    "News Reader [Tạp chí Tài chính Doanh nghiệp]: Sau kết luận thanh tra, PNJ có động thái gì về nộp thuế? - Tạp chí Tài chính Doanh nghiệp | nhóm: ket_qua_kinh_doanh, rui_ro (2026-08-10T00:45:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Cổ phiếu tăng mạnh: PNJ tạo đáy, nhóm vốn hoá lớn hồi phục - VietnamFinance",
+      "publisher": "VietnamFinance",
+      "url": "https://vietnamfinance.vn/co-phieu-tang-manh-pnj-tao-day-nhom-von-hoa-lon-hoi-phuc-d148805.html",
+      "published_at": "2026-08-09T08:30:00+00:00"
+    },
+    {
+      "title": "Top 10 cổ phiếu tăng/giảm mạnh nhất tuần: Dòng tiền lan tỏa, nhiều cổ phiếu bật tăng từ đáy - Tin nhanh chứng khoán",
+      "publisher": "Tin nhanh chứng khoán",
+      "url": "https://www.tinnhanhchungkhoan.vn/top-10-co-phieu-tanggiam-manh-nhat-tuan-dong-tien-lan-toa-nhieu-co-phieu-bat-tang-tu-day-post395499.html",
+      "published_at": "2026-08-07T23:55:47+00:00"
+    },
+    {
+      "title": "PNJ tính điều chỉnh kế hoạch kinh doanh, cổ phiếu quay đầu giảm mạnh - Chứng khoán DNSE",
+      "publisher": "Chứng khoán DNSE",
+      "url": "https://www.dnse.com.vn/senses/tin-tuc/pnj-tinh-dieu-chinh-ke-hoach-kinh-doanh-co-phieu-quay-dau-giam-manh-35261330",
+      "published_at": "2026-08-06T08:46:00+00:00"
+    },
+    {
+      "title": "Sau kết luận thanh tra, PNJ có động thái gì về nộp thuế? - Tạp chí Tài chính Doanh nghiệp",
+      "publisher": "Tạp chí Tài chính Doanh nghiệp",
+      "url": "https://taichinhdoanhnghiep.net.vn/sau-ket-luan-thanh-tra-pnj-co-dong-thai-gi-ve-nop-thue-d68861.html",
+      "published_at": "2026-08-10T00:45:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -4. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 36.5.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 37.4, -DI vượt +DI.); Thanh khoản: Thấp (0.24 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Vàng Phú Nhuận; kỳ 2026-Q2; P/E 6.14; P/B 1.28; ROE 21.6%; ROA 14.9%; Debt/Equity 0.51; Revenue Growth 11.9%; Profit Growth -164.7%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 4 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 1, nganh: 2, rui_ro: 3. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-12T17:19:15.254406+00:00; News Reader đọc được 4 bài. ML có 6 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

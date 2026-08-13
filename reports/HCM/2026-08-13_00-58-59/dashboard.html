@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bảng điều khiển XGBoost - HCM</title>
+  <style>
+    :root { --bg:#f4f7fb; --ink:#162033; --muted:#68758a; --line:#e3e9f2; --panel:#fff; --navy:#102a43; --blue:#2563eb; --cyan:#0f766e; --red:#b42318; --amber:#a15c07; --soft-blue:#eff6ff; --soft-amber:#fff7e6; --soft-slate:#f6f8fb; --shadow:0 14px 34px rgba(25,42,70,.08); }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:38px clamp(18px,4vw,56px) 30px; background:radial-gradient(circle at 84% -15%,#315f9d 0%,transparent 30%),linear-gradient(125deg,#0b1f33 0%,#102a43 52%,#163e63 100%); color:#fff; border-bottom:1px solid rgba(255,255,255,.12); }
+    .header-layout { max-width:1360px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,370px); gap:34px; align-items:start; }
+    .eyebrow { color:var(--cyan); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.11em; }
+    header .eyebrow { color:#8dd9d0; }
+    h1 { margin:10px 0 8px; font-size:clamp(30px,4vw,48px); line-height:1.04; letter-spacing:-.035em; }
+    .subtitle,.disclaimer { color:var(--muted); line-height:1.6; }
+    header .subtitle { color:#dce9f6; max-width:850px; margin:0; }
+    .capital-scenario { background:rgba(255,255,255,.98); color:var(--ink); border:1px solid rgba(255,255,255,.45); border-radius:14px; padding:16px; box-shadow:0 18px 40px rgba(1,14,29,.28); }
+    .capital-scenario label { display:block; color:var(--navy); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .capital-input-row { display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .capital-input-row input { width:100%; min-width:0; padding:10px 11px; border:1px solid #b9c8d9; border-radius:8px; color:var(--ink); font:inherit; font-size:17px; font-weight:750; }
+    .capital-input-row input:focus { outline:3px solid rgba(37,99,235,.2); border-color:var(--blue); }
+    .capital-input-row span { color:var(--muted); font-size:13px; font-weight:750; }
+    .capital-scenario p { margin:8px 0 0; color:var(--muted); font-size:12px; line-height:1.45; }
+    .capital-scenario-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; }
+    .capital-scenario-metric { padding:9px; border-radius:8px; background:var(--soft-blue); border:1px solid #dbeafe; }
+    .capital-scenario-label,.capital-scenario-metric small { display:block; font-size:11px; color:var(--muted); }
+    .capital-scenario-metric strong { display:block; margin:3px 0; color:var(--navy); font-size:14px; }
+    .capital-scenario-note { border-top:1px solid var(--line); padding-top:8px; }
+    main { padding:28px clamp(18px,4vw,56px) 52px; display:grid; gap:24px; max-width:1440px; margin:0 auto; }
+    .quick-nav { position:sticky; top:0; z-index:10; display:flex; gap:8px; flex-wrap:wrap; padding:11px clamp(18px,4vw,56px); background:rgba(244,247,251,.9); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); }
+    .quick-nav a { text-decoration:none; color:#38506b; background:#fff; border:1px solid var(--line); border-radius:7px; padding:8px 11px; font-weight:750; font-size:12px; }
+    .quick-nav a:hover { color:var(--blue); border-color:#b9d2ff; background:var(--soft-blue); }
+    .metrics { display:grid; gap:12px; }
+    .result-metrics { grid-template-columns:repeat(4,minmax(165px,1fr)); }
+    .strategy-metrics { grid-template-columns:repeat(4,minmax(160px,1fr)); }
+    .fundamental-metrics { grid-template-columns:repeat(7,minmax(130px,1fr)); }
+    .metric,section { background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+    .metric,section,.accordion { box-shadow:var(--shadow); }
+    .metric { padding:16px; min-height:112px; border-radius:12px; position:relative; overflow:hidden; }
+    .metric::before { content:""; position:absolute; inset:0 auto 0 0; width:3px; background:#dbe5f1; }
+    .metric-label { color:var(--muted); font-size:12px; font-weight:750; text-transform:uppercase; }
+    .metric-value { margin-top:10px; font-size:23px; font-weight:780; line-height:1.1; letter-spacing:-.025em; }
+    .metric-detail { color:var(--muted); margin-top:7px; font-size:13px; }
+    section { padding:20px; border-radius:14px; }
+    .section-title { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:10px 0 0; }
+    .section-title h2 { margin:0; }
+    .section-kicker { color:var(--muted); font-size:12px; font-weight:650; }
+    .decision-summary { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr); gap:22px; padding:22px 24px; border-radius:14px; border:1px solid #d7e2ef; background:linear-gradient(110deg,#fff 0%,#f7fbff 100%); box-shadow:var(--shadow); }
+    .decision-summary h2 { margin:8px 0; font-size:22px; }
+    .decision-summary p { margin:0; color:#526175; line-height:1.58; }
+    .status-badge { display:inline-flex; align-items:center; width:max-content; padding:6px 10px; border-radius:999px; font-size:11px; font-weight:850; letter-spacing:.06em; }
+    .status-badge.neutral { color:#475569; background:#eef2f7; border:1px solid #d9e1ec; }
+    .status-badge.warning { color:#8a4b00; background:var(--soft-amber); border:1px solid #f4d89a; }
+    .status-badge.positive { color:#086455; background:#e6f8f4; border:1px solid #aee8db; }
+    .gate-summary { display:grid; align-content:center; gap:8px; padding-left:22px; border-left:1px solid #dbe5f0; }
+    .gate-summary strong { font-size:28px; letter-spacing:-.04em; color:var(--navy); }
+    .gate-summary span { color:var(--muted); font-size:13px; line-height:1.45; }
+    .grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr); gap:22px; align-items:start; }
+    .two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+    .dashboard-grid { display:grid; grid-template-columns:minmax(0,1.32fr) minmax(340px,.68fr); gap:22px; align-items:start; }
+    .stack { display:grid; gap:14px; }
+    h2 { margin:0 0 12px; font-size:18px; letter-spacing:0; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th { padding:10px 8px; border-bottom:2px solid var(--line); text-align:left; background:var(--soft-slate); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    td { padding:10px 8px; border-top:1px solid var(--line); vertical-align:top; }
+    td:first-child { font-weight:700; width:28%; }
+    td:nth-child(2) { color:#1d4f91; font-weight:700; width:24%; }
+    img { width:100%; height:auto; display:block; border-radius:9px; border:1px solid var(--line); background:#fff; }
+    .table-wrap { overflow-x:auto; }
+    .table-wrap table { min-width:680px; }
+    .table-wrap td { white-space:normal; }
+    .muted { color:var(--muted); line-height:1.55; }
+    details { border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin:8px 0; }
+    .accordion { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:0; overflow:hidden; }
+    .accordion > summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:15px 17px; background:#fff; border-bottom:1px solid transparent; }
+    .accordion > summary::-webkit-details-marker { display:none; }
+    .accordion > summary::after { content:"▾"; color:var(--muted); transform:rotate(-90deg); transition:transform .18s ease; }
+    .accordion[open] > summary { border-bottom-color:var(--line); }
+    .accordion[open] > summary::after { transform:rotate(0deg); }
+    .accordion-body { padding:15px 17px 17px; }
+    .accordion-note { color:var(--muted); font-size:12px; font-weight:650; margin-left:auto; }
+    summary { cursor:pointer; font-weight:700; }
+    details p { white-space:pre-wrap; line-height:1.55; }
+    a { color:var(--blue); }
+    @media (max-width:1200px) { .result-metrics,.fundamental-metrics,.strategy-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } .grid,.two,.dashboard-grid,.header-layout,.decision-summary { grid-template-columns:1fr; } .capital-scenario { max-width:460px; } .gate-summary { border-left:0; border-top:1px solid #dbe5f0; padding:18px 0 0; } }
+    @media (max-width:620px) { .result-metrics,.fundamental-metrics,.strategy-metrics { grid-template-columns:1fr; } td { display:block; width:100%!important; border:0; padding:6px 4px; } tr { display:block; border-top:1px solid var(--line); padding:8px 0; } .quick-nav { position:static; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-layout">
+      <div>
+        <div class="eyebrow">Phân tích cổ phiếu Việt Nam bằng XGBoost</div>
+        <h1>HCM - Chứng khoán HSC</h1>
+        <p class="subtitle">Dữ liệu 2009-05-19 → 2026-08-12. Nguồn vnstock/VCI. XGBoost là mô hình chính; Logistic và mô hình đa số được dùng làm đối chứng.</p>
+      </div>
+      
+      <aside class="capital-scenario" data-reference-capital="100000000">
+        <label for="assumed-capital-input">Vốn giả định</label>
+        <div class="capital-input-row">
+          <input id="assumed-capital-input" type="number" min="100000" step="100000" inputmode="numeric" value="100000000" aria-describedby="assumed-capital-note">
+          <span>VND</span>
+        </div>
+        <p id="assumed-capital-note">Quy đổi từ tỷ suất của backtest gốc dùng 100,000,000 VND.</p>
+        <div class="capital-scenario-metrics"><div class="capital-scenario-metric"><span class="capital-scenario-label">Gross backtest</span><strong>+18.3%</strong><small data-capital-rate="0.182891348906">Đang tính...</small></div><div class="capital-scenario-metric"><span class="capital-scenario-label">Phí backtest</span><strong>-30.3%</strong><small data-capital-rate="-0.302508142201">Đang tính...</small></div><div class="capital-scenario-metric"><span class="capital-scenario-label">Net backtest</span><strong>-12.6%</strong><small data-capital-rate="-0.12580115">Đang tính...</small></div><div class="capital-scenario-metric"><span class="capital-scenario-label">Rủi ro/lệnh</span><strong>1.0%</strong><small data-capital-risk-pct="0.01">Đang tính...</small></div></div>
+        <p class="capital-scenario-note">Chỉ quy đổi tiền minh họa. Muốn tính lại số cổ phiếu theo lô, thanh khoản và phí chính xác, cần chạy lại report với vốn đó.</p>
+      </aside>
+    
+    </div>
+  </header>
+  <nav class="quick-nav">
+    <a href="#overview">Tổng quan</a>
+    <a href="#strategy">Chi phí & vòng lệnh</a>
+    <a href="#technical">Kỹ thuật</a>
+    <a href="#fundamental">Cơ bản & tin</a>
+    <a href="#forecast">Dự báo</a>
+  </nav>
+  <main>
+    <section class="decision-summary" aria-labelledby="decision-heading">
+      <div>
+        <div class="eyebrow">Quyết định đã qua guard sau phí</div>
+        <div class="status-badge neutral">CHƯA CÓ LỢI THẾ (NO_EDGE)</div>
+        <h2 id="decision-heading">Không có lệnh mua mới hôm nay</h2>
+        <p>0 lệnh mới: xác suất hiện tại 52.6% chưa đạt ngưỡng theo dõi 0.62.</p>
+      </div>
+      <div class="gate-summary">
+        <span>Điều kiện chưa đạt</span>
+        <strong>6</strong>
+        <span>Độ chính xác cân bằng của mô hình, XGBoost vượt mô hình Logistic đối chứng, Xác suất tăng đạt ngưỡng, Kiểm thử chiến lược có lợi thế ròng, Swing qua frozen holdout và stress phí, Expected excess return swing vượt chi phí + margin</span>
+      </div>
+    </section>
+    <div id="overview" class="section-title"><h2>Kết quả chính</h2><span class="section-kicker">KPI đọc nhanh trước, chi tiết bấm mở bên dưới</span></div>
+    <div class="metrics result-metrics"><div class="metric"><div class="metric-label">Giá hiện tại</div><div class="metric-value">26.15</div><div class="metric-detail">2026-08-12 - nghìn VND/cp</div></div><div class="metric"><div class="metric-label">Xu hướng kỹ thuật</div><div class="metric-value">Hồi phục / nghiêng tăng</div><div class="metric-detail">Điểm 4</div></div><div class="metric"><div class="metric-label">Trạng thái tín hiệu</div><div class="metric-value">CHƯA CÓ LỢI THẾ (NO_EDGE)</div><div class="metric-detail">Độ chính xác cân bằng của mô hình; XGBoost vượt mô hình Logistic đối chứng; Xác suất tăng đạt ngưỡng; Kiểm thử chiến lược có lợi thế ròng; Swing qua frozen holdout và stress phí; Expected excess return swing vượt chi phí + margin</div></div><div class="metric"><div class="metric-label">Mua mới</div><div class="metric-value">WAIT</div><div class="metric-detail">Không có lệnh mua mới hôm nay</div></div><div class="metric"><div class="metric-label">Lệnh mới hôm nay</div><div class="metric-value">0 lệnh</div><div class="metric-detail">Chỉ là 1 khi signal ACTIONABLE; không lấy số vòng lịch sử làm khuyến nghị.</div></div><div class="metric"><div class="metric-label">Đang giữ</div><div class="metric-value">HOLD_DISCIPLINED</div><div class="metric-detail">Chưa đủ điều kiện mua mới, nhưng kỹ thuật chưa xấu; nếu đang giữ thì có thể giữ có stop-loss, không mua thêm.</div></div><div class="metric"><div class="metric-label">Model health</div><div class="metric-value">WEAK</div><div class="metric-detail">Có ngưỡng dương trong sensitivity (chưa phải rule live), nhưng model health chưa sạch: Kiểm thử chiến lược có lợi thế ròng, Độ chính xác cân bằng của mô hình, XGBoost vượt mô hình Logistic đối chứng.</div></div><div class="metric"><div class="metric-label">Xác suất XGBoost</div><div class="metric-value">52.6%</div><div class="metric-detail">Xác suất giá đóng cửa phiên tới cao hơn giá mở cửa</div></div><div class="metric"><div class="metric-label">Ngưỡng theo dõi</div><div class="metric-value">0.62</div><div class="metric-detail">Ứng viên sensitivity; chưa phải rule live</div></div><div class="metric"><div class="metric-label">Dự báo</div><div class="metric-value">25.96</div><div class="metric-detail">P50 sau 20 phiên - -0.7%</div></div><div class="metric"><div class="metric-label">Quản trị rủi ro</div><div class="metric-value">Lợi nhuận/rủi ro 2.52</div><div class="metric-detail">Dừng lỗ 24.88 / Mục tiêu 29.82</div></div><div class="metric"><div class="metric-label">Swing expected excess 5D</div><div class="metric-value">+0.1%</div><div class="metric-detail">Frozen gate: chưa đạt; margin 0.5%</div></div></div>
+    <div id="strategy" class="section-title"><h2>Chi phí & vòng lệnh</h2><span class="section-kicker">Trọng tâm: tránh giao dịch nhiều làm phí ăn hết lợi thế</span></div>
+    <div class="metrics strategy-metrics"><div class="metric"><div class="metric-label">Gross trước phí</div><div class="metric-value">+18.3%</div><div class="metric-detail">Lợi nhuận chiến lược trước phí/thuế</div></div><div class="metric"><div class="metric-label">Net sau phí</div><div class="metric-value">-12.6%</div><div class="metric-detail">Kết quả dùng cho publish guard</div></div><div class="metric"><div class="metric-label">Vòng baseline lịch sử</div><div class="metric-value">61</div><div class="metric-detail">Dùng đo turnover/phí, không phải số lệnh nên thực hiện</div></div><div class="metric"><div class="metric-label">Phí cộng dồn</div><div class="metric-value">30.3%</div><div class="metric-detail">Ngưỡng hòa vốn 30.2 bps/vòng</div></div></div>
+    <div class="dashboard-grid">
+      <div class="stack"><details class="accordion" open><summary><span>Khuyến nghị hành động sau phí</span><span class="accordion-note">WAIT</span></summary><div class="accordion-body"><table><tbody><tr><td>Lệnh mới hôm nay</td><td>0 lệnh</td><td>0 lệnh khi chưa ACTIONABLE. Không chia nhỏ/DCA để che một backtest có turnover cao.</td></tr><tr><td>Model health</td><td>WEAK</td><td>Có ngưỡng dương trong sensitivity (chưa phải rule live), nhưng model health chưa sạch: Kiểm thử chiến lược có lợi thế ròng, Độ chính xác cân bằng của mô hình, XGBoost vượt mô hình Logistic đối chứng.</td></tr><tr><td>Nếu chưa có cổ phiếu</td><td>WAIT</td><td>Không có lệnh mua mới hôm nay</td></tr><tr><td>Lý do cho mua mới</td><td></td><td>0 lệnh mới: xác suất hiện tại 52.6% chưa đạt ngưỡng theo dõi 0.62.</td></tr><tr><td>Nếu đang nắm giữ</td><td>HOLD_DISCIPLINED</td><td>Chưa đủ điều kiện mua mới, nhưng kỹ thuật chưa xấu; nếu đang giữ thì có thể giữ có stop-loss, không mua thêm.</td></tr><tr><td>Xác suất hiện tại</td><td>52.6%</td><td>So với ngưỡng sau phí được chọn từ OOS.</td></tr><tr><td>Ngưỡng theo dõi từ sensitivity</td><td>0.62</td><td>Ngưỡng 0.62; net +6.8%; 20 vòng; chưa phải rule live.</td></tr><tr><td>Baseline cấu hình</td><td>61 vòng</td><td>Net sau phí -12.6%.</td></tr><tr><td>Reward/Risk</td><td>2.52</td><td>Chỉ dùng nếu decision cuối cùng cho phép mở vị thế.</td></tr><tr><td>Kỹ thuật / tin</td><td>4 điểm</td><td>Hồi phục / nghiêng tăng; news warning: không; sentiment 0.00.</td></tr></tbody></table><p class="muted">Đây là lớp ra quyết định sau phí: tách riêng người chưa có cổ phiếu và người đang nắm giữ. Mua mới chỉ được xét khi model health đủ tốt, xác suất hiện tại vượt ngưỡng theo dõi, guard chính đều đạt và rule được xác nhận trên dữ liệu future/holdout đã khóa.</p></div></details><details class="accordion" open><summary><span>Chiến lược swing 5 phiên: frozen holdout &amp; T+2</span><span class="accordion-note">stateful cash → long → cash</span></summary><div class="accordion-body"><table><tbody><tr><td>Target / execution</td><td>5 phiên</td><td>signal after close[t]; enter open[t+1]; exit close[t+5] ; target is stock return minus VNINDEX return over the same window</td></tr><tr><td>Frozen holdout net</td><td>+0.0%</td><td>Sharpe N/A; 0 vòng.</td></tr><tr><td>Nắm giữ / T+2</td><td>N/A phiên</td><td>Tối thiểu 2 phiên trước khi bán.</td></tr><tr><td>Stress phí 1.5x</td><td>Không đạt</td><td>Điều kiện bắt buộc trước khi chiến lược được publish-ready.</td></tr><tr><td>Publish gate</td><td>CHƯA ĐẠT</td><td>Frozen holdout không được dùng để chọn margin/boosting rounds.</td></tr></tbody></table><p class="muted">Chiến lược này không dùng top-N hay threshold tối ưu trên OOS. Margin được chọn trong validation của từng fold; frozen holdout chỉ dùng một lần để kiểm định. Stop-loss không được giả định vượt qua ràng buộc chứng khoán chưa về.</p></div></details><details class="accordion" open><summary><span>Kiểm thử kịch bản lịch sử (không phải khuyến nghị giao dịch)</span><span class="accordion-note">nghiên cứu OOS</span></summary><div class="accordion-body"><div class="table-wrap"><table><thead><tr><th>Kịch bản</th><th>Cách chọn</th><th>Vòng</th><th>Gross trước phí</th><th>Phí</th><th>Net sau phí</th><th>Sharpe</th><th>Ghi chú</th></tr></thead><tbody><tr><td>Gốc</td><td>Ngưỡng gốc ≥ 0.55</td><td>61</td><td>+18.3%</td><td>30.3%</td><td>-12.6%</td><td>-0.34</td><td>Baseline lịch sử để đo turnover/phí; không phải số lệnh khuyến nghị.</td></tr><tr><td>Ngưỡng 0.58</td><td>Chỉ vào lệnh khi xác suất ≥ 0.58</td><td>38</td><td>+18.1%</td><td>18.9%</td><td>-2.2%</td><td>-0.02</td><td>Kịch bản nghiên cứu; cần xác nhận trên holdout/future trước khi dùng làm rule.</td></tr><tr><td>Ngưỡng 0.60</td><td>Chỉ vào lệnh khi xác suất ≥ 0.60</td><td>31</td><td>+16.6%</td><td>15.4%</td><td>+0.0%</td><td>0.05</td><td>Kịch bản nghiên cứu; cần xác nhận trên holdout/future trước khi dùng làm rule.</td></tr><tr><td>Ngưỡng 0.62</td><td>Chỉ vào lệnh khi xác suất ≥ 0.62</td><td>20</td><td>+17.9%</td><td>10.0%</td><td>+6.8%</td><td>0.30</td><td>Kịch bản nghiên cứu; cần xác nhận trên holdout/future trước khi dùng làm rule.</td></tr><tr><td>Giới hạn 10 vòng</td><td>Tối đa 10 vòng, ưu tiên xác suất cao hơn</td><td>10</td><td>+11.6%</td><td>5.0%</td><td>+6.2%</td><td>0.41</td><td>Ngưỡng trong nhóm: 66.3%. Không dùng làm rule vì chọn số vòng sau khi đã thấy OOS.</td></tr><tr><td>Giới hạn 5 vòng</td><td>Tối đa 5 vòng, ưu tiên xác suất cao hơn</td><td>5</td><td>+13.0%</td><td>2.5%</td><td>+10.2%</td><td>0.70</td><td>Ngưỡng trong nhóm: 69.0%. Không dùng làm rule vì chọn số vòng sau khi đã thấy OOS.</td></tr><tr><td>Giới hạn 1 vòng</td><td>Tối đa 1 vòng, ưu tiên xác suất cao hơn</td><td>1</td><td>+6.1%</td><td>0.5%</td><td>+5.6%</td><td>0.60</td><td>Ngưỡng trong nhóm: 75.2%. Không dùng làm rule vì chọn số vòng sau khi đã thấy OOS.</td></tr></tbody></table></div><p class="muted"><strong>Không dùng bảng này để chọn “1 lệnh” hay DCA.</strong> Baseline 61 vòng chỉ để đo turnover/phí. Các dòng threshold là ứng viên nghiên cứu cần holdout/future đã khóa; các dòng 10/5/1 có selection bias vì số vòng được chọn sau khi đã thấy OOS. Khi signal chưa ACTIONABLE, lệnh mới hôm nay luôn là 0.</p></div></details><details class="accordion" open><summary><span>Breakdown trước phí / sau phí</span><span class="accordion-note">vì sao gross dương nhưng net âm</span></summary><div class="accordion-body"><table><tbody><tr><td>Kịch bản trước chi phí</td><td>+18.3%</td><td>Gross PnL 18,289,135 VND; chưa trừ commission/slippage/tax.</td></tr><tr><td>Chi phí giao dịch</td><td>-30.3%</td><td>61 vòng; entry 20.0 bps + exit 30.0 bps = 50.0 bps/vòng; tổng phí 28,355,115 VND.</td></tr><tr><td>Kịch bản sau chi phí</td><td>-12.6%</td><td>Net PnL -12,580,115 VND; gross - cost gap khoảng +30.9%.</td></tr><tr><td>Ngưỡng phí hòa vốn</td><td>30.2 bps/vòng</td><td>Phí hiện tại 50.0 bps/vòng; cao hơn ngưỡng này thì gross dương vẫn có thể thành net âm.</td></tr><tr><td>Kết luận hành động</td><td>CHƯA CÓ LỢI THẾ (NO_EDGE)</td><td>Không mở vị thế mới; nếu đang giữ thì xem khung HOLD/REDUCE/SELL riêng theo model health, kỹ thuật, tin và stop-loss.</td></tr><tr><td>Cách cải thiện cần test</td><td>Giảm turnover</td><td>Hiện có 61 phiên active/61 vòng; nên test threshold 0.58/0.60/0.62 hoặc giữ nhiều phiên hơn.</td></tr></tbody></table></div></details><details class="accordion" open><summary><span>Kiểm thử chiến lược ngoài mẫu sau chi phí</span><span class="accordion-note">61 vòng</span></summary><div class="accordion-body"><table><tbody><tr><td>Lợi nhuận ròng</td><td>-12.6%</td><td>702 quan sát ngoài mẫu</td></tr><tr><td>Sharpe</td><td>-0.34</td><td>Sau chi phí</td></tr><tr><td>Mức sụt giảm tối đa</td><td>-20.4%</td><td>61 vòng giao dịch</td></tr><tr><td>Chi phí giả định</td><td>50.0 bps</td><td>Một vòng mua và bán</td></tr></tbody></table></div></details><details class="accordion" open><summary><span>So sánh mô hình</span><span class="accordion-note">XGBoost vs Logistic</span></summary><div class="accordion-body"><table><tbody><tr><td>XGBoost</td><td>0.518</td><td>AUC 0.558</td></tr><tr><td>Logistic</td><td>0.519</td><td>AUC 0.563</td></tr><tr><td>Đa số</td><td>0.500</td><td>Mốc so sánh</td></tr></tbody></table></div></details><details class="accordion"><summary><span>Mức độ quan trọng của đặc trưng</span><span class="accordion-note">top feature</span></summary><div class="accordion-body"><table><tbody><tr><td>volatility_20d</td><td>13.74</td><td>Mức đóng góp</td></tr><tr><td>macd_pct</td><td>12.47</td><td>Mức đóng góp</td></tr><tr><td>return_1d</td><td>11.38</td><td>Mức đóng góp</td></tr><tr><td>corr_60d</td><td>11.30</td><td>Mức đóng góp</td></tr><tr><td>market_return_1d</td><td>10.80</td><td>Mức đóng góp</td></tr><tr><td>return_20d</td><td>10.52</td><td>Mức đóng góp</td></tr><tr><td>macd_hist_pct</td><td>10.40</td><td>Mức đóng góp</td></tr><tr><td>month_of_year</td><td>10.39</td><td>Mức đóng góp</td></tr></tbody></table></div></details></div>
+      <div class="stack"><details class="accordion" open><summary><span>Điều kiện phát hành tín hiệu</span><span class="accordion-note">CHƯA CÓ LỢI THẾ (NO_EDGE)</span></summary><div class="accordion-body"><table><tbody><tr><td>AUC của mô hình</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Độ chính xác cân bằng của mô hình</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>XGBoost vượt mô hình Logistic đối chứng</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Xác suất tăng đạt ngưỡng</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Bối cảnh kỹ thuật đạt ngưỡng</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Tỷ lệ lợi nhuận/rủi ro đạt ngưỡng</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Dữ liệu còn mới</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Có khối lượng vị thế hợp lệ</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Có kết quả kiểm thử chiến lược ngoài mẫu</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Mẫu kiểm thử chiến lược đủ lớn</td><td>ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Kiểm thử chiến lược có lợi thế ròng</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Swing qua frozen holdout và stress phí</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr><tr><td>Expected excess return swing vượt chi phí + margin</td><td>KHÔNG ĐẠT</td><td>Điều kiện phát hành tín hiệu</td></tr></tbody></table></div></details><details class="accordion" open><summary><span>Quản trị rủi ro</span><span class="accordion-note">stop / target</span></summary><div class="accordion-body"><table><tbody><tr><td>Rủi ro/lệnh</td><td>1.0%</td><td>1,000,000 VND</td></tr><tr><td>Mức dừng lỗ</td><td>24.88</td><td>Rủi ro mỗi cổ phiếu 1.40</td></tr><tr><td>Mục tiêu 1</td><td>29.82</td><td>Lợi nhuận/rủi ro 2.52</td></tr><tr><td>Mục tiêu 2</td><td>29.82</td><td>Dự báo/kháng cự</td></tr></tbody></table></div></details></div>
+    </div>
+    <div id="technical" class="section-title"><h2>Kỹ thuật</h2><span class="section-kicker">Biểu đồ mở sẵn, bảng tín hiệu thu gọn</span></div>
+    <div class="grid"><section><h2>Biểu đồ kỹ thuật</h2><img src="technical_chart.png" alt="Biểu đồ kỹ thuật"></section><div class="stack"><details class="accordion"><summary><span>Tín hiệu kỹ thuật</span><span class="accordion-note">chi tiết</span></summary><div class="accordion-body"><table><tbody><tr><td>Xu hướng</td><td>Tích cực</td><td>Giá nằm trên SMA20 và SMA60.</td></tr><tr><td>MACD</td><td>Tích cực</td><td>MACD trên signal, histogram dương.</td></tr><tr><td>RSI14</td><td>Tích cực</td><td>RSI 59.9.</td></tr><tr><td>Bollinger</td><td>Ổn định</td><td>Giá nằm trong dải Bollinger.</td></tr><tr><td>ADX</td><td>Đi ngang</td><td>ADX 15.4.</td></tr><tr><td>Thanh khoản</td><td>Thấp</td><td>0.59 lần trung bình.</td></tr><tr><td>Stochastic</td><td>Yếu lại</td><td>%K nằm dưới %D.</td></tr></tbody></table></div></details></div></div>
+    <div id="fundamental" class="section-title"><h2>Cơ bản & tin tức</h2><span class="section-kicker">Các bảng dài để trong nút bung</span></div>
+    <div class="metrics fundamental-metrics"><div class="metric"><div class="metric-label">P/E</div><div class="metric-value">20.17</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">P/B</div><div class="metric-value">2.06</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">ROE</div><div class="metric-value">9.8%</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">ROA</div><div class="metric-value">3.1%</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">Vốn hóa thị trường</div><div class="metric-value">35,773.6 tỷ</div><div class="metric-detail">2026-Q2</div></div><div class="metric"><div class="metric-label">Tăng trưởng doanh thu</div><div class="metric-value">15.1%</div><div class="metric-detail">2026-Q2 YoY</div></div><div class="metric"><div class="metric-label">Tăng trưởng lợi nhuận</div><div class="metric-value">42.0%</div><div class="metric-detail">2026-Q2 YoY</div></div></div>
+    <div class="two"><div class="stack"><details class="accordion"><summary><span>Phân tích cơ bản</span><span class="accordion-note">BCTC/tỷ số</span></summary><div class="accordion-body"><table><tbody><tr><td>P/E</td><td>20.17</td><td>2026-Q2</td></tr><tr><td>P/B</td><td>2.06</td><td>2026-Q2</td></tr><tr><td>P/S</td><td>6.21</td><td>2026-Q2</td></tr><tr><td>ROE</td><td>9.8%</td><td>2026-Q2</td></tr><tr><td>ROA</td><td>3.1%</td><td>2026-Q2</td></tr><tr><td>Gross margin</td><td>38.0%</td><td>2026-Q2</td></tr><tr><td>Net margin</td><td>23.0%</td><td>2026-Q2</td></tr><tr><td>Debt/Equity</td><td>1.82</td><td>2026-Q2</td></tr><tr><td>Current ratio</td><td>1.54</td><td>2026-Q2</td></tr><tr><td>NPL</td><td>0.0%</td><td>2026-Q2</td></tr><tr><td>Dividend yield</td><td>0.0%</td><td>2026-Q2</td></tr><tr><td>Market cap</td><td>35,773.6 tỷ</td><td>2026-Q2</td></tr><tr><td>Revenue Growth</td><td>15.1%</td><td>2026-Q2 YoY</td></tr><tr><td>Profit Growth</td><td>42.0%</td><td>2026-Q2 YoY</td></tr><tr><td>Dòng tiền từ HĐKD</td><td>317.7 tỷ</td><td>2026-Q2</td></tr><tr><td>CAPEX</td><td>-2.3 tỷ</td><td>2026-Q2</td></tr><tr><td>Lợi nhuận sau thuế</td><td>273.2 tỷ</td><td>2026-Q2</td></tr><tr><td>Lợi nhuận hoạt động</td><td>340.5 tỷ</td><td>2026-Q2</td></tr><tr><td>Tiền và tương đương tiền</td><td>2,202.4 tỷ</td><td>2026-Q2</td></tr><tr><td>Vay ngắn hạn</td><td>26,093.2 tỷ</td><td>2026-Q2</td></tr><tr><td>Vay dài hạn</td><td>0.0 tỷ</td><td>2026-Q2</td></tr><tr><td>Tổng tài sản</td><td>41,258.9 tỷ</td><td>2026-Q2</td></tr><tr><td>Tổng nợ phải trả</td><td>26,619.1 tỷ</td><td>2026-Q2</td></tr><tr><td>Vốn chủ sở hữu</td><td>14,639.8 tỷ</td><td>2026-Q2</td></tr><tr><td>Khoản phải thu</td><td>313.9 tỷ</td><td>2026-Q2</td></tr><tr><td>Dòng tiền tự do (CFO - CAPEX)</td><td>315.4 tỷ</td><td>2026-Q2</td></tr><tr><td>CFO / Lợi nhuận sau thuế</td><td>1.16</td><td>2026-Q2</td></tr><tr><td>Nợ vay ròng</td><td>23,890.8 tỷ</td><td>2026-Q2</td></tr><tr><td>Nợ vay / Vốn chủ sở hữu</td><td>1.78</td><td>2026-Q2</td></tr><tr><td>Phải thu / Tổng tài sản</td><td>0.8%</td><td>2026-Q2</td></tr></tbody></table></div></details></div><div class="stack"><details class="accordion"><summary><span>Tin tức doanh nghiệp</span><span class="accordion-note">research only</span></summary><div class="accordion-body"><table><tbody><tr><td>Trạng thái</td><td>Có dữ liệu</td><td>research_only</td></tr><tr><td>Nguồn / số bài</td><td>VCI</td><td>50</td></tr><tr><td>Bài đủ timestamp</td><td>50</td><td>Chỉ các bài này mới được phép dùng point-in-time</td></tr><tr><td>Sentiment 5 ngày</td><td>0.00</td><td>3.0 bài trước cutoff</td></tr><tr><td>Phương pháp</td><td>keyword_heuristic_v1</td><td>Research only; chưa dùng làm tín hiệu mua/bán</td></tr></tbody></table></div></details></div></div>
+    <div id="forecast" class="section-title"><h2>Dự báo</h2><span class="section-kicker">Kịch bản giá và lịch sử drawdown</span></div>
+    <div class="two"><div class="stack"><details class="accordion" open><summary><span>Dự báo ngắn hạn</span><span class="accordion-note">20 phiên</span></summary><div class="accordion-body"><table><tbody><tr><td>2026-08-13</td><td>26.13</td><td>P10 25.52 / P90 26.89</td></tr><tr><td>2026-08-14</td><td>26.12</td><td>P10 25.16 / P90 27.16</td></tr><tr><td>2026-08-17</td><td>26.06</td><td>P10 25.05 / P90 27.41</td></tr><tr><td>2026-08-18</td><td>26.09</td><td>P10 24.76 / P90 27.67</td></tr><tr><td>2026-08-19</td><td>26.02</td><td>P10 24.52 / P90 28.01</td></tr><tr><td>2026-08-20</td><td>26.03</td><td>P10 24.34 / P90 28.03</td></tr><tr><td>2026-08-21</td><td>26.04</td><td>P10 24.15 / P90 28.22</td></tr><tr><td>2026-08-24</td><td>26.06</td><td>P10 24.02 / P90 28.40</td></tr></tbody></table></div></details><details class="accordion"><summary><span>Lịch giao dịch Việt Nam dùng cho forecast</span><span class="accordion-note">không tính T7/CN/lễ</span></summary><div class="accordion-body"><p>VN stock calendar: loại Thứ Bảy/Chủ Nhật và các ngày nghỉ 2026 đã công bố; ngày làm bù Thứ Bảy không được tính là phiên giao dịch chứng khoán.</p><p><strong>Ngày nghỉ đã loại:</strong> 2026-01-01, 2026-01-02, 2026-02-16, 2026-02-17, 2026-02-18, 2026-02-19, 2026-02-20, 2026-04-27, 2026-04-30, 2026-05-01, 2026-08-31, 2026-09-01, 2026-09-02</p><p class="muted">Nếu HOSE/HNX/UPCoM công bố nghỉ đột xuất, cần thêm ngày đó vào config `market_holidays` rồi chạy lại report.</p></div></details></div><section><h2>Biểu đồ dự báo</h2><img src="forecast_chart.png" alt="Biểu đồ dự báo"></section></div>
+    <section><h2>Lịch sử giá và mức sụt giảm</h2><img src="history_chart.png" alt="Biểu đồ lịch sử giá"></section>
+    <p class="disclaimer">Báo cáo dùng để học tập và lập kịch bản, không phải khuyến nghị mua/bán.</p>
+  </main>
+  <script>
+    (() => {
+      const box = document.querySelector('.capital-scenario');
+      const input = document.getElementById('assumed-capital-input');
+      if (!box || !input) return;
+
+      const storageKey = 'vn-stock-analysis-assumed-capital-vnd';
+      const formatVnd = (value) => `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(Math.round(value))} VND`;
+      const parseCapital = (value) => Number(String(value).replace(/[^0-9.-]/g, ''));
+      const render = () => {
+        const capital = parseCapital(input.value);
+        const valid = Number.isFinite(capital) && capital >= 100000;
+        document.querySelectorAll('[data-capital-rate]').forEach((element) => {
+          const rate = Number(element.dataset.capitalRate);
+          element.textContent = valid && Number.isFinite(rate) ? formatVnd(capital * rate) : 'Nhập vốn ≥ 100.000 VND';
+        });
+        document.querySelectorAll('[data-capital-risk-pct]').forEach((element) => {
+          const rate = Number(element.dataset.capitalRiskPct);
+          element.textContent = valid && Number.isFinite(rate) ? formatVnd(capital * rate) : 'Nhập vốn ≥ 100.000 VND';
+        });
+        if (valid) {
+          try { localStorage.setItem(storageKey, String(capital)); } catch (_) { /* Browser storage is optional. */ }
+        }
+      };
+      try {
+        const saved = parseCapital(localStorage.getItem(storageKey));
+        if (Number.isFinite(saved) && saved >= 100000) input.value = String(saved);
+      } catch (_) { /* Safari private mode or file restrictions: use report default. */ }
+      input.addEventListener('input', render);
+      input.addEventListener('change', render);
+      render();
+    })();
+  </script>
+</body>
+</html>

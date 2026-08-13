@@ -1,0 +1,55 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 3 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 3, nganh: 2, rui_ro: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Balanced accuracy 0.500 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5463285098522167, AUC logistic=0.5505618842364532",
+    "ML guard: Probability 50.0% < 55.0%",
+    "ML guard: Technical score 0 < 2",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.009731229999999313, Sharpe=-0.029982760617571127",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.500 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5463285098522167, AUC logistic=0.5505618842364532",
+    "ML decision artifact: NO_EDGE. Probability 50.0% < 55.0%",
+    "ML decision artifact: NO_EDGE. Technical score 0 < 2",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.009731229999999313, Sharpe=-0.029982760617571127",
+    "News Reader [Tin nhanh chứng khoán]: SSI: Ngày GDKHQ trả cổ tức năm 2025 bằng tiền (10%), cổ phiếu thưởng (5:1) - Tin nhanh chứng khoán | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo (2026-08-10T05:38:49+00:00)",
+    "News Reader [Tạp chí Kinh tế - Tài chính Online]: Điểm danh những mã cổ phiếu đáng chú ý trong tháng 8 - Tạp chí Kinh tế - Tài chính Online | nhóm: ket_qua_kinh_doanh, vi_mo, nganh, rui_ro (2026-08-07T03:01:54+00:00)",
+    "News Reader [Nhịp sống kinh doanh]: 9 quỹ của “cá mập” Dragon Capital, SSI và VinaCapital lỗ đầu tư hơn 6. - Nhịp sống kinh doanh | nhóm: vi_mo, nganh, rui_ro (2026-08-10T01:09:23+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "SSI: Ngày GDKHQ trả cổ tức năm 2025 bằng tiền (10%), cổ phiếu thưởng (5:1) - Tin nhanh chứng khoán",
+      "publisher": "Tin nhanh chứng khoán",
+      "url": "https://www.tinnhanhchungkhoan.vn/ssi-ngay-gdkhq-tra-co-tuc-nam-2025-bang-tien-10-co-phieu-thuong-51-post395640.html",
+      "published_at": "2026-08-10T05:38:49+00:00"
+    },
+    {
+      "title": "Điểm danh những mã cổ phiếu đáng chú ý trong tháng 8 - Tạp chí Kinh tế - Tài chính Online",
+      "publisher": "Tạp chí Kinh tế - Tài chính Online",
+      "url": "https://tapchikinhtetaichinh.vn/nhung-ma-co-phieu-dang-chu-y-trong-thang-8-163869.html",
+      "published_at": "2026-08-07T03:01:54+00:00"
+    },
+    {
+      "title": "9 quỹ của “cá mập” Dragon Capital, SSI và VinaCapital lỗ đầu tư hơn 6. - Nhịp sống kinh doanh",
+      "publisher": "Nhịp sống kinh doanh",
+      "url": "https://nhipsongkinhdoanh.vn/9-quy-cua--ca-map--dragon-capital--ssi-va-vinacapital-lo-dau-tu-hon-6-000-ty-dong--hang-loat-quy-ban-sach-mot-co-phieu-blue-chip-trong-thang-7-31664.htm",
+      "published_at": "2026-08-10T01:09:23+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm 0. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Tích cực (RSI 55.2.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 27.5, -DI vượt +DI.); Thanh khoản: Bình thường (0.71 lần trung bình.); Stochastic: Cực trị (%K 97.3, %D 95.4.)",
+  "fundamental_view": "Artifact cơ bản: Chứng khoán SSI; kỳ 2026-Q2; P/E 11.73; P/B 1.55; ROE 13.4%; ROA 5.0%; Debt/Equity 1.37; Revenue Growth 10.9%; Profit Growth 27.0%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 3 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 3, nganh: 2, rui_ro: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-12T15:33:33.445187+00:00; News Reader đọc được 3 bài. ML có 5 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

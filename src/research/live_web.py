@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Iterable, Mapping
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urljoin, urlparse
 
 import feedparser
 import httpx
@@ -20,6 +20,7 @@ GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
 MAX_ARTICLE_BYTES = 1_500_000
 MAX_EXCERPT_CHARS = 2_400
 MIN_ARTICLE_CHARS = 300
+MAX_REDIRECTS = 5
 
 TOPIC_RULES = {
     "ket_qua_kinh_doanh": ("doanh thu", "lợi nhuận", "kết quả kinh doanh", "báo cáo tài chính", "bctc", "biên lợi nhuận"),
@@ -70,6 +71,15 @@ def _is_public_http_url(value: str) -> bool:
     except ValueError:
         return True
     return not (address.is_private or address.is_loopback or address.is_link_local or address.is_reserved)
+
+
+def _public_redirect_target(current_url: str, location: str | None) -> str:
+    """Resolve one redirect while keeping the article reader off local hosts."""
+
+    target = urljoin(current_url, str(location or "").strip())
+    if not _is_public_http_url(target):
+        raise ValueError("Redirect của bài báo không trỏ tới HTTP(S) public hợp lệ.")
+    return target
 
 
 def _clean_text(value: str) -> str:
@@ -159,25 +169,27 @@ def fetch_article_html(url: str, *, timeout_seconds: float = 15.0) -> tuple[str,
 
     if not _is_public_http_url(url):
         raise ValueError("URL bài báo không phải HTTP(S) public hợp lệ.")
-    with httpx.stream(
-        "GET",
-        url,
-        timeout=timeout_seconds,
-        follow_redirects=True,
-        headers={"User-Agent": "vn-stock-analysis-research/0.2 (+local research CLI)"},
-    ) as response:
-        response.raise_for_status()
-        content_type = response.headers.get("content-type", "").casefold()
-        if "html" not in content_type:
-            raise ValueError("Nguồn không trả về HTML.")
-        chunks: list[bytes] = []
-        received = 0
-        for chunk in response.iter_bytes():
-            received += len(chunk)
-            if received > MAX_ARTICLE_BYTES:
-                raise ValueError("Trang bài báo vượt giới hạn dung lượng.")
-            chunks.append(chunk)
-        return b"".join(chunks).decode(response.encoding or "utf-8", errors="replace"), str(response.url)
+    current_url = url
+    headers = {"User-Agent": "vn-stock-analysis-research/0.2 (+local research CLI)"}
+    with httpx.Client(timeout=timeout_seconds, follow_redirects=False, headers=headers) as client:
+        for _ in range(MAX_REDIRECTS + 1):
+            with client.stream("GET", current_url) as response:
+                if response.is_redirect:
+                    current_url = _public_redirect_target(current_url, response.headers.get("location"))
+                    continue
+                response.raise_for_status()
+                content_type = response.headers.get("content-type", "").casefold()
+                if "html" not in content_type:
+                    raise ValueError("Nguồn không trả về HTML.")
+                chunks: list[bytes] = []
+                received = 0
+                for chunk in response.iter_bytes():
+                    received += len(chunk)
+                    if received > MAX_ARTICLE_BYTES:
+                        raise ValueError("Trang bài báo vượt giới hạn dung lượng.")
+                    chunks.append(chunk)
+                return b"".join(chunks).decode(response.encoding or "utf-8", errors="replace"), str(response.url)
+    raise ValueError(f"Trang bài báo chuyển hướng quá {MAX_REDIRECTS} lần.")
 
 
 def _near_duplicate(candidate: str, prior: str) -> bool:

@@ -54,6 +54,15 @@
     "periods_per_year": 252,
     "force_close_at_end": true
   },
+  "swing_strategy": {
+    "enabled": true,
+    "horizon_sessions": 5,
+    "minimum_holding_sessions": 2,
+    "entry_margin_candidates": [0.0, 0.0025, 0.005],
+    "frozen_holdout_rows": 126,
+    "min_completed_round_trips": 10,
+    "cost_stress_multipliers": [1.0, 1.5, 2.0]
+  },
   "signal_guard": {
     "min_roc_auc": 0.54,
     "min_balanced_accuracy": 0.52,
@@ -101,7 +110,23 @@
   "monte_carlo_method": "moving_block_bootstrap",
   "monte_carlo_block_size": 5,
   "monte_carlo_drift_shrinkage": 0.0,
-  "market_holidays": [],
+  "market_weekmask": "Mon Tue Wed Thu Fri",
+  "market_holidays": [
+    "2026-01-01",
+    "2026-01-02",
+    "2026-02-16",
+    "2026-02-17",
+    "2026-02-18",
+    "2026-02-19",
+    "2026-02-20",
+    "2026-04-27",
+    "2026-04-30",
+    "2026-05-01",
+    "2026-08-31",
+    "2026-09-01",
+    "2026-09-02"
+  ],
+  "market_calendar_note": "VN stock calendar: loại Thứ Bảy/Chủ Nhật và các ngày nghỉ 2026 đã công bố; ngày làm bù Thứ Bảy không được tính là phiên giao dịch chứng khoán.",
   "daily_run_time": "15:30",
   "timezone": "Asia/Ho_Chi_Minh",
   "report_root": "reports",

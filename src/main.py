@@ -15,6 +15,7 @@ from src.database.postgres import save_postgres
 from src.features.technical import (
     add_features,
     add_market_features,
+    add_swing_target,
     current_levels,
     technical_assessment,
 )
@@ -30,6 +31,7 @@ from src.reports.dashboard import (
 )
 from src.risk.management import build_risk_plan
 from src.risk.decision import build_signal_decision, enforce_signal_decision
+from src.strategy import train_swing_strategy
 from src.utils import write_json
 
 
@@ -55,8 +57,37 @@ def run_once(config: dict) -> Path:
         benchmark = fetch_history({**config, "symbol": benchmark_symbol})
         data = add_market_features(data, benchmark)
 
+    swing_options = config.get("swing_strategy", {}) or {}
+    swing_enabled = bool(swing_options.get("enabled", False))
+    if swing_enabled:
+        if not bool(market_options.get("enabled", False)):
+            raise ValueError(
+                "swing_strategy cần market_features.enabled=true để học excess return."
+            )
+        data = add_swing_target(
+            data,
+            horizon_sessions=int(swing_options.get("horizon_sessions", 5)),
+        )
+
     print("Huấn luyện XGBoost và logistic baseline...")
     metrics, scored_test, latest_probabilities, booster = train_models(data, config)
+    swing_metrics = None
+    swing_oos = None
+    swing_latest = None
+    swing_booster = None
+    if swing_enabled:
+        print("Huấn luyện chiến lược swing excess-return và frozen holdout...")
+        swing_metrics, swing_oos, swing_payload, swing_booster = train_swing_strategy(
+            data, config
+        )
+        swing_latest = swing_payload["latest"]
+        metrics["swing_strategy"] = swing_metrics
+        latest_probabilities["swing_expected_excess_return_5d"] = swing_latest[
+            "expected_excess_return_5d"
+        ]
+        latest_probabilities["swing_entry_margin"] = swing_latest[
+            "selected_entry_margin"
+        ]
 
     print("Mô phỏng Monte Carlo...")
     forecast = simulate_forecast(data, config)
@@ -102,6 +133,30 @@ def run_once(config: dict) -> Path:
             run_directory / "backtest_oos.csv",
             index=False,
         )
+    if swing_oos is not None and swing_metrics is not None:
+        swing_oos.reset_index().rename(columns={"time": "date"}).to_csv(
+            run_directory / "swing_development_oos.csv", index=False
+        )
+        swing_details = swing_oos.attrs.get("backtest_details")
+        if isinstance(swing_details, pd.DataFrame) and not swing_details.empty:
+            swing_details.reset_index().rename(columns={"time": "date"}).to_csv(
+                run_directory / "swing_development_backtest.csv", index=False
+            )
+        swing_trades = swing_oos.attrs.get("backtest_trades")
+        if isinstance(swing_trades, pd.DataFrame):
+            swing_trades.to_csv(run_directory / "swing_development_trades.csv", index=False)
+        frozen_scored = swing_payload["frozen_scored"]
+        frozen_scored.reset_index().rename(columns={"time": "date"}).to_csv(
+            run_directory / "swing_frozen_holdout.csv", index=False
+        )
+        frozen_details = frozen_scored.attrs.get("backtest_details")
+        if isinstance(frozen_details, pd.DataFrame) and not frozen_details.empty:
+            frozen_details.reset_index().rename(columns={"time": "date"}).to_csv(
+                run_directory / "swing_frozen_backtest.csv", index=False
+            )
+        frozen_trades = frozen_scored.attrs.get("backtest_trades")
+        if isinstance(frozen_trades, pd.DataFrame):
+            frozen_trades.to_csv(run_directory / "swing_frozen_trades.csv", index=False)
     forecast.reset_index(names="date").to_csv(
         run_directory / f"forecast_{config['forecast_sessions']}_sessions.csv",
         index=False,
@@ -121,7 +176,11 @@ def run_once(config: dict) -> Path:
         news_features.reset_index().to_csv(run_directory / "news_features_latest.csv", index=False)
 
     booster.save_model(str(run_directory / "xgboost_model.json"))
+    if swing_booster is not None:
+        swing_booster.save_model(str(run_directory / "xgboost_swing_5d.json"))
     write_json(run_directory / "model_metrics.json", metrics)
+    if swing_metrics is not None:
+        write_json(run_directory / "swing_model_metrics.json", swing_metrics)
     write_json(run_directory / "latest_probabilities.json", latest_probabilities)
     write_json(run_directory / "latest_levels.json", levels)
     write_json(run_directory / "technical_assessment.json", technical)

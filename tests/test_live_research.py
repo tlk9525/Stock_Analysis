@@ -2,7 +2,23 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.research.live_web import build_live_research_snapshot, read_live_articles
+import pytest
+
+from src.research.live_web import (
+    _public_redirect_target,
+    build_live_research_snapshot,
+    read_live_articles,
+)
+
+
+def test_news_reader_rejects_redirect_to_local_address() -> None:
+    with pytest.raises(ValueError, match="HTTP\\(S\\) public"):
+        _public_redirect_target("https://publisher.example/article", "http://127.0.0.1/private")
+
+    assert _public_redirect_target(
+        "https://publisher.example/article",
+        "/market/update",
+    ) == "https://publisher.example/market/update"
 
 
 def test_live_research_keeps_attributable_recent_headlines_only() -> None:

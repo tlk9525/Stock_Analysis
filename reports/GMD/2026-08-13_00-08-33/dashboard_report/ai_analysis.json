@@ -1,0 +1,69 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 5 bài để phân loại chủ đề (ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 5, vi_mo: 3, nganh: 4, rui_ro: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: AUC 0.528 < 0.540",
+    "ML guard: Balanced accuracy 0.508 < 0.520",
+    "ML guard: XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5276393751683275, AUC logistic=0.5390295358649789",
+    "ML guard: Probability 48.1% < 55.0%",
+    "ML guard: Lợi thế OOS ròng không đạt: return=-0.2050639400000005, Sharpe=-0.7448701519430575",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. AUC 0.528 < 0.540",
+    "ML decision artifact: NO_EDGE. Balanced accuracy 0.508 < 0.520",
+    "ML decision artifact: NO_EDGE. XGBoost chưa vượt logistic baseline: AUC XGBoost=0.5276393751683275, AUC logistic=0.5390295358649789",
+    "ML decision artifact: NO_EDGE. Probability 48.1% < 55.0%",
+    "ML decision artifact: NO_EDGE. Lợi thế OOS ròng không đạt: return=-0.2050639400000005, Sharpe=-0.7448701519430575",
+    "News Reader [thuonghieucongluan.com.vn]: Cổ phiếu đáng chú ý ngày 7/8: FPT, GMD, SAB - thuonghieucongluan.com.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-06T23:23:00+00:00)",
+    "News Reader [Vietstock]: GMD: Thông báo nhận được công văn của UBCKNN về tài liệu báo cáo phát hành cổ phiếu theo chương trình lựa chọn cho người lao động - Vietstock | nhóm: co_tuc_va_hanh_dong_doanh_nghiep (2026-08-07T08:30:10+00:00)",
+    "News Reader [Báo Pháp Luật Việt Nam]: Tập đoàn Gemadept (GMD): Phát hành thành công gần 6,4 triệu cổ phiếu ESOP, lãi quý II tăng bằng lần - Báo Pháp Luật Việt Nam | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh (2026-08-06T02:06:00+00:00)",
+    "News Reader [MoneyF]: Cổ phiếu đáng chú ý ngày 7/8: FPT hưởng lợi từ làn sóng AI, GMD chờ cú hích Gemalink - MoneyF | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-07T00:41:00+00:00)",
+    "News Reader [nguoiquansat.vn]: CTCK khuyến nghị 6 cổ phiếu hot trong tháng 8/2026, tiềm năng tăng giá hàng chục % - nguoiquansat.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-06T00:06:01+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Cổ phiếu đáng chú ý ngày 7/8: FPT, GMD, SAB - thuonghieucongluan.com.vn",
+      "publisher": "thuonghieucongluan.com.vn",
+      "url": "https://thuonghieucongluan.com.vn/co-phieu-dang-chu-y-ngay-7-8-fpt-gmd-sab-a329496.html",
+      "published_at": "2026-08-06T23:23:00+00:00"
+    },
+    {
+      "title": "GMD: Thông báo nhận được công văn của UBCKNN về tài liệu báo cáo phát hành cổ phiếu theo chương trình lựa chọn cho người lao động - Vietstock",
+      "publisher": "Vietstock",
+      "url": "https://vietstock.vn/2026/08/gmd-thong-bao-nhan-duoc-cong-van-cua-ubcknn-ve-tai-lieu-bao-cao-phat-hanh-co-phieu-theo-chuong-trinh-lua-chon-cho-nguoi-lao-dong-830-1478078.amp",
+      "published_at": "2026-08-07T08:30:10+00:00"
+    },
+    {
+      "title": "Tập đoàn Gemadept (GMD): Phát hành thành công gần 6,4 triệu cổ phiếu ESOP, lãi quý II tăng bằng lần - Báo Pháp Luật Việt Nam",
+      "publisher": "Báo Pháp Luật Việt Nam",
+      "url": "https://doanhnhan.baophapluat.vn/tap-doan-gemadept-gmd-phat-hanh-thanh-cong-gan-6-4-trieu-co-phieu-esop-lai-quy-ii-tang-bang-lan.html",
+      "published_at": "2026-08-06T02:06:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu đáng chú ý ngày 7/8: FPT hưởng lợi từ làn sóng AI, GMD chờ cú hích Gemalink - MoneyF",
+      "publisher": "MoneyF",
+      "url": "https://moneyf.vn/co-phieu-dang-chu-y-ngay-78-fpt-huong-loi-tu-lan-s-krbgudrq",
+      "published_at": "2026-08-07T00:41:00+00:00"
+    },
+    {
+      "title": "CTCK khuyến nghị 6 cổ phiếu hot trong tháng 8/2026, tiềm năng tăng giá hàng chục % - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/ctck-khuyen-nghi-6-co-phieu-hot-trong-thang-8-2026-tiem-nang-tang-gia-hang-chuc-308720.html",
+      "published_at": "2026-08-06T00:06:01+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 4. Chi tiết artifact: Xu hướng: Tích cực (Giá nằm trên SMA20 và SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Tích cực (RSI 55.1.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 17.0.); Thanh khoản: Thấp (0.62 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Tập đoàn Gemadept; kỳ 2026-Q2; P/E 12.78; P/B 2.43; ROE 19.4%; ROA 12.8%; Debt/Equity 0.36; Revenue Growth 17.9%; Profit Growth 154.6%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 5 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 5, vi_mo: 3, nganh: 4, rui_ro: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-12T17:08:52.598713+00:00; News Reader đọc được 5 bài. ML có 5 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}
