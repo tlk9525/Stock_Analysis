@@ -636,7 +636,15 @@ def train_models(
         "majority_baseline": majority_metrics,
     }
 
-    if "next_return" in scored_test and scored_test["next_return"].notna().any():
+    swing_enabled = bool((config.get("swing_strategy", {}) or {}).get("enabled", False))
+    legacy_intraday_research = bool(
+        backtest_options.get("allow_legacy_intraday_research", False)
+    )
+    if (
+        "next_return" in scored_test
+        and scored_test["next_return"].notna().any()
+        and (not swing_enabled or legacy_intraday_research)
+    ):
         backtest_signal_threshold = float(
             backtest_options.get("signal_threshold", decision_threshold)
         )
@@ -837,6 +845,15 @@ def train_models(
             )
         metrics["backtest"]["top_n_trade_sensitivity"] = top_n_sensitivity
         scored_test.attrs["backtest_details"] = backtest_details
+    elif swing_enabled:
+        metrics["backtest"] = {
+            "available": False,
+            "reason": (
+                "Đã tắt backtest classifier 1D mua/bán trong ngày vì không "
+                "phù hợp ràng buộc T+2; dùng swing fixed-horizon thay thế."
+            ),
+            "execution_contract": "disabled_intraday_legacy",
+        }
     else:
         metrics["backtest"] = {
             "available": False,

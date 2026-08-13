@@ -194,6 +194,11 @@ dashboard trả `INSUFFICIENT_EDGE` khi sample/ranking chưa đủ, thay vì di�
 0 trade là lợi nhuận 0%. Không dùng bảng sensitivity/top-N của classifier cũ để
 chọn rule swing, theo dõi ngưỡng live, hoặc suy ra “lệnh tốt nhất”.
 
+Khi `swing_strategy.enabled=true`, pipeline cũng **không chạy** backtest
+classifier 1D mua ở open và bán ở close cùng phiên, vì giả định đó không phù hợp
+T+2. Do đó report không còn có bảng vòng/turnover legacy; classifier 1D chỉ còn
+là metric dự báo đối chứng.
+
 ### Báo cáo tài chính và tin tức doanh nghiệp
 
 Mỗi lần chạy một mã, hệ thống lấy dữ liệu từ `vnstock` và tạo hai lớp phân tích bổ sung:

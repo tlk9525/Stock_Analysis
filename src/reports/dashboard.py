@@ -1011,7 +1011,7 @@ def write_report(
         )
     strategy = metrics.get("backtest", {})
     swing = metrics.get("swing_strategy", {}) or {}
-    if strategy:
+    if strategy and (not swing.get("available") or bool(strategy.get("available"))):
         lines.append(
             f"- {'Diagnostic classifier 1D legacy' if swing.get('available') else 'Kiểm thử chiến lược ngoài mẫu sau chi phí'}: tổng lợi nhuận {format_percent(safe_float(strategy.get('net_total_return', strategy.get('total_return'))))}; "
             f"Sharpe {format_number(safe_float(strategy.get('sharpe_ratio', strategy.get('sharpe'))), 2)}; "
@@ -1403,6 +1403,7 @@ def write_dashboard(
     )
     strategy = metrics.get("backtest", {}) or {}
     swing = metrics.get("swing_strategy", {}) or {}
+    legacy_execution_visible = not swing.get("available") or bool(strategy.get("available"))
     swing_frozen = (swing.get("frozen_holdout", {}) or {}).get("backtest", {}) or {}
     swing_gate = swing.get("publish_gate", {}) or {}
     decision_status = str(decision.get("status") or "NO_EDGE")
@@ -1654,9 +1655,20 @@ def write_dashboard(
     turnover_panel = _accordion(
         "Phụ lục legacy 1D — Kiểm thử kịch bản lịch sử (không phải khuyến nghị giao dịch)",
         turnover_sensitivity_table
-        + '<p class="muted"><strong>Không dùng bảng này để chọn “1 lệnh” hay DCA.</strong> Baseline 61 vòng chỉ để đo turnover/phí. Các dòng threshold là ứng viên nghiên cứu cần holdout/future đã khóa; các dòng 10/5/1 có selection bias vì số vòng được chọn sau khi đã thấy OOS. Khi signal chưa ACTIONABLE, lệnh mới hôm nay luôn là 0.</p>',
+        + f'<p class="muted"><strong>Không dùng bảng này để chọn “1 lệnh” hay DCA.</strong> Baseline {round_trips} vòng chỉ để đo turnover/phí. Các dòng threshold là ứng viên nghiên cứu cần holdout/future đã khóa; các dòng 10/5/1 có selection bias vì số vòng được chọn sau khi đã thấy OOS. Khi signal chưa ACTIONABLE, lệnh mới hôm nay luôn là 0.</p>',
         open_by_default=False,
         note="nghiên cứu OOS · research-only",
+    )
+    legacy_panels = (
+        f"{turnover_panel}{cost_panel}{backtest_panel}"
+        if legacy_execution_visible
+        else ""
+    )
+    legacy_strategy_section = (
+        f'''<div id="strategy" class="section-title"><h2>Chi phí & vòng lệnh</h2><span class="section-kicker">Trọng tâm: tránh giao dịch nhiều làm phí ăn hết lợi thế</span></div>
+    <div class="metrics strategy-metrics">{strategy_cards}</div>'''
+        if legacy_execution_visible
+        else ""
     )
     swing_panel = _accordion(
         "Chiến lược swing 5 phiên: frozen holdout & T+2",
@@ -1807,10 +1819,9 @@ def write_dashboard(
     </section>
     <div id="overview" class="section-title"><h2>Kết quả chính</h2><span class="section-kicker">KPI đọc nhanh trước, chi tiết bấm mở bên dưới</span></div>
     <div class="metrics result-metrics">{result_cards}</div>
-    <div id="strategy" class="section-title"><h2>{'Diagnostic legacy 1D: chi phí & vòng lệnh' if swing.get('available') else 'Chi phí & vòng lệnh'}</h2><span class="section-kicker">{'Chỉ để audit turnover, không tham gia quyết định swing 5D' if swing.get('available') else 'Trọng tâm: tránh giao dịch nhiều làm phí ăn hết lợi thế'}</span></div>
-    <div class="metrics strategy-metrics">{strategy_cards}</div>
+    {legacy_strategy_section}
     <div class="dashboard-grid">
-      <div class="stack">{recommendation_panel}{swing_panel}{turnover_panel}{cost_panel}{backtest_panel}{model_quality_panel}{feature_panel}</div>
+      <div class="stack">{recommendation_panel}{swing_panel}{legacy_panels}{model_quality_panel}{feature_panel}</div>
       <div class="stack">{decision_panel}{risk_panel}</div>
     </div>
     <div id="technical" class="section-title"><h2>Kỹ thuật</h2><span class="section-kicker">Biểu đồ mở sẵn, bảng tín hiệu thu gọn</span></div>
