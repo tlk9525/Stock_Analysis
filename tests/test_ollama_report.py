@@ -356,20 +356,32 @@ def test_report_and_dashboard_explain_positive_gross_but_negative_net_costs(tmp_
     assert "Giới hạn 1 vòng" in markdown
     assert "mạnh nhất" not in markdown
     assert "Không mở vị thế mới" in markdown
-    assert "Breakdown trước phí / sau phí" in html
     assert "Mua mới" in html
     assert "Đang giữ" in html
     assert "Khuyến nghị hành động sau phí" in html
     assert "WAIT" in html
     assert "Ngưỡng theo dõi" in html
-    assert "Kiểm thử kịch bản lịch sử (không phải khuyến nghị giao dịch)" in html
-    assert "nghiên cứu OOS" in html
-    assert "Giới hạn 10 vòng" in html
+    assert "Chi phí & vòng lệnh" not in html
+    assert "Breakdown trước phí / sau phí" not in html
+    assert "Kiểm thử kịch bản lịch sử (không phải khuyến nghị giao dịch)" not in html
+    assert "nghiên cứu OOS" not in html
+    assert "Giới hạn 10 vòng" not in html
     assert "mạnh nhất" not in html
     assert "+18.0%" in html
     assert "-12.0%" in html
+    assert 'id="theme-toggle"' in html
+    assert 'id="market-canvas"' in html
+    assert 'id="market-chart-data"' in html
+    assert 'data-mode="candle"' in html
+    assert 'data-overlay="bollinger"' in html
+    assert 'data-indicator="macd"' in html
+    assert 'data-tool="trend"' in html
+    assert 'data-tool="horizontal"' in html
+    assert 'data-tool="fib"' in html
+    assert "Cuộn để zoom" in html
+    assert "https://cdn" not in html
+    assert html.index('id="technical"') < html.index('id="overview"')
     assert "Lệnh mới hôm nay" in html
-    assert "Không dùng bảng này để chọn “1 lệnh” hay DCA." in html
     assert "Vốn giả định" in html
     assert 'id="assumed-capital-input"' in html
     assert "Chỉ quy đổi tiền minh họa" in html

@@ -1,0 +1,180 @@
+{
+  "symbol": "VCB",
+  "source": "VCI",
+  "start_date": "2009-01-01",
+  "forecast_sessions": 20,
+  "simulations": 20000,
+  "lookback_sessions": 252,
+  "random_seed": 42,
+  "xgboost": {
+    "num_boost_round": 400,
+    "early_stopping_rounds": 40,
+    "learning_rate": 0.03,
+    "max_depth": 4,
+    "min_child_weight": 3,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "reg_alpha": 0.05,
+    "random_state": 42,
+    "n_jobs": 4
+  },
+  "market_features": {
+    "enabled": true,
+    "benchmark_symbol": "VNINDEX"
+  },
+  "fundamentals": {
+    "mode": "snapshot_only",
+    "allow_model_features": false
+  },
+  "news": {
+    "enabled": true,
+    "mode": "research_only",
+    "allow_model_features": false,
+    "source": "VCI",
+    "lookback_days": 5
+  },
+  "validation": {
+    "min_train_rows": 756,
+    "validation_rows": 126,
+    "test_rows": 126,
+    "step_rows": 126,
+    "gap_rows": 1,
+    "max_folds": 6
+  },
+  "backtest": {
+    "commission_bps_per_side": 15,
+    "sell_tax_bps": 10,
+    "slippage_bps_per_side": 5,
+    "price_multiplier": 1000,
+    "lot_size": 100,
+    "max_volume_fraction": 0.01,
+    "signal_threshold": 0.55,
+    "execution_lag": 0,
+    "periods_per_year": 252,
+    "force_close_at_end": true
+  },
+  "swing_strategy": {
+    "enabled": true,
+    "horizon_sessions": 5,
+    "minimum_holding_sessions": 2,
+    "entry_margin_candidates": [
+      0.0,
+      0.0025,
+      0.005
+    ],
+    "frozen_holdout_rows": 126,
+    "min_completed_round_trips": 10,
+    "cost_stress_multipliers": [
+      1.0,
+      1.5,
+      2.0
+    ]
+  },
+  "signal_guard": {
+    "min_roc_auc": 0.54,
+    "min_balanced_accuracy": 0.52,
+    "min_probability_up": 0.55,
+    "min_technical_score": 2,
+    "max_data_age_days": 5,
+    "require_model_outperform_baseline": true,
+    "min_auc_improvement_over_logistic": 0.0,
+    "require_profitable_backtest": true,
+    "min_backtest_observations": 126,
+    "min_completed_round_trips": 5,
+    "min_backtest_total_return": 0.0,
+    "min_backtest_sharpe": 0.0,
+    "enable_near_threshold_watch": true,
+    "max_auc_shortfall_for_watch": 0.02,
+    "max_balanced_accuracy_shortfall_for_watch": 0.01,
+    "max_probability_shortfall_for_watch": 0.02
+  },
+  "panel": {
+    "symbols": [
+      "FPT",
+      "VCB",
+      "MBB",
+      "TCB",
+      "HPG",
+      "VNM",
+      "MWG",
+      "SSI",
+      "HCM",
+      "VIC",
+      "VHM",
+      "GAS"
+    ],
+    "benchmark_symbol": "VNINDEX",
+    "horizons": [
+      5,
+      10,
+      20
+    ],
+    "top_k": 3,
+    "max_positions": 3,
+    "min_train_dates": 756,
+    "validation_dates": 126,
+    "test_dates": 63,
+    "step_dates": 63,
+    "max_folds": 6,
+    "min_symbols_per_date": 5,
+    "model_kind": "regression",
+    "transaction_cost_bps": 50,
+    "entry_margin_candidates": [
+      0.0,
+      0.0025,
+      0.005,
+      0.01
+    ],
+    "minimum_validation_trades": 3,
+    "minimum_holding_sessions": 2,
+    "cooldown_cohorts": 1,
+    "frozen_holdout_dates": 252,
+    "lower_confidence_level": 0.8,
+    "cost_stress_multipliers": [
+      1.0,
+      1.5,
+      2.0
+    ],
+    "publish_guard": {
+      "min_rank_ic_observations": 20,
+      "min_portfolio_observations": 12,
+      "min_completed_round_trips": 20,
+      "min_mean_rank_ic": 0.0,
+      "min_rank_ic_hac_t_stat": 1.96,
+      "min_total_return": 0.0,
+      "min_sharpe": 0.0,
+      "required_cost_stress_multiplier": 1.5,
+      "require_frozen_holdout": true
+    }
+  },
+  "risk_per_trade_pct": 0.01,
+  "risk_capital_vnd": 100000000,
+  "atr_stop_multiplier": 1.5,
+  "min_reward_risk": 1.5,
+  "monte_carlo_method": "moving_block_bootstrap",
+  "monte_carlo_block_size": 5,
+  "monte_carlo_drift_shrinkage": 0.0,
+  "market_weekmask": "Mon Tue Wed Thu Fri",
+  "market_holidays": [
+    "2026-01-01",
+    "2026-01-02",
+    "2026-02-16",
+    "2026-02-17",
+    "2026-02-18",
+    "2026-02-19",
+    "2026-02-20",
+    "2026-04-27",
+    "2026-04-30",
+    "2026-05-01",
+    "2026-08-31",
+    "2026-09-01",
+    "2026-09-02"
+  ],
+  "market_calendar_note": "VN stock calendar: loại Thứ Bảy/Chủ Nhật và các ngày nghỉ 2026 đã công bố; ngày làm bù Thứ Bảy không được tính là phiên giao dịch chứng khoán.",
+  "daily_run_time": "15:30",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "report_root": "reports",
+  "save_to_postgres": true,
+  "database_url": "postgresql:///stock_db"
+}

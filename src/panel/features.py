@@ -168,6 +168,12 @@ def add_panel_features(
         )
 
         for horizon in clean_horizons:
+            entry_dates = pd.Series(market.index, index=market.index).shift(-1).reindex(
+                featured.index
+            )
+            exit_dates = pd.Series(market.index, index=market.index).shift(
+                -horizon
+            ).reindex(featured.index)
             next_open = _future_value_on_market_calendar(
                 featured["open"], market.index, 1
             )
@@ -182,6 +188,8 @@ def add_panel_features(
             )
             future_return = future_close / next_open - 1
             future_market_return = future_market_close / next_market_open - 1
+            featured[f"target_entry_date_{horizon}d"] = entry_dates
+            featured[f"target_exit_date_{horizon}d"] = exit_dates
             featured[f"target_entry_open_{horizon}d"] = next_open
             featured[f"target_exit_close_{horizon}d"] = future_close
             featured[f"target_return_{horizon}d"] = future_return

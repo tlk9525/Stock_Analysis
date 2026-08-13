@@ -198,6 +198,175 @@ def top_k_backtest(
     return pd.DataFrame(records).set_index("date").sort_index()
 
 
+def sparse_panel_backtest(
+    predictions: pd.DataFrame,
+    *,
+    max_positions: int = 3,
+    transaction_cost_bps: float = 50.0,
+    horizon: int = 5,
+    minimum_holding_sessions: int = 2,
+    rebalance_every: int | None = None,
+    min_symbols_per_date: int = 2,
+    prediction_column: str = "prediction",
+    return_column: str = "actual_return",
+    market_return_column: str = "actual_market_return",
+    entry_margin: float = 0.0,
+    entry_margin_column: str | None = "entry_margin",
+    rule_selected_column: str | None = "entry_rule_selected",
+    cooldown_cohorts: int = 0,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Backtest sparse cohorts: 0..max_positions, cash is the default.
+
+    A prediction must exceed full round-trip cost plus the fold-specific margin.
+    Cohorts never overlap because the evaluation interval is at least ``horizon``.
+    Each selected position receives ``1 / max_positions`` capital; unused slots
+    remain in cash.  This makes Top-K a capacity cap rather than a trading quota.
+    """
+
+    interval = horizon if rebalance_every is None else int(rebalance_every)
+    if (
+        max_positions <= 0
+        or horizon < minimum_holding_sessions
+        or minimum_holding_sessions < 2
+        or interval < horizon
+        or transaction_cost_bps < 0
+        or cooldown_cohorts < 0
+        or min_symbols_per_date < max(2, max_positions)
+    ):
+        raise ValueError(
+            "Cấu hình sparse backtest không hợp lệ: horizon phải tôn trọng T+2, "
+            "rebalance_every >= horizon, phí/cooldown không âm và universe đủ lớn."
+        )
+
+    required = [prediction_column, return_column, market_return_column]
+    frame = _filter_complete_universe_dates(
+        _as_columns(predictions),
+        required_columns=required,
+        min_symbols_per_date=min_symbols_per_date,
+    )
+    dates = frame["date"].drop_duplicates().sort_values().iloc[::interval]
+    cost_rate = transaction_cost_bps / 10_000
+    slot_weight = 1.0 / max_positions
+    cooldown_until: dict[str, int] = {}
+    cohort_records: list[dict] = []
+    trade_records: list[dict] = []
+
+    for cohort_number, current_date in enumerate(dates):
+        date_frame = frame[frame["date"] == current_date].copy()
+        regime = None
+        if "market_regime" in date_frame:
+            modes = date_frame["market_regime"].dropna().mode()
+            regime = str(modes.iloc[0]) if not modes.empty else None
+        candidates = date_frame.copy()
+        candidates["entry_margin_used"] = float(entry_margin)
+        if entry_margin_column and entry_margin_column in candidates:
+            candidates["entry_margin_used"] = pd.to_numeric(
+                candidates[entry_margin_column], errors="coerce"
+            )
+        if rule_selected_column and rule_selected_column in candidates:
+            candidates = candidates[candidates[rule_selected_column].fillna(False)]
+        candidates["entry_threshold"] = (
+            cost_rate + candidates["entry_margin_used"]
+        )
+        candidates["expected_net_edge"] = (
+            pd.to_numeric(candidates[prediction_column], errors="coerce")
+            - cost_rate
+        )
+        candidates = candidates[
+            candidates[prediction_column] > candidates["entry_threshold"]
+        ]
+        if not candidates.empty:
+            cooldown_mask = candidates["symbol"].map(
+                lambda symbol: cohort_number >= cooldown_until.get(str(symbol), 0)
+            ).astype(bool)
+            candidates = candidates.loc[cooldown_mask].nlargest(
+                max_positions, prediction_column
+            )
+
+        gross_return = 0.0
+        market_return = 0.0
+        winning_trades = 0
+        symbols: list[str] = []
+        margins: list[float] = []
+        for row in candidates.to_dict("records"):
+            symbol = str(row["symbol"])
+            gross_trade_return = float(row[return_column])
+            market_trade_return = float(row[market_return_column])
+            net_trade_return = gross_trade_return - cost_rate
+            gross_return += slot_weight * gross_trade_return
+            market_return += slot_weight * market_trade_return
+            winning_trades += int(net_trade_return > 0)
+            symbols.append(symbol)
+            margins.append(float(row["entry_margin_used"]))
+            cooldown_until[symbol] = cohort_number + 1 + cooldown_cohorts
+            trade_records.append(
+                {
+                    "signal_date": current_date,
+                    "entry_date": row.get("entry_date"),
+                    "exit_date": row.get("exit_date"),
+                    "symbol": symbol,
+                    "horizon": horizon,
+                    "holding_sessions": horizon,
+                    "prediction": float(row.get("prediction", row[prediction_column])),
+                    "prediction_lower_bound": float(row[prediction_column]),
+                    "prediction_haircut": row.get("prediction_haircut"),
+                    "entry_price": row.get("entry_price"),
+                    "exit_price": row.get("exit_price"),
+                    "entry_margin": float(row["entry_margin_used"]),
+                    "entry_threshold": float(row["entry_threshold"]),
+                    "expected_net_edge": float(row["expected_net_edge"]),
+                    "gross_return": gross_trade_return,
+                    "cost": cost_rate,
+                    "net_return": net_trade_return,
+                    "market_return": market_trade_return,
+                    "net_excess_return": net_trade_return - market_trade_return,
+                    "fold": row.get("fold"),
+                }
+            )
+
+        trade_count = len(symbols)
+        invested_fraction = trade_count / max_positions
+        cost = invested_fraction * cost_rate
+        net_return = gross_return - cost
+        cohort_record = {
+                "date": current_date,
+                "symbols": ",".join(symbols),
+                "positions": trade_count,
+                "completed_round_trips": trade_count,
+                "gross_return": gross_return,
+                "cost": cost,
+                "net_return": net_return,
+                "market_return": market_return,
+                "net_excess_return": net_return - market_return,
+                "invested_fraction": invested_fraction,
+                "cash_fraction": 1.0 - invested_fraction,
+                "round_trip_turnover": 2.0 * invested_fraction,
+                "winning_trades": winning_trades,
+                "entry_margin_min": min(margins) if margins else None,
+                "entry_margin_max": max(margins) if margins else None,
+            }
+        if regime is not None:
+            cohort_record["market_regime"] = regime
+        cohort_records.append(cohort_record)
+
+    cohort_columns = [
+        "symbols", "positions", "completed_round_trips", "gross_return", "cost",
+        "net_return", "market_return", "net_excess_return", "invested_fraction",
+        "cash_fraction", "round_trip_turnover", "winning_trades",
+        "entry_margin_min", "entry_margin_max",
+    ]
+    if not cohort_records:
+        cohorts = pd.DataFrame(
+            columns=cohort_columns, index=pd.DatetimeIndex([], name="date")
+        )
+    else:
+        cohorts = pd.DataFrame(cohort_records).set_index("date").sort_index()
+    trades = pd.DataFrame(trade_records)
+    if not trades.empty:
+        trades = trades.sort_values(["signal_date", "symbol"]).reset_index(drop=True)
+    return cohorts, trades
+
+
 def performance_metrics(
     returns: pd.Series,
     *,
@@ -253,8 +422,18 @@ def evaluate_panel_predictions(
     horizon: int = 20,
     rebalance_every: int | None = None,
     min_symbols_per_date: int = 2,
+    entry_margin: float = 0.0,
+    entry_margin_column: str | None = "entry_margin",
+    rule_selected_column: str | None = "entry_rule_selected",
+    cooldown_cohorts: int = 0,
+    minimum_holding_sessions: int = 2,
+    cost_stress_multipliers: Sequence[float] = (1.0, 1.5, 2.0),
 ) -> tuple[dict, pd.DataFrame]:
-    """Đánh giá kỹ năng cross-sectional và top-k có thể đầu tư."""
+    """Đánh giá Rank IC và chiến lược sparse sau phí.
+
+    ``top_k`` được giữ để tương thích CLI, nhưng mang nghĩa số vị thế tối đa.
+    Không có ứng viên vượt cost + margin thì cohort giữ 100% tiền mặt.
+    """
 
     if horizon <= 0:
         raise ValueError("horizon phải > 0.")
@@ -281,13 +460,26 @@ def evaluate_panel_predictions(
         raise ValueError(
             "rebalance_every nhỏ hơn horizon sẽ tạo forward return chồng lắp."
         )
-    backtest = top_k_backtest(
+    execution_prediction_column = (
+        "prediction_lower_bound"
+        if "prediction_lower_bound" in _as_columns(predictions).columns
+        else "prediction"
+    )
+    backtest, trades = sparse_panel_backtest(
         predictions,
-        top_k=top_k,
+        max_positions=top_k,
         transaction_cost_bps=transaction_cost_bps,
+        horizon=horizon,
+        minimum_holding_sessions=minimum_holding_sessions,
         rebalance_every=interval,
         min_symbols_per_date=min_symbols_per_date,
+        prediction_column=execution_prediction_column,
+        entry_margin=entry_margin,
+        entry_margin_column=entry_margin_column,
+        rule_selected_column=rule_selected_column,
+        cooldown_cohorts=cooldown_cohorts,
     )
+    backtest.attrs["trade_ledger"] = trades
     annual_periods = 252.0 / interval
     portfolio = performance_metrics(
         backtest.get("net_return", pd.Series(dtype=float)),
@@ -296,20 +488,65 @@ def evaluate_panel_predictions(
     portfolio.update(
         {
             "top_k": top_k,
+            "max_positions": top_k,
             "transaction_cost_bps": transaction_cost_bps,
-            "cost_convention": "full_round_trip_each_cohort",
-            "full_round_trip_charged_each_cohort": True,
+            "cost_convention": "full_round_trip_selected_positions_only",
+            "full_round_trip_charged_each_cohort": False,
             "terminal_liquidation_charged": True,
             "rebalance_every": interval,
             "min_symbols_per_date": min_symbols_per_date,
+            "entry_rule": "prediction > round_trip_cost + validation_selected_margin",
+            "execution_prediction_column": execution_prediction_column,
+            "cash_is_default": True,
+            "cooldown_cohorts": cooldown_cohorts,
+            "completed_round_trips": int(len(trades)),
+            "average_holding_sessions": (
+                float(trades["holding_sessions"].mean()) if not trades.empty else None
+            ),
+            "no_trade_cohorts": int(backtest["positions"].eq(0).sum())
+            if not backtest.empty
+            else 0,
+            "no_trade_rate": float(backtest["positions"].eq(0).mean())
+            if not backtest.empty
+            else None,
+            "average_invested_fraction": float(backtest["invested_fraction"].mean())
+            if not backtest.empty
+            else None,
+            "total_cost": float(backtest["cost"].sum())
+            if not backtest.empty
+            else 0.0,
+            "gross_compound_return": (
+                float((1 + backtest["gross_return"]).prod() - 1)
+                if not backtest.empty
+                else None
+            ),
+            "average_gross_return_per_trade": (
+                float(trades["gross_return"].mean()) if not trades.empty else None
+            ),
+            "average_net_return_per_trade": (
+                float(trades["net_return"].mean()) if not trades.empty else None
+            ),
+            "profit_factor": (
+                float(
+                    trades.loc[trades["net_return"] > 0, "net_return"].sum()
+                    / abs(trades.loc[trades["net_return"] < 0, "net_return"].sum())
+                )
+                if not trades.empty
+                and trades.loc[trades["net_return"] < 0, "net_return"].sum() < 0
+                else None
+            ),
             "average_turnover": (
-                float(backtest["turnover"].mean()) if not backtest.empty else None
+                float(backtest["round_trip_turnover"].mean())
+                if not backtest.empty
+                else None
             ),
             "total_turnover": (
-                float(backtest["turnover"].sum()) if not backtest.empty else None
+                float(backtest["round_trip_turnover"].sum())
+                if not backtest.empty
+                else None
             ),
-            "average_cost_turnover": (
-                float(backtest["cost_turnover"].mean())
+            "annualized_turnover": (
+                float(backtest["round_trip_turnover"].mean() * annual_periods)
                 if not backtest.empty
                 else None
             ),
@@ -320,6 +557,19 @@ def evaluate_panel_predictions(
             ),
         }
     )
+
+    stress: dict[str, dict] = {}
+    for multiplier in sorted({float(value) for value in cost_stress_multipliers}):
+        if multiplier <= 0:
+            raise ValueError("Mọi cost stress multiplier phải > 0.")
+        stressed = backtest["gross_return"] - backtest["invested_fraction"] * (
+            transaction_cost_bps / 10_000
+        ) * multiplier
+        stress_metrics = performance_metrics(stressed, periods_per_year=annual_periods)
+        stress_metrics["multiplier"] = multiplier
+        stress_metrics["transaction_cost_bps"] = transaction_cost_bps * multiplier
+        stress[f"{multiplier:g}x"] = stress_metrics
+    portfolio["cost_stress"] = stress
 
     regime: dict[str, dict] = {}
     if not backtest.empty and "market_regime" in backtest:
@@ -343,6 +593,8 @@ def evaluate_panel_predictions(
 
     metrics = {
         "rank_ic": rank_ic,
+        "sparse_portfolio": portfolio,
+        # Backward-compatible alias for database/report consumers.
         "top_k_portfolio": portfolio,
         "by_regime": regime,
     }

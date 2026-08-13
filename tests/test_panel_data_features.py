@@ -79,6 +79,8 @@ def test_panel_features_are_point_in_time_and_labels_keep_unknown_tail_nan() -> 
         featured.loc[(dates[0], "AAA"), "target_market_return_5d"],
         expected_market_return,
     )
+    assert featured.loc[(dates[0], "AAA"), "target_entry_date_5d"] == dates[1]
+    assert featured.loc[(dates[0], "AAA"), "target_exit_date_5d"] == dates[5]
     for _, group in featured.groupby(level="symbol"):
         assert group["target_excess_return_5d"].tail(5).isna().all()
         assert group["target_excess_return_20d"].tail(20).isna().all()

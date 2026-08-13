@@ -111,7 +111,14 @@ def test_panel_runner_creates_end_to_end_artifacts(tmp_path, monkeypatch) -> Non
     metrics = json.loads((run_directory / "metrics_5d.json").read_text())
     assert metrics["execution"]["entry"] == "open_t_plus_1"
     assert metrics["walk_forward"]["fold_count"] == 2
-    assert metrics["top_k_portfolio"]["cost_convention"] == "full_round_trip_each_cohort"
+    assert metrics["sparse_portfolio"]["cost_convention"] == (
+        "full_round_trip_selected_positions_only"
+    )
+    assert metrics["sparse_portfolio"]["cash_is_default"] is True
     assert metrics["publish_guard"]["status"] in {"RESEARCH_OK", "NO_EDGE"}
     report = (run_directory / "panel_report.md").read_text(encoding="utf-8")
     assert "Báo cáo panel cổ phiếu Việt Nam" in report
+    dashboard = (run_directory / "panel_dashboard.html").read_text(encoding="utf-8")
+    assert "Vietnam Equity Decision Dashboard" in dashboard
+    assert "performanceChart" in dashboard
+    assert "Bảng quyết định hôm nay" in dashboard

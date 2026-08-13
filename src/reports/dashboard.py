@@ -1373,6 +1373,437 @@ def enhance_dashboard_with_research(report_directory: Path, ai_result: dict | No
     dashboard_path.write_text(document, encoding="utf-8")
 
 
+def _chart_number(value: object) -> float | None:
+    number = safe_float(value)
+    if number is None or not np.isfinite(number):
+        return None
+    return round(float(number), 6)
+
+
+def _interactive_chart_payload(frame: pd.DataFrame, symbol: str) -> str:
+    """Serialize a bounded OHLCV window for the self-contained browser chart."""
+
+    chart_frame = frame.tail(1600).copy()
+    close = pd.to_numeric(chart_frame.get("close"), errors="coerce")
+
+    def series(name: str, fallback: pd.Series | None = None) -> pd.Series:
+        if name in chart_frame:
+            return pd.to_numeric(chart_frame[name], errors="coerce")
+        if fallback is not None:
+            return fallback
+        return pd.Series(np.nan, index=chart_frame.index, dtype=float)
+
+    open_price = series("open", close)
+    high = series("high", pd.concat([open_price, close], axis=1).max(axis=1))
+    low = series("low", pd.concat([open_price, close], axis=1).min(axis=1))
+    rows = []
+    for index, values in pd.DataFrame(
+        {
+            "open": open_price,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": series("volume"),
+            "sma20": series("sma_20"),
+            "sma60": series("sma_60"),
+            "bbUpper": series("bb_upper_20"),
+            "bbLower": series("bb_lower_20"),
+            "rsi": series("rsi_14"),
+            "macd": series("macd"),
+            "macdSignal": series("macd_signal"),
+            "macdHist": series("macd_hist"),
+        }
+    ).iterrows():
+        if pd.isna(values["close"]):
+            continue
+        rows.append(
+            {
+                "date": pd.Timestamp(index).strftime("%Y-%m-%d"),
+                **{name: _chart_number(value) for name, value in values.items()},
+            }
+        )
+    payload = json.dumps(
+        {"symbol": symbol, "rows": rows},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return payload.replace("</", "<\\/")
+
+
+INTERACTIVE_CHART_CSS = r"""
+    html[data-theme="dark"] {
+      --bg:#080d17; --ink:#e8edf7; --muted:#8f9bad; --line:#263143;
+      --panel:#111827; --navy:#e8edf7; --blue:#60a5fa; --cyan:#2dd4bf;
+      --red:#f87171; --amber:#fbbf24; --soft-blue:#172554;
+      --soft-amber:#292113; --soft-slate:#151e2d;
+      --shadow:0 18px 42px rgba(0,0,0,.28);
+    }
+    body, header, .quick-nav, .metric, section, .accordion,
+    .accordion > summary, th, td, .capital-scenario, input {
+      transition:background-color .22s ease,color .22s ease,border-color .22s ease;
+    }
+    html[data-theme="dark"] header {
+      background:radial-gradient(circle at 84% -15%,#173a64 0%,transparent 32%),
+                 linear-gradient(125deg,#060a12 0%,#0b1320 52%,#102137 100%);
+    }
+    html[data-theme="dark"] .quick-nav { background:rgba(8,13,23,.9); }
+    html[data-theme="dark"] .quick-nav a,
+    html[data-theme="dark"] .accordion > summary,
+    html[data-theme="dark"] .capital-scenario { background:var(--panel); color:var(--ink); }
+    html[data-theme="dark"] .decision-summary {
+      background:linear-gradient(110deg,#111827 0%,#0f1b2d 100%);
+      border-color:var(--line);
+    }
+    html[data-theme="dark"] .decision-summary p { color:var(--muted); }
+    html[data-theme="dark"] td:nth-child(2) { color:#7db7ff; }
+    html[data-theme="dark"] img { background:#e9eef5; }
+    .nav-spacer { flex:1; }
+    .ui-button {
+      appearance:none; border:1px solid var(--line); background:var(--panel); color:var(--ink);
+      border-radius:8px; padding:7px 10px; font:inherit; font-size:12px; font-weight:750;
+      cursor:pointer; white-space:nowrap;
+    }
+    .ui-button:hover { border-color:var(--blue); color:var(--blue); }
+    .ui-button.active { color:#fff; background:#2563eb; border-color:#2563eb; }
+    #theme-toggle { display:inline-flex; align-items:center; gap:7px; }
+    .market-terminal {
+      padding:0; overflow:hidden; border-radius:15px; background:#0b111c;
+      border:1px solid #273247; box-shadow:0 24px 55px rgba(7,15,29,.24);
+    }
+    .terminal-head {
+      display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap;
+      padding:15px 18px; color:#e8edf7; background:linear-gradient(100deg,#111827,#132238);
+      border-bottom:1px solid #273247;
+    }
+    .symbol-block { display:flex; align-items:center; gap:13px; }
+    .symbol-mark {
+      display:grid; place-items:center; width:43px; height:43px; border-radius:10px;
+      background:linear-gradient(145deg,#2563eb,#0f766e); color:#fff; font-weight:900;
+    }
+    .symbol-block strong { display:block; font-size:17px; }
+    .quote-line { display:flex; align-items:baseline; gap:8px; margin-top:3px; }
+    .quote-price { font-size:22px; font-weight:850; letter-spacing:-.03em; }
+    .quote-change.positive { color:#2dd4bf; }
+    .quote-change.negative { color:#f87171; }
+    .live-label { display:flex; align-items:center; gap:7px; color:#9eabbf; font-size:12px; }
+    .live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 5px rgba(34,197,94,.12); }
+    .chart-toolbar {
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:9px 12px;
+      background:#0f1724; border-bottom:1px solid #273247;
+    }
+    .chart-toolbar .ui-button { color:#b9c3d4; background:#151f2f; border-color:#2b374b; padding:6px 9px; }
+    .chart-toolbar .ui-button:hover { color:#fff; border-color:#5b7295; }
+    .chart-toolbar .ui-button.active { color:#fff; background:#2563eb; border-color:#3b82f6; }
+    .tool-separator { width:1px; height:24px; background:#2b374b; margin:0 2px; }
+    .chart-stage { position:relative; height:640px; min-height:440px; background:#0b111c; touch-action:none; }
+    #market-canvas { display:block; width:100%; height:100%; cursor:crosshair; }
+    .chart-tooltip {
+      position:absolute; z-index:4; pointer-events:none; min-width:192px; padding:9px 10px;
+      border:1px solid rgba(148,163,184,.28); border-radius:8px; color:#dbe5f3;
+      background:rgba(10,17,28,.92); box-shadow:0 10px 28px rgba(0,0,0,.3);
+      font-size:12px; line-height:1.55; opacity:0; transform:translate(12px,12px);
+    }
+    .chart-tooltip.visible { opacity:1; }
+    .chart-tooltip b { color:#fff; }
+    .chart-legend {
+      display:flex; gap:18px; flex-wrap:wrap; padding:10px 16px; color:#9eabbf;
+      background:#0f1724; border-top:1px solid #273247; font-size:11px;
+    }
+    .legend-item::before { content:""; display:inline-block; width:18px; height:3px; margin-right:6px; vertical-align:middle; border-radius:5px; background:var(--legend); }
+    .chart-help { margin-left:auto; }
+    .static-fallback img { margin-top:12px; }
+    @media (max-width:760px) {
+      .chart-stage { height:520px; }
+      .chart-help { width:100%; margin-left:0; }
+      .tool-separator { display:none; }
+      .terminal-head { align-items:flex-start; }
+    }
+"""
+
+
+INTERACTIVE_CHART_JS = r"""
+(() => {
+  const root = document.documentElement;
+  const themeButton = document.getElementById('theme-toggle');
+  const preferredTheme = () => {
+    try { return localStorage.getItem('vn-stock-dashboard-theme'); } catch (_) { return null; }
+  };
+  const setTheme = (theme) => {
+    root.dataset.theme = theme;
+    if (themeButton) themeButton.querySelector('span').textContent = theme === 'dark' ? 'Giao diện sáng' : 'Giao diện tối';
+    try { localStorage.setItem('vn-stock-dashboard-theme', theme); } catch (_) {}
+    window.dispatchEvent(new Event('dashboard-theme-change'));
+  };
+  setTheme(preferredTheme() || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  themeButton?.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+  const source = document.getElementById('market-chart-data');
+  const canvas = document.getElementById('market-canvas');
+  const stage = document.querySelector('.chart-stage');
+  if (!source || !canvas || !stage) return;
+  const payload = JSON.parse(source.textContent);
+  const rows = payload.rows || [];
+  if (!rows.length) return;
+  const ctx = canvas.getContext('2d');
+  const tooltip = document.getElementById('chart-tooltip');
+  const state = {
+    count: Math.min(260, rows.length), end: rows.length, mode: 'candle', indicator: 'rsi',
+    overlays: { sma20: true, sma60: true, bollinger: false }, tool: 'cursor',
+    drawings: [], draft: null, hover: null, dragging: null,
+  };
+  let cssWidth = 0;
+  let cssHeight = 0;
+  let plot = null;
+
+  const finite = (value) => value !== null && value !== '' && Number.isFinite(Number(value));
+  const fmt = (value, digits = 2) => finite(value) ? Number(value).toLocaleString('vi-VN', { minimumFractionDigits: digits, maximumFractionDigits: digits }) : 'N/A';
+  const compact = (value) => finite(value) ? Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 }).format(value) : 'N/A';
+  const colors = () => ({
+    bg:'#0b111c', panel:'#0d1522', grid:'#243044', text:'#91a0b5', up:'#19b394', down:'#ef5350',
+    sma20:'#f59e0b', sma60:'#60a5fa', band:'#818cf8', cross:'#8b9bb3', volume:'#42617e', white:'#e7edf7', fib:'#c084fc'
+  });
+  const visible = () => rows.slice(Math.max(0, state.end - state.count), state.end);
+  const resize = () => {
+    const rect = stage.getBoundingClientRect();
+    cssWidth = Math.max(320, Math.floor(rect.width));
+    cssHeight = Math.max(420, Math.floor(rect.height));
+    const ratio = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(cssWidth * ratio);
+    canvas.height = Math.floor(cssHeight * ratio);
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    draw();
+  };
+  const range = (values, fallback = [0, 1]) => {
+    const valid = values.filter(finite).map(Number);
+    if (!valid.length) return fallback;
+    let min = Math.min(...valid), max = Math.max(...valid);
+    if (min === max) { min -= 1; max += 1; }
+    return [min, max];
+  };
+  const path = (data, getter, mapX, mapY, color, width = 1.35) => {
+    ctx.beginPath(); let started = false;
+    data.forEach((row, index) => {
+      const value = getter(row);
+      if (!finite(value)) { started = false; return; }
+      const x = mapX(index), y = mapY(Number(value));
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+  };
+  const roundedRect = (x, y, width, height, radius = 4) => {
+    ctx.beginPath(); ctx.roundRect(x, y, width, height, radius); ctx.fill();
+  };
+  const draw = () => {
+    if (!cssWidth || !cssHeight) return;
+    const c = colors(), data = visible();
+    const startIndex = Math.max(0, state.end - state.count);
+    const left = 14, right = 70, top = 18, bottom = 28;
+    const usable = cssHeight - top - bottom;
+    const priceHeight = usable * .66, volumeHeight = usable * .15, indicatorHeight = usable * .19;
+    const volumeTop = top + priceHeight, indicatorTop = volumeTop + volumeHeight;
+    const width = cssWidth - left - right;
+    const xStep = width / Math.max(1, data.length);
+    const highs = data.map(row => row.high), lows = data.map(row => row.low);
+    const [rawMin, rawMax] = range([...highs, ...lows]);
+    const pad = (rawMax - rawMin) * .08;
+    const minPrice = rawMin - pad, maxPrice = rawMax + pad;
+    const maxVolume = Math.max(1, ...data.map(row => Number(row.volume) || 0));
+    const x = (index) => left + xStep * (index + .5);
+    const y = (price) => top + (maxPrice - price) / (maxPrice - minPrice) * priceHeight;
+    const priceAt = (pointY) => maxPrice - ((pointY - top) / priceHeight) * (maxPrice - minPrice);
+    const indexAt = (pointX) => Math.max(0, Math.min(data.length - 1, Math.floor((pointX - left) / xStep)));
+    plot = { data, startIndex, left, right, top, width, priceHeight, volumeTop, volumeHeight, indicatorTop, indicatorHeight, xStep, x, y, priceAt, indexAt };
+
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 0, cssWidth, cssHeight);
+    ctx.strokeStyle = c.grid; ctx.lineWidth = 1; ctx.setLineDash([3, 5]);
+    ctx.font = '11px ui-sans-serif,system-ui'; ctx.fillStyle = c.text;
+    for (let line = 0; line <= 5; line += 1) {
+      const lineY = top + priceHeight * line / 5;
+      ctx.beginPath(); ctx.moveTo(left, lineY); ctx.lineTo(cssWidth - right, lineY); ctx.stroke();
+      const label = maxPrice - (maxPrice - minPrice) * line / 5;
+      ctx.fillText(fmt(label), cssWidth - right + 8, lineY + 4);
+    }
+    for (let line = 0; line <= 5; line += 1) {
+      const lineX = left + width * line / 5;
+      ctx.beginPath(); ctx.moveTo(lineX, top); ctx.lineTo(lineX, cssHeight - bottom); ctx.stroke();
+      const row = data[Math.min(data.length - 1, Math.floor((data.length - 1) * line / 5))];
+      if (row) ctx.fillText(row.date.slice(5), Math.max(left, lineX - 20), cssHeight - 8);
+    }
+    ctx.setLineDash([]);
+
+    if (state.overlays.bollinger) {
+      ctx.beginPath(); let started = false;
+      data.forEach((row, index) => { if (!finite(row.bbUpper)) return; const px = x(index), py = y(row.bbUpper); if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py); });
+      [...data].reverse().forEach((row, reverseIndex) => { if (!finite(row.bbLower)) return; ctx.lineTo(x(data.length - 1 - reverseIndex), y(row.bbLower)); });
+      ctx.closePath(); ctx.fillStyle = 'rgba(129,140,248,.10)'; ctx.fill();
+      path(data, row => row.bbUpper, x, y, c.band, 1); path(data, row => row.bbLower, x, y, c.band, 1);
+    }
+    if (state.mode === 'line') {
+      path(data, row => row.close, x, y, '#3b82f6', 2);
+    } else {
+      const bodyWidth = Math.max(1.2, Math.min(12, xStep * .66));
+      data.forEach((row, index) => {
+        if (![row.open, row.high, row.low, row.close].every(finite)) return;
+        const up = row.close >= row.open, color = up ? c.up : c.down, px = x(index);
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(px, y(row.high)); ctx.lineTo(px, y(row.low)); ctx.stroke();
+        const bodyTop = y(Math.max(row.open, row.close));
+        const bodyBottom = y(Math.min(row.open, row.close));
+        ctx.fillRect(px - bodyWidth / 2, bodyTop, bodyWidth, Math.max(1.2, bodyBottom - bodyTop));
+      });
+    }
+    if (state.overlays.sma20) path(data, row => row.sma20, x, y, c.sma20, 1.35);
+    if (state.overlays.sma60) path(data, row => row.sma60, x, y, c.sma60, 1.35);
+
+    data.forEach((row, index) => {
+      const height = (Number(row.volume) || 0) / maxVolume * (volumeHeight - 8);
+      ctx.fillStyle = row.close >= row.open ? 'rgba(25,179,148,.45)' : 'rgba(239,83,80,.45)';
+      ctx.fillRect(x(index) - Math.max(1, xStep * .28), volumeTop + volumeHeight - height, Math.max(1, xStep * .56), height);
+    });
+    ctx.fillStyle = c.text; ctx.fillText('VOL', left + 4, volumeTop + 14);
+
+    ctx.strokeStyle = c.grid; ctx.beginPath(); ctx.moveTo(left, indicatorTop); ctx.lineTo(cssWidth - right, indicatorTop); ctx.stroke();
+    if (state.indicator === 'rsi') {
+      const indicatorY = (value) => indicatorTop + (100 - value) / 100 * indicatorHeight;
+      [30, 50, 70].forEach(value => { ctx.setLineDash([3, 4]); ctx.strokeStyle = c.grid; ctx.beginPath(); ctx.moveTo(left, indicatorY(value)); ctx.lineTo(cssWidth - right, indicatorY(value)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = c.text; ctx.fillText(String(value), cssWidth - right + 8, indicatorY(value) + 4); });
+      path(data, row => row.rsi, x, indicatorY, '#c084fc', 1.4);
+      ctx.fillStyle = c.text; ctx.fillText('RSI 14', left + 4, indicatorTop + 14);
+    } else {
+      const values = data.flatMap(row => [row.macd, row.macdSignal, row.macdHist]).filter(finite).map(Number);
+      let [min, max] = range(values, [-1, 1]); const extra = (max - min) * .12; min -= extra; max += extra;
+      const indicatorY = (value) => indicatorTop + (max - value) / (max - min) * indicatorHeight;
+      const zeroY = indicatorY(0); ctx.strokeStyle = c.grid; ctx.beginPath(); ctx.moveTo(left, zeroY); ctx.lineTo(cssWidth - right, zeroY); ctx.stroke();
+      data.forEach((row, index) => { if (!finite(row.macdHist)) return; const barY = indicatorY(row.macdHist); ctx.fillStyle = row.macdHist >= 0 ? 'rgba(25,179,148,.5)' : 'rgba(239,83,80,.5)'; ctx.fillRect(x(index) - Math.max(1, xStep * .25), Math.min(zeroY, barY), Math.max(1, xStep * .5), Math.abs(zeroY - barY)); });
+      path(data, row => row.macd, x, indicatorY, '#60a5fa', 1.35); path(data, row => row.macdSignal, x, indicatorY, '#f59e0b', 1.2);
+      ctx.fillStyle = c.text; ctx.fillText('MACD 12·26·9', left + 4, indicatorTop + 14);
+    }
+    drawAnnotations(c);
+    if (state.hover && state.tool === 'cursor') drawCrosshair(c);
+  };
+
+  const annotationPoint = (point) => ({ x: plot.x(point.index - plot.startIndex), y: plot.y(point.price) });
+  const drawAnnotations = (c) => {
+    [...state.drawings, ...(state.draft ? [state.draft] : [])].forEach(item => {
+      const a = annotationPoint(item.a), b = item.b ? annotationPoint(item.b) : a;
+      ctx.strokeStyle = item.type === 'fib' ? c.fib : '#fbbf24'; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 1.4;
+      if (item.type === 'horizontal') { ctx.setLineDash([7, 4]); ctx.beginPath(); ctx.moveTo(plot.left, a.y); ctx.lineTo(cssWidth - plot.right, a.y); ctx.stroke(); ctx.setLineDash([]); ctx.fillText(fmt(item.a.price), cssWidth - plot.right + 8, a.y - 5); }
+      if (item.type === 'trend') { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+      if (item.type === 'fib') {
+        [0, .236, .382, .5, .618, .786, 1].forEach(level => { const price = item.a.price + (item.b.price - item.a.price) * level; const lineY = plot.y(price); ctx.globalAlpha = .78; ctx.beginPath(); ctx.moveTo(Math.min(a.x, b.x), lineY); ctx.lineTo(Math.max(a.x, b.x), lineY); ctx.stroke(); ctx.fillText(`${Math.round(level * 100)}%`, Math.max(a.x, b.x) + 5, lineY + 4); }); ctx.globalAlpha = 1;
+      }
+    });
+  };
+  const drawCrosshair = (c) => {
+    const index = plot.indexAt(state.hover.x), row = plot.data[index]; if (!row) return;
+    const px = plot.x(index), py = Math.max(plot.top, Math.min(plot.top + plot.priceHeight, state.hover.y));
+    ctx.strokeStyle = c.cross; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(px, plot.top); ctx.lineTo(px, cssHeight - 28); ctx.moveTo(plot.left, py); ctx.lineTo(cssWidth - plot.right, py); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#27364c'; roundedRect(cssWidth - plot.right + 3, py - 10, 63, 20, 4); ctx.fillStyle = c.white; ctx.fillText(fmt(plot.priceAt(py)), cssWidth - plot.right + 8, py + 4);
+  };
+  const pointFromEvent = (event) => { const rect = canvas.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; };
+  const chartPoint = (point) => ({ index: plot.startIndex + plot.indexAt(point.x), price: plot.priceAt(Math.max(plot.top, Math.min(plot.top + plot.priceHeight, point.y))) });
+  const showTooltip = (point) => {
+    const index = plot.indexAt(point.x), row = plot.data[index]; if (!row || !tooltip) return;
+    const delta = finite(row.open) ? Number(row.close) / Number(row.open) - 1 : null;
+    tooltip.innerHTML = `<b>${row.date} · ${payload.symbol}</b><br>O ${fmt(row.open)} &nbsp; H ${fmt(row.high)}<br>L ${fmt(row.low)} &nbsp; C ${fmt(row.close)}<br>Thay đổi ${finite(delta) ? `${delta >= 0 ? '+' : ''}${fmt(delta * 100)}%` : 'N/A'} · KL ${compact(row.volume)}`;
+    tooltip.style.left = `${Math.min(cssWidth - 215, Math.max(5, point.x))}px`; tooltip.style.top = `${Math.min(cssHeight - 120, Math.max(5, point.y))}px`; tooltip.classList.add('visible');
+  };
+  canvas.addEventListener('pointermove', (event) => {
+    const point = pointFromEvent(event); state.hover = point;
+    if (state.dragging?.type === 'pan') { const bars = Math.round((state.dragging.x - point.x) / plot.xStep); state.end = Math.max(state.count, Math.min(rows.length, state.dragging.end + bars)); }
+    if (state.dragging?.type === 'draw') { state.draft.b = chartPoint(point); }
+    showTooltip(point); draw();
+  });
+  canvas.addEventListener('pointerleave', () => { state.hover = null; tooltip?.classList.remove('visible'); draw(); });
+  canvas.addEventListener('pointerdown', (event) => {
+    const point = pointFromEvent(event); canvas.setPointerCapture(event.pointerId);
+    if (state.tool === 'cursor') { state.dragging = { type:'pan', x:point.x, end:state.end }; return; }
+    const anchor = chartPoint(point);
+    if (state.tool === 'horizontal') { state.drawings.push({ type:'horizontal', a:anchor }); draw(); return; }
+    state.draft = { type:state.tool, a:anchor, b:anchor }; state.dragging = { type:'draw' };
+  });
+  canvas.addEventListener('pointerup', () => { if (state.dragging?.type === 'draw' && state.draft) state.drawings.push(state.draft); state.draft = null; state.dragging = null; draw(); });
+  canvas.addEventListener('wheel', (event) => { event.preventDefault(); const direction = event.deltaY > 0 ? 1.18 : .84; state.count = Math.max(25, Math.min(rows.length, Math.round(state.count * direction))); state.end = Math.max(state.count, Math.min(rows.length, state.end)); draw(); }, { passive:false });
+
+  document.querySelectorAll('[data-range]').forEach(button => button.addEventListener('click', () => { const requested = button.dataset.range === 'all' ? rows.length : Number(button.dataset.range); state.count = Math.min(rows.length, requested); state.end = rows.length; document.querySelectorAll('[data-range]').forEach(item => item.classList.toggle('active', item === button)); draw(); }));
+  document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => { state.mode = button.dataset.mode; document.querySelectorAll('[data-mode]').forEach(item => item.classList.toggle('active', item === button)); draw(); }));
+  document.querySelectorAll('[data-overlay]').forEach(button => button.addEventListener('click', () => { const name = button.dataset.overlay; state.overlays[name] = !state.overlays[name]; button.classList.toggle('active', state.overlays[name]); draw(); }));
+  document.querySelectorAll('[data-indicator]').forEach(button => button.addEventListener('click', () => { state.indicator = button.dataset.indicator; document.querySelectorAll('[data-indicator]').forEach(item => item.classList.toggle('active', item === button)); draw(); }));
+  document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => { const tool = button.dataset.tool; if (tool === 'clear') { state.drawings = []; state.draft = null; draw(); return; } state.tool = tool; document.querySelectorAll('[data-tool]:not([data-tool="clear"])').forEach(item => item.classList.toggle('active', item === button)); canvas.style.cursor = tool === 'cursor' ? 'crosshair' : 'cell'; }));
+  window.addEventListener('dashboard-theme-change', draw);
+  new ResizeObserver(resize).observe(stage);
+  resize();
+})();
+"""
+
+
+def _interactive_chart_markup(
+    frame: pd.DataFrame,
+    symbol: str,
+) -> tuple[str, str]:
+    close = pd.to_numeric(frame.get("close"), errors="coerce").dropna()
+    latest = float(close.iloc[-1]) if not close.empty else 0.0
+    previous = float(close.iloc[-2]) if len(close) > 1 else latest
+    change = 0.0 if previous == 0 else latest / previous - 1
+    tone = "positive" if change >= 0 else "negative"
+    markup = f"""
+    <section class="market-terminal" aria-labelledby="market-chart-heading">
+      <div class="terminal-head">
+        <div class="symbol-block">
+          <span class="symbol-mark">{_escape(symbol[:3])}</span>
+          <div><strong id="market-chart-heading">{_escape(symbol)} · HOSE/Việt Nam</strong>
+            <div class="quote-line"><span class="quote-price">{format_price(latest)}</span>
+              <span class="quote-change {tone}">{change:+.2%}</span></div>
+          </div>
+        </div>
+        <span class="live-label"><span class="live-dot"></span>Dữ liệu EOD · chart tương tác</span>
+      </div>
+      <div class="chart-toolbar" role="toolbar" aria-label="Công cụ biểu đồ">
+        <button class="ui-button active" type="button" data-mode="candle">Nến</button>
+        <button class="ui-button" type="button" data-mode="line">Đường</button>
+        <span class="tool-separator"></span>
+        <button class="ui-button" type="button" data-range="65">3T</button>
+        <button class="ui-button" type="button" data-range="130">6T</button>
+        <button class="ui-button active" type="button" data-range="260">1N</button>
+        <button class="ui-button" type="button" data-range="780">3N</button>
+        <button class="ui-button" type="button" data-range="all">Tất cả</button>
+        <span class="tool-separator"></span>
+        <button class="ui-button active" type="button" data-overlay="sma20">SMA20</button>
+        <button class="ui-button active" type="button" data-overlay="sma60">SMA60</button>
+        <button class="ui-button" type="button" data-overlay="bollinger">Bollinger</button>
+        <button class="ui-button active" type="button" data-indicator="rsi">RSI</button>
+        <button class="ui-button" type="button" data-indicator="macd">MACD</button>
+        <span class="tool-separator"></span>
+        <button class="ui-button active" type="button" data-tool="cursor">Crosshair</button>
+        <button class="ui-button" type="button" data-tool="trend">Trendline</button>
+        <button class="ui-button" type="button" data-tool="horizontal">Đường ngang</button>
+        <button class="ui-button" type="button" data-tool="fib">Fibonacci</button>
+        <button class="ui-button" type="button" data-tool="clear">Xóa nét vẽ</button>
+      </div>
+      <div class="chart-stage">
+        <canvas id="market-canvas" aria-label="Biểu đồ nến tương tác của {_escape(symbol)}"></canvas>
+        <div class="chart-tooltip" id="chart-tooltip"></div>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-item" style="--legend:#19b394">Tăng</span>
+        <span class="legend-item" style="--legend:#ef5350">Giảm</span>
+        <span class="legend-item" style="--legend:#f59e0b">SMA20</span>
+        <span class="legend-item" style="--legend:#60a5fa">SMA60</span>
+        <span class="chart-help">Cuộn để zoom · kéo để pan · chọn công cụ rồi vẽ trực tiếp trên vùng giá</span>
+      </div>
+    </section>
+    """
+    payload = _interactive_chart_payload(frame, symbol)
+    scripts = (
+        '<script type="application/json" id="market-chart-data">'
+        f"{payload}</script><script>{INTERACTIVE_CHART_JS}</script>"
+    )
+    return markup, scripts
+
+
 def write_dashboard(
     config: dict,
     frame: pd.DataFrame,
@@ -1403,7 +1834,6 @@ def write_dashboard(
     )
     strategy = metrics.get("backtest", {}) or {}
     swing = metrics.get("swing_strategy", {}) or {}
-    legacy_execution_visible = not swing.get("available") or bool(strategy.get("available"))
     swing_frozen = (swing.get("frozen_holdout", {}) or {}).get("backtest", {}) or {}
     swing_gate = swing.get("publish_gate", {}) or {}
     decision_status = str(decision.get("status") or "NO_EDGE")
@@ -1414,6 +1844,10 @@ def write_dashboard(
     }.get(decision_status, "neutral")
     failed_checks = list(decision.get("failed_checks", []) or [])
     capital_scenario_box = _capital_scenario_box(strategy, risk_plan)
+    interactive_chart, interactive_chart_scripts = _interactive_chart_markup(
+        frame,
+        str(config["symbol"]),
+    )
     result_cards = "".join(
         [
             _metric_card("Giá hiện tại", format_price(latest), f"{levels['latest_date']} - nghìn VND/cp"),
@@ -1480,42 +1914,9 @@ def write_dashboard(
             ("Đa số", format_number(metrics["majority_baseline"]["balanced_accuracy"], 3), "Mốc so sánh"),
         ]
     )
-    backtest_table = _table(
-        [
-            (
-                "Lợi nhuận ròng",
-                format_percent(
-                    safe_float(
-                        strategy.get("net_total_return", strategy.get("total_return"))
-                    )
-                ),
-                f"{strategy.get('observations', 0)} quan sát ngoài mẫu",
-            ),
-            (
-                "Sharpe",
-                format_number(
-                    safe_float(strategy.get("sharpe_ratio", strategy.get("sharpe"))),
-                    2,
-                ),
-                "Sau chi phí",
-            ),
-            (
-                "Mức sụt giảm tối đa",
-                format_percent(safe_float(strategy.get("max_drawdown"))),
-                f"{strategy.get('completed_round_trips', 0)} vòng giao dịch",
-            ),
-            (
-                "Chi phí giả định",
-                f"{safe_float(strategy.get('round_trip_cost_bps'), 0):.1f} bps",
-                "Một vòng mua và bán",
-            ),
-        ]
-    )
-    cost_breakdown_table = _table(_cost_breakdown_rows(strategy, decision))
     investment_recommendation_table = _table(
         _investment_recommendation_rows(investment_recommendation)
     )
-    turnover_sensitivity_table = _turnover_sensitivity_table(strategy)
     swing_table = _table(
         [
             (
@@ -1606,44 +2007,11 @@ def write_dashboard(
     feature_table = _table(
         [(name, format_number(value, 2), "Mức đóng góp") for name, value in top_features]
     )
-    gross_return = safe_float(strategy.get("gross_total_return"))
-    net_return = safe_float(strategy.get("net_total_return", strategy.get("total_return")))
-    round_trips = int(strategy.get("completed_round_trips") or 0)
-    cost_sum = safe_float(strategy.get("transaction_cost_sum"))
-    round_trip_cost = safe_float(strategy.get("round_trip_cost_bps"))
-    breakeven_cost_bps = (
-        None
-        if gross_return is None
-        or cost_sum is None
-        or cost_sum <= 0
-        or round_trip_cost is None
-        else round_trip_cost * gross_return / cost_sum
-    )
-    strategy_cards = "".join(
-        [
-            _metric_card("Gross legacy trước phí" if swing.get("available") else "Gross trước phí", format_signed_percent(gross_return), "Lợi nhuận classifier 1D trước phí/thuế" if swing.get("available") else "Lợi nhuận chiến lược trước phí/thuế"),
-            _metric_card("Net legacy sau phí" if swing.get("available") else "Net sau phí", format_signed_percent(net_return), "Diagnostic 1D, không dùng cho publish guard 5D" if swing.get("available") else "Kết quả dùng cho publish guard"),
-            _metric_card("Vòng baseline legacy" if swing.get("available") else "Vòng baseline lịch sử", str(round_trips), "Dùng đo turnover/phí, không phải số lệnh nên thực hiện"),
-            _metric_card("Phí cộng dồn", format_percent(cost_sum), f"Ngưỡng hòa vốn {format_number(breakeven_cost_bps, 1)} bps/vòng"),
-        ]
-    )
     model_quality_panel = _accordion(
         "So sánh mô hình",
         model_table,
         open_by_default=True,
         note="XGBoost vs Logistic",
-    )
-    backtest_panel = _accordion(
-        "Diagnostic legacy 1D: kiểm thử ngoài mẫu sau chi phí" if swing.get("available") else "Kiểm thử chiến lược ngoài mẫu sau chi phí",
-        backtest_table,
-        open_by_default=True,
-        note=f"{round_trips} vòng",
-    )
-    cost_panel = _accordion(
-        "Breakdown legacy 1D trước phí / sau phí" if swing.get("available") else "Breakdown trước phí / sau phí",
-        cost_breakdown_table,
-        open_by_default=True,
-        note="vì sao gross dương nhưng net âm",
     )
     recommendation_panel = _accordion(
         "Khuyến nghị theo fixed-horizon swing 5D" if swing.get("available") else "Khuyến nghị hành động sau phí",
@@ -1651,24 +2019,6 @@ def write_dashboard(
         + '<p class="muted">Classifier next-day và bảng sensitivity legacy không tham gia quyết định này. Mua mới chỉ được xét khi swing 5D có sample đủ lớn, ranking edge dương, frozen holdout/stress phí đạt và expected excess return vượt chi phí + margin.</p>',
         open_by_default=True,
         note=str(investment_recommendation["entry_action"]),
-    )
-    turnover_panel = _accordion(
-        "Phụ lục legacy 1D — Kiểm thử kịch bản lịch sử (không phải khuyến nghị giao dịch)",
-        turnover_sensitivity_table
-        + f'<p class="muted"><strong>Không dùng bảng này để chọn “1 lệnh” hay DCA.</strong> Baseline {round_trips} vòng chỉ để đo turnover/phí. Các dòng threshold là ứng viên nghiên cứu cần holdout/future đã khóa; các dòng 10/5/1 có selection bias vì số vòng được chọn sau khi đã thấy OOS. Khi signal chưa ACTIONABLE, lệnh mới hôm nay luôn là 0.</p>',
-        open_by_default=False,
-        note="nghiên cứu OOS · research-only",
-    )
-    legacy_panels = (
-        f"{turnover_panel}{cost_panel}{backtest_panel}"
-        if legacy_execution_visible
-        else ""
-    )
-    legacy_strategy_section = (
-        f'''<div id="strategy" class="section-title"><h2>Chi phí & vòng lệnh</h2><span class="section-kicker">Trọng tâm: tránh giao dịch nhiều làm phí ăn hết lợi thế</span></div>
-    <div class="metrics strategy-metrics">{strategy_cards}</div>'''
-        if legacy_execution_visible
-        else ""
     )
     swing_panel = _accordion(
         "Chiến lược swing 5 phiên: frozen holdout & T+2",
@@ -1747,6 +2097,7 @@ def write_dashboard(
     .decision-summary {{ display:grid; grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr); gap:22px; padding:22px 24px; border-radius:14px; border:1px solid #d7e2ef; background:linear-gradient(110deg,#fff 0%,#f7fbff 100%); box-shadow:var(--shadow); }}
     .decision-summary h2 {{ margin:8px 0; font-size:22px; }}
     .decision-summary p {{ margin:0; color:#526175; line-height:1.58; }}
+    .decision-summary .status-badge {{ margin-top:10px; }}
     .status-badge {{ display:inline-flex; align-items:center; width:max-content; padding:6px 10px; border-radius:999px; font-size:11px; font-weight:850; letter-spacing:.06em; }}
     .status-badge.neutral {{ color:#475569; background:#eef2f7; border:1px solid #d9e1ec; }}
     .status-badge.warning {{ color:#8a4b00; background:var(--soft-amber); border:1px solid #f4d89a; }}
@@ -1783,6 +2134,7 @@ def write_dashboard(
     a {{ color:var(--blue); }}
     @media (max-width:1200px) {{ .result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .grid,.two,.dashboard-grid,.header-layout,.decision-summary {{ grid-template-columns:1fr; }} .capital-scenario {{ max-width:460px; }} .gate-summary {{ border-left:0; border-top:1px solid #dbe5f0; padding:18px 0 0; }} }}
     @media (max-width:620px) {{ .result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:1fr; }} td {{ display:block; width:100%!important; border:0; padding:6px 4px; }} tr {{ display:block; border-top:1px solid var(--line); padding:8px 0; }} .quick-nav {{ position:static; }} }}
+    {INTERACTIVE_CHART_CSS}
   </style>
 </head>
 <body>
@@ -1797,11 +2149,12 @@ def write_dashboard(
     </div>
   </header>
   <nav class="quick-nav">
-    <a href="#overview">Tổng quan</a>
-    <a href="#strategy">Chi phí & vòng lệnh</a>
     <a href="#technical">Kỹ thuật</a>
+    <a href="#overview">Tổng quan</a>
     <a href="#fundamental">Cơ bản & tin</a>
     <a href="#forecast">Dự báo</a>
+    <span class="nav-spacer"></span>
+    <button class="ui-button" id="theme-toggle" type="button" aria-label="Đổi giao diện sáng tối">◐ <span>Giao diện tối</span></button>
   </nav>
   <main>
     <section class="decision-summary" aria-labelledby="decision-heading">
@@ -1817,15 +2170,18 @@ def write_dashboard(
         <span>{_escape(', '.join(signal_check_label(name) for name in failed_checks) if failed_checks else 'Tất cả điều kiện phát hành hiện có đều đạt.')}</span>
       </div>
     </section>
+    <div id="technical" class="section-title"><h2>Trading workspace</h2><span class="section-kicker">Nến động, chỉ báo và công cụ vẽ · dữ liệu cuối ngày</span></div>
+    {interactive_chart}
+    <div class="two">
+      <div class="stack">{technical_panel}</div>
+      <details class="accordion static-fallback"><summary><strong>Biểu đồ kỹ thuật tĩnh</strong><span class="accordion-note">ảnh dự phòng / in báo cáo</span></summary><div class="accordion-body"><img src="technical_chart.png" alt="Biểu đồ kỹ thuật tĩnh"></div></details>
+    </div>
     <div id="overview" class="section-title"><h2>Kết quả chính</h2><span class="section-kicker">KPI đọc nhanh trước, chi tiết bấm mở bên dưới</span></div>
     <div class="metrics result-metrics">{result_cards}</div>
-    {legacy_strategy_section}
     <div class="dashboard-grid">
-      <div class="stack">{recommendation_panel}{swing_panel}{legacy_panels}{model_quality_panel}{feature_panel}</div>
+      <div class="stack">{recommendation_panel}{swing_panel}{model_quality_panel}{feature_panel}</div>
       <div class="stack">{decision_panel}{risk_panel}</div>
     </div>
-    <div id="technical" class="section-title"><h2>Kỹ thuật</h2><span class="section-kicker">Biểu đồ mở sẵn, bảng tín hiệu thu gọn</span></div>
-    <div class="grid"><section><h2>Biểu đồ kỹ thuật</h2><img src="technical_chart.png" alt="Biểu đồ kỹ thuật"></section><div class="stack">{technical_panel}</div></div>
     <div id="fundamental" class="section-title"><h2>Cơ bản & tin tức</h2><span class="section-kicker">Các bảng dài để trong nút bung</span></div>
     <div class="metrics fundamental-metrics">{fundamental_cards}</div>
     <div class="two"><div class="stack">{fundamental_panel}</div><div class="stack">{news_panel}</div></div>
@@ -1867,6 +2223,7 @@ def write_dashboard(
       render();
     }})();
   </script>
+  {interactive_chart_scripts}
 </body>
 </html>
 """

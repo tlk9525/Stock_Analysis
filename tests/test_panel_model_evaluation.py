@@ -3,7 +3,11 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from src.panel.evaluation import evaluate_panel_predictions, rank_ic_by_date
+from src.panel.evaluation import (
+    evaluate_panel_predictions,
+    rank_ic_by_date,
+    sparse_panel_backtest,
+)
 from src.panel.model import walk_forward_predict
 
 
@@ -62,6 +66,7 @@ def test_expanding_walk_forward_produces_purged_oos_and_latest_rankings() -> Non
     )[-6]
     assert set(result.feature_importance) == {"signal", "noise"}
     assert result.predictions.groupby(level="date")["predicted_rank"].min().eq(1).all()
+    assert (result.predictions["prediction_lower_bound"] <= result.predictions["prediction"]).all()
 
 
 def test_ranking_mode_uses_each_date_as_query_group() -> None:
@@ -118,9 +123,63 @@ def test_evaluation_reports_rank_ic_net_portfolio_and_regimes() -> None:
     assert set(metrics["by_regime"]) == {"bull", "bear"}
     assert backtest.iloc[0]["net_return"] < backtest.iloc[0]["gross_return"]
     assert (backtest["net_return"] <= backtest["gross_return"]).all()
-    assert np.isclose(backtest["turnover"].sum(), 0.5)
+    assert np.isclose(backtest["round_trip_turnover"].sum(), 8.0)
     assert np.isclose(backtest["cost"].sum(), 4 * 10 / 10_000)
-    assert backtest["cost_turnover"].eq(1.0).all()
+    assert metrics["sparse_portfolio"]["completed_round_trips"] == 8
+    assert metrics["sparse_portfolio"]["no_trade_rate"] == 0.0
+    assert metrics["sparse_portfolio"]["cash_is_default"] is True
+
+
+def test_sparse_backtest_keeps_cash_when_predictions_do_not_clear_cost() -> None:
+    dates = pd.bdate_range("2024-01-02", periods=12)
+    rows = [
+        {
+            "date": date,
+            "symbol": symbol,
+            "prediction": 0.004,
+            "actual_return": 0.02,
+            "actual_market_return": 0.001,
+        }
+        for date in dates
+        for symbol in ["A", "B", "C"]
+    ]
+    cohorts, trades = sparse_panel_backtest(
+        pd.DataFrame(rows),
+        max_positions=2,
+        transaction_cost_bps=50,
+        horizon=5,
+        min_symbols_per_date=3,
+    )
+
+    assert trades.empty
+    assert cohorts["positions"].eq(0).all()
+    assert cohorts["cost"].eq(0).all()
+    assert cohorts["net_return"].eq(0).all()
+
+
+def test_frozen_holdout_is_scored_after_purge_and_never_selects_margin() -> None:
+    result = walk_forward_predict(
+        make_model_panel(days=120, symbols=5),
+        target="target_excess_return_5d",
+        feature_columns=["signal", "noise"],
+        min_train_dates=30,
+        validation_dates=5,
+        test_dates=10,
+        gap=5,
+        frozen_holdout_dates=10,
+        minimum_validation_trades=1,
+        max_positions=2,
+        xgboost_params={"num_boost_round": 8, "max_depth": 2, "nthread": 1},
+    )
+
+    assert not result.frozen_predictions.empty
+    assert result.predictions.index.get_level_values("date").max() < (
+        result.frozen_predictions.index.get_level_values("date").min()
+    )
+    frozen_meta = result.training_metadata["frozen_holdout"]
+    assert frozen_meta["enabled"] is True
+    assert frozen_meta["purge_before_frozen"] == 5
+    assert "prediction_lower_bound" in result.frozen_predictions
 
 
 def test_evaluation_drops_dates_with_too_few_symbols() -> None:

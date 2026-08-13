@@ -19,6 +19,17 @@ fi
 
 cd "$PROJECT_DIR"
 
+# ``VN100`` is a batch shortcut, not a listed security code.  Keep this before
+# the normal single-symbol fallback so `stockrun VN100` never attempts to
+# download prices for a fictitious VN100 ticker.
+if [[ "${1:-}" == "VN100" ]]; then
+  exec "$PROJECT_DIR/scripts/run_vn100_full_batch.sh" "${@:2}"
+fi
+
+if [[ "${1:-}" == "full" && "${2:-}" == "VN100" ]]; then
+  exec "$PROJECT_DIR/scripts/run_vn100_full_batch.sh" "${@:3}"
+fi
+
 # The common case is intentionally terse: `stockrun FPT` runs ML, research and AI.
 # Named FinAI commands remain available for individual workflow steps.
 case "${1:-}" in

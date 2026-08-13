@@ -7,7 +7,7 @@ set -u
 PROJECT_DIR="/Users/tranlekhoa/Documents/DATA_SCI/vn_stock_analysis"
 RUNNER="$PROJECT_DIR/bin/stockrun"
 LOG_DIR="$PROJECT_DIR/logs"
-LOCK_DIR="$PROJECT_DIR/.daily_full_batch.lock"
+LOCK_DIR="$PROJECT_DIR/.full_batch.lock"
 SYMBOLS=(ACB BID CTG FPT GMD HCM HPG KDH MBB MSN MWG NVL PLX PNJ POW SAB SSI STB TCB VCB VHM VIC VNM)
 
 mkdir -p "$LOG_DIR"

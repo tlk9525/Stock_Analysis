@@ -49,6 +49,7 @@ def resolve_panel_config(config: dict, args: argparse.Namespace) -> dict:
         "benchmark_symbol": args.benchmark,
         "horizons": args.horizons,
         "top_k": args.top_k,
+        "max_positions": getattr(args, "max_positions", None),
         "min_train_dates": args.min_train_dates,
         "validation_dates": args.validation_dates,
         "test_dates": args.test_dates,
@@ -109,6 +110,8 @@ def resolve_panel_config(config: dict, args: argparse.Namespace) -> dict:
         )
     )
     panel["benchmark_symbol"] = str(panel["benchmark_symbol"]).strip().upper()
+    panel["max_positions"] = int(panel.get("max_positions", panel["top_k"]))
+    panel["top_k"] = panel["max_positions"]
     panel["horizons"] = (
         _csv_integers(panel["horizons"])
         if isinstance(panel["horizons"], str)
@@ -116,14 +119,32 @@ def resolve_panel_config(config: dict, args: argparse.Namespace) -> dict:
     )
     if any(horizon <= 0 for horizon in panel["horizons"]):
         raise ValueError("Mọi horizon phải là số nguyên dương.")
+    minimum_holding = int(panel.get("minimum_holding_sessions", 2))
+    if minimum_holding < 2:
+        raise ValueError("minimum_holding_sessions phải >= 2 để tôn trọng T+2.")
+    if any(horizon < minimum_holding for horizon in panel["horizons"]):
+        raise ValueError("Mọi horizon phải >= minimum_holding_sessions.")
     if len(panel["symbols"]) < int(panel["min_symbols_per_date"]):
         raise ValueError("Số mã trong universe nhỏ hơn min_symbols_per_date.")
     if int(panel["top_k"]) > int(panel["min_symbols_per_date"]):
-        raise ValueError("top_k không được lớn hơn min_symbols_per_date.")
+        raise ValueError("max_positions không được lớn hơn min_symbols_per_date.")
     if int(panel["step_dates"]) < int(panel["test_dates"]):
         raise ValueError("step_dates phải lớn hơn hoặc bằng test_dates.")
     if float(panel["transaction_cost_bps"]) < 0:
         raise ValueError("transaction_cost_bps không được âm.")
+    margins = [float(value) for value in panel.get("entry_margin_candidates", [0.0])]
+    if not margins or any(value < 0 for value in margins):
+        raise ValueError("entry_margin_candidates phải có số không âm.")
+    panel["entry_margin_candidates"] = margins
+    if int(panel.get("minimum_validation_trades", 1)) < 1:
+        raise ValueError("minimum_validation_trades phải >= 1.")
+    if int(panel.get("cooldown_cohorts", 0)) < 0:
+        raise ValueError("cooldown_cohorts không được âm.")
+    if int(panel.get("frozen_holdout_dates", 0)) < 0:
+        raise ValueError("frozen_holdout_dates không được âm.")
+    confidence = float(panel.get("lower_confidence_level", 0.80))
+    if not 0.5 <= confidence < 1.0:
+        raise ValueError("lower_confidence_level phải thuộc [0.5, 1.0).")
     return resolved
 
 
@@ -199,6 +220,19 @@ def run_panel_once(
             gap=horizon,
             model_kind=panel_options.get("model_kind", "regression"),
             xgboost_params=config.get("xgboost", {}),
+            transaction_cost_bps=float(panel_options["transaction_cost_bps"]),
+            max_positions=int(panel_options.get("max_positions", panel_options["top_k"])),
+            entry_margin_candidates=panel_options.get(
+                "entry_margin_candidates", [0.0, 0.0025, 0.005, 0.01]
+            ),
+            minimum_validation_trades=int(
+                panel_options.get("minimum_validation_trades", 3)
+            ),
+            cooldown_cohorts=int(panel_options.get("cooldown_cohorts", 0)),
+            frozen_holdout_dates=int(panel_options.get("frozen_holdout_dates", 0)),
+            lower_confidence_level=float(
+                panel_options.get("lower_confidence_level", 0.80)
+            ),
         )
         metrics, backtest = evaluate_panel_predictions(
             result.predictions,
@@ -207,7 +241,42 @@ def run_panel_once(
             horizon=horizon,
             rebalance_every=horizon,
             min_symbols_per_date=int(panel_options["min_symbols_per_date"]),
+            cooldown_cohorts=int(panel_options.get("cooldown_cohorts", 0)),
+            minimum_holding_sessions=int(
+                panel_options.get("minimum_holding_sessions", 2)
+            ),
+            cost_stress_multipliers=panel_options.get(
+                "cost_stress_multipliers", [1.0, 1.5, 2.0]
+            ),
         )
+        development_metrics = metrics
+        trades = backtest.attrs.get("trade_ledger", pd.DataFrame()).copy()
+        frozen_backtest = pd.DataFrame()
+        frozen_trades = pd.DataFrame()
+        if not result.frozen_predictions.empty:
+            frozen_metrics, frozen_backtest = evaluate_panel_predictions(
+                result.frozen_predictions,
+                top_k=int(panel_options["top_k"]),
+                transaction_cost_bps=float(panel_options["transaction_cost_bps"]),
+                horizon=horizon,
+                rebalance_every=horizon,
+                min_symbols_per_date=int(panel_options["min_symbols_per_date"]),
+                cooldown_cohorts=int(panel_options.get("cooldown_cohorts", 0)),
+                minimum_holding_sessions=int(
+                    panel_options.get("minimum_holding_sessions", 2)
+                ),
+                cost_stress_multipliers=panel_options.get(
+                    "cost_stress_multipliers", [1.0, 1.5, 2.0]
+                ),
+            )
+            frozen_trades = frozen_backtest.attrs.get(
+                "trade_ledger", pd.DataFrame()
+            ).copy()
+            metrics = {
+                **development_metrics,
+                "development": development_metrics,
+                "frozen": frozen_metrics,
+            }
         metrics["publish_guard"] = build_panel_publish_guard(metrics, config)
         metrics["walk_forward"] = result.training_metadata
         metrics["execution"] = {
@@ -215,19 +284,41 @@ def run_panel_once(
             "entry": "open_t_plus_1",
             "exit": f"close_t_plus_{horizon}",
             "target": f"target_excess_return_{horizon}d",
-            "transaction_cost_bps_full_round_trip_each_cohort": float(
+            "transaction_cost_bps_full_round_trip_selected_positions": float(
                 panel_options["transaction_cost_bps"]
             ),
+            "state_machine": "CASH -> LONG -> CASH",
+            "max_positions": int(panel_options.get("max_positions", panel_options["top_k"])),
+            "cash_is_default": True,
+            "minimum_holding_sessions": int(
+                panel_options.get("minimum_holding_sessions", 2)
+            ),
         }
+        live = result.latest_ranking.copy()
+        research_ok = metrics["publish_guard"]["status"] == "RESEARCH_OK"
+        live["decision"] = "WAIT"
+        if research_ok:
+            live.loc[live["candidate_decision"] == "BUY_CANDIDATE", "decision"] = (
+                "BUY_CANDIDATE"
+            )
+        live["publish_gate"] = metrics["publish_guard"]["status"]
+        result.latest_ranking = live
         artifacts[horizon] = {
             "result": result,
             "metrics": metrics,
             "backtest": backtest,
+            "trades": trades,
+            "frozen_backtest": frozen_backtest,
+            "frozen_trades": frozen_trades,
         }
 
         result.predictions.reset_index().to_csv(
             run_directory / f"predictions_{horizon}d.csv", index=False
         )
+        if not result.frozen_predictions.empty:
+            result.frozen_predictions.reset_index().to_csv(
+                run_directory / f"frozen_predictions_{horizon}d.csv", index=False
+            )
         latest = result.latest_ranking.reset_index()
         latest.insert(0, "horizon", horizon)
         latest.to_csv(run_directory / f"latest_ranking_{horizon}d.csv", index=False)
@@ -235,11 +326,28 @@ def run_panel_once(
         folds = result.folds.reset_index()
         folds.to_csv(run_directory / f"folds_{horizon}d.csv", index=False)
         backtest_output = backtest.reset_index()
+        backtest_output.attrs = {}
         backtest_output.insert(0, "horizon", horizon)
+        backtest_output.insert(1, "sample", "development")
         backtest_output.to_csv(
             run_directory / f"backtest_{horizon}d.csv", index=False
         )
         aggregate_backtests.append(backtest_output)
+        if not trades.empty:
+            trades.to_csv(run_directory / f"trades_{horizon}d.csv", index=False)
+        if not frozen_backtest.empty:
+            frozen_output = frozen_backtest.reset_index()
+            frozen_output.attrs = {}
+            frozen_output.insert(0, "horizon", horizon)
+            frozen_output.insert(1, "sample", "frozen")
+            frozen_output.to_csv(
+                run_directory / f"frozen_backtest_{horizon}d.csv", index=False
+            )
+            aggregate_backtests.append(frozen_output)
+        if not frozen_trades.empty:
+            frozen_trades.to_csv(
+                run_directory / f"frozen_trades_{horizon}d.csv", index=False
+            )
         write_json(run_directory / f"metrics_{horizon}d.json", metrics)
         write_json(
             run_directory / f"feature_importance_{horizon}d.json",
@@ -312,6 +420,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--benchmark", help="Benchmark, mặc định VNINDEX.")
     parser.add_argument("--horizons", type=_csv_integers, help="Ví dụ 5,20")
     parser.add_argument("--top-k", type=int)
+    parser.add_argument("--max-positions", type=int)
     parser.add_argument("--source")
     parser.add_argument("--start-date")
     parser.add_argument("--end-date")

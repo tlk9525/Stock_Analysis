@@ -84,8 +84,9 @@
   "panel": {
     "symbols": ["FPT", "VCB", "MBB", "TCB", "HPG", "VNM", "MWG", "SSI", "HCM", "VIC", "VHM", "GAS"],
     "benchmark_symbol": "VNINDEX",
-    "horizons": [5, 20],
+    "horizons": [5, 10, 20],
     "top_k": 3,
+    "max_positions": 3,
     "min_train_dates": 756,
     "validation_dates": 126,
     "test_dates": 63,
@@ -94,13 +95,23 @@
     "min_symbols_per_date": 5,
     "model_kind": "regression",
     "transaction_cost_bps": 50,
+    "entry_margin_candidates": [0.0, 0.0025, 0.005, 0.01],
+    "minimum_validation_trades": 3,
+    "minimum_holding_sessions": 2,
+    "cooldown_cohorts": 1,
+    "frozen_holdout_dates": 252,
+    "lower_confidence_level": 0.80,
+    "cost_stress_multipliers": [1.0, 1.5, 2.0],
     "publish_guard": {
       "min_rank_ic_observations": 20,
       "min_portfolio_observations": 12,
+      "min_completed_round_trips": 20,
       "min_mean_rank_ic": 0.0,
       "min_rank_ic_hac_t_stat": 1.96,
       "min_total_return": 0.0,
-      "min_sharpe": 0.0
+      "min_sharpe": 0.0,
+      "required_cost_stress_multiplier": 1.5,
+      "require_frozen_holdout": true
     }
   },
   "risk_per_trade_pct": 0.01,

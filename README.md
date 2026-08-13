@@ -231,19 +231,21 @@ Tùy chỉnh universe và horizon:
 ./run_panel.sh \
   --symbols FPT,VCB,MBB,TCB,HPG,VNM,MWG,SSI,HCM,VIC,VHM,GAS \
   --benchmark VNINDEX \
-  --horizons 5,20 \
-  --top-k 3 \
+  --horizons 5,10,20 \
+  --max-positions 3 \
   --no-postgres
 ```
 
 Panel thực hiện:
 
 - Ghép dữ liệu point-in-time của từng mã với `VNINDEX`.
-- Tạo target excess return 5/20 phiên từ `open[t+1]` đến `close[t+h]`.
+- Tạo target excess return 5/10/20 phiên từ `open[t+1]` đến `close[t+h]`.
 - Huấn luyện XGBoost regression mặc định; có thể thử `--model-kind ranking`.
-- Purge theo đúng horizon, validation riêng, early stopping và OOS prediction không chứa phần đuôi chưa có nhãn.
-- Đánh giá Rank IC, top-k sau chi phí, Sharpe, drawdown, turnover và kết quả theo market regime. Vì mỗi target vào `open[t+1]` và thoát `close[t+h]`, mỗi cohort luôn chịu trọn chi phí mua + bán, kể cả khi cùng mã được chọn lại.
-- Chỉ xuất `RESEARCH_OK` khi Rank IC dương, HAC/Newey-West t-stat đạt ngưỡng và top-k OOS sau chi phí có lợi nhuận cùng Sharpe dương; nếu không sẽ ghi `NO_EDGE`.
+- Purge theo đúng horizon, validation riêng, early stopping, margin chọn bên trong từng validation fold và frozen holdout không dùng để tune.
+- Top-K là **số vị thế tối đa**, không phải quota. Cohort giữ tiền mặt nếu cận dưới dự báo (haircut lấy từ residual validation) không vượt full round-trip cost + margin.
+- Backtest theo trạng thái `CASH → LONG → CASH`, horizon tối thiểu tôn trọng T+2, chỉ tính phí cho vị thế thật sự mở và có cooldown chống mua lại liên tục.
+- Đánh giá Rank IC, net return, Sharpe, drawdown, số vòng hoàn tất, no-trade rate, thời gian giữ, annualized turnover và stress phí 1x/1.5x/2x.
+- Chỉ xuất `RESEARCH_OK` khi frozen holdout, số vòng, Rank IC/HAC, net/Sharpe và stress phí đều đạt; nếu không dashboard luôn hiển thị `WAIT`/`NO_EDGE`.
 
 Kết quả nằm tại:
 
@@ -251,7 +253,7 @@ Kết quả nằm tại:
 reports/PANEL/YYYY-MM-DD_HH-MM-SS/
 ```
 
-Các file chính gồm `panel_report.md`, `panel_dashboard.html`, `panel_performance.png`, `latest_rankings.csv`, `predictions_5d.csv`, `predictions_20d.csv`, `panel_backtests.csv`, metrics, fold metadata và model XGBoost theo từng horizon.
+Các file chính gồm `panel_report.md`, dashboard BI tương tác `panel_dashboard.html`, `latest_rankings.csv`, prediction/development/frozen backtest, trade ledger có ngày/giá mua-bán, metrics, fold metadata và model XGBoost theo từng horizon.
 
 ### Train panel với sentiment tin tức
 
@@ -261,8 +263,8 @@ Mặc định panel vẫn dùng feature giá/kỹ thuật/benchmark để giữ 
 ./run_panel.sh \
   --symbols FPT,VCB,MBB,TCB,HPG,VNM,MWG,SSI,HCM,VIC,VHM,GAS \
   --benchmark VNINDEX \
-  --horizons 5,20 \
-  --top-k 3 \
+  --horizons 5,10,20 \
+  --max-positions 3 \
   --news-articles-csv data/news_history.csv \
   --use-news \
   --no-postgres
@@ -289,7 +291,7 @@ Quy tắc chống leakage: feature ngày `t` chỉ dùng tin có `available_at` 
 ./run_panel.sh --news-articles-csv data/news_history.csv --use-news --no-postgres
 ```
 
-Sau đó so sánh `metrics_5d.json`, `metrics_20d.json`, Rank IC, top-k return sau chi phí và publish guard giữa hai report trong `reports/PANEL/`.
+Sau đó so sánh metrics theo 5/10/20 phiên, frozen net return, stress phí, số vòng/no-trade rate và publish guard giữa hai report trong `reports/PANEL/`.
 
 ### Train riêng từng mã với tin tức
 

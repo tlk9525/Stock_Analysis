@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from src.panel.features import PANEL_MODEL_FEATURES, target_horizon
+from src.panel.evaluation import performance_metrics, sparse_panel_backtest
 
 
 @dataclass
@@ -15,6 +16,7 @@ class WalkForwardResult:
     """Các artifact do quá trình walk-forward panel tạo ra."""
 
     predictions: pd.DataFrame
+    frozen_predictions: pd.DataFrame
     latest_ranking: pd.DataFrame
     folds: pd.DataFrame
     feature_importance: dict[str, float]
@@ -196,6 +198,78 @@ def _score(
     return scored
 
 
+def _select_entry_margin(
+    scored_validation: pd.DataFrame,
+    *,
+    candidates: Sequence[float],
+    transaction_cost_bps: float,
+    horizon: int,
+    max_positions: int,
+    min_symbols_per_date: int,
+    minimum_trades: int,
+    cooldown_cohorts: int,
+) -> tuple[float | None, dict[str, Any]]:
+    """Select the no-trade margin using validation data only."""
+
+    trials: list[dict[str, Any]] = []
+    annual_periods = 252.0 / horizon
+    for raw_margin in sorted({float(value) for value in candidates}):
+        if raw_margin < 0:
+            raise ValueError("entry_margin_candidates không được âm.")
+        cohorts, trades = sparse_panel_backtest(
+            scored_validation,
+            max_positions=max_positions,
+            transaction_cost_bps=transaction_cost_bps,
+            horizon=horizon,
+            rebalance_every=horizon,
+            min_symbols_per_date=min_symbols_per_date,
+            prediction_column=(
+                "prediction_lower_bound"
+                if "prediction_lower_bound" in scored_validation
+                else "prediction"
+            ),
+            entry_margin=raw_margin,
+            entry_margin_column=None,
+            rule_selected_column=None,
+            cooldown_cohorts=cooldown_cohorts,
+        )
+        performance = performance_metrics(
+            cohorts.get("net_return", pd.Series(dtype=float)),
+            periods_per_year=annual_periods,
+        )
+        trial = {
+            "margin": raw_margin,
+            "completed_round_trips": int(len(trades)),
+            "net_return": performance.get("total_return"),
+            "sharpe": performance.get("sharpe"),
+        }
+        trials.append(trial)
+
+    viable = [
+        trial
+        for trial in trials
+        if trial["completed_round_trips"] >= minimum_trades
+        and trial["net_return"] is not None
+        and float(trial["net_return"]) > 0
+    ]
+    if not viable:
+        return None, {"selected": False, "trials": trials}
+    best = max(
+        viable,
+        key=lambda trial: (
+            float(trial["net_return"]),
+            float(trial["sharpe"] or float("-inf")),
+            -int(trial["completed_round_trips"]),
+            float(trial["margin"]),
+        ),
+    )
+    return float(best["margin"]), {
+        "selected": True,
+        "selected_margin": float(best["margin"]),
+        "trials": trials,
+    }
+
+
 def _eligible_dates(
     frame: pd.DataFrame,
     *,
@@ -219,6 +293,13 @@ def walk_forward_predict(
     gap: int | None = None,
     model_kind: str = "regression",
     xgboost_params: Mapping[str, Any] | None = None,
+    transaction_cost_bps: float = 50.0,
+    max_positions: int = 2,
+    entry_margin_candidates: Sequence[float] = (0.0, 0.0025, 0.005, 0.01),
+    minimum_validation_trades: int = 3,
+    cooldown_cohorts: int = 0,
+    frozen_holdout_dates: int = 0,
+    lower_confidence_level: float = 0.80,
 ) -> WalkForwardResult:
     """Chạy expanding walk-forward có purge và validation độc lập.
 
@@ -243,10 +324,17 @@ def walk_forward_predict(
         or step < test_dates
         or max_folds < 1
         or min_symbols_per_date < 2
+        or max_positions < 1
+        or max_positions > min_symbols_per_date
+        or transaction_cost_bps < 0
+        or minimum_validation_trades < 1
+        or cooldown_cohorts < 0
+        or frozen_holdout_dates < 0
+        or not 0.5 <= lower_confidence_level < 1.0
     ):
         raise ValueError(
             "Cấu hình fold không hợp lệ: train>=2, validation/test>=1, "
-            "step>=test, max_folds>=1 và min_symbols_per_date>=2."
+            "step>=test, max_folds>=1, universe/position hợp lệ và phí không âm."
         )
 
     horizon = target_horizon(target)
@@ -273,30 +361,53 @@ def walk_forward_predict(
     )
     labeled = labeled[labeled["date"].isin(labeled_dates)]
 
+    if frozen_holdout_dates:
+        minimum_required = (
+            min_train_dates
+            + purge
+            + validation_dates
+            + purge
+            + test_dates
+            + purge
+            + frozen_holdout_dates
+        )
+        if len(labeled_dates) < minimum_required:
+            raise ValueError(
+                "Không đủ ngày cho frozen holdout tách biệt: "
+                f"cần >= {minimum_required}, hiện có {len(labeled_dates)}."
+            )
+        frozen_dates_index = labeled_dates[-frozen_holdout_dates:]
+        development_dates = labeled_dates[: -(frozen_holdout_dates + purge)]
+    else:
+        frozen_dates_index = pd.Index([])
+        development_dates = labeled_dates
+
     first_test = min_train_dates + purge + validation_dates + purge
-    if len(labeled_dates) <= first_test:
+    if len(development_dates) <= first_test:
         raise ValueError(
             "Không đủ ngày có nhãn cho walk-forward: "
-            f"cần > {first_test}, hiện có {len(labeled_dates)}."
+            f"cần > {first_test}, hiện có {len(development_dates)}."
         )
 
     params, rounds, early_stopping_rounds = _xgboost_params(
         model_kind, xgboost_params
     )
-    candidate_starts = list(range(first_test, len(labeled_dates), step))
+    candidate_starts = list(range(first_test, len(development_dates), step))
     selected_starts = candidate_starts[-max_folds:]
     prediction_parts: list[pd.DataFrame] = []
     fold_records: list[dict[str, Any]] = []
     selected_rounds: list[int] = []
+    selected_margins: list[float] = []
+    selected_haircuts: list[float] = []
 
     for fold_number, test_start in enumerate(selected_starts, start=1):
-        test_end = min(test_start + test_dates, len(labeled_dates))
+        test_end = min(test_start + test_dates, len(development_dates))
         validation_end = test_start - purge
         validation_start = validation_end - validation_dates
         train_end = validation_start - purge
-        train_date_values = labeled_dates[:train_end]
-        validation_date_values = labeled_dates[validation_start:validation_end]
-        held_out_dates = labeled_dates[test_start:test_end]
+        train_date_values = development_dates[:train_end]
+        validation_date_values = development_dates[validation_start:validation_end]
+        held_out_dates = development_dates[test_start:test_end]
         train = labeled[labeled["date"].isin(train_date_values)]
         validation = labeled[labeled["date"].isin(validation_date_values)]
         test = labeled[labeled["date"].isin(held_out_dates)]
@@ -310,7 +421,7 @@ def walk_forward_predict(
             if smallest_group < 2:
                 raise ValueError("Ranking model cần ít nhất hai mã mỗi ngày.")
 
-        _, best_rounds, history = _tune_with_validation(
+        tuning_model, best_rounds, history = _tune_with_validation(
             xgb,
             train,
             validation,
@@ -322,6 +433,47 @@ def walk_forward_predict(
             early_stopping_rounds,
         )
         selected_rounds.append(best_rounds)
+        validation_scored = _score(
+            xgb, tuning_model, validation, feature_columns, model_kind
+        )
+        validation_scored["actual_excess_return"] = validation_scored[target]
+        validation_scored["actual_return"] = validation_scored[
+            f"target_return_{horizon}d"
+        ]
+        validation_scored["actual_market_return"] = validation_scored[
+            f"target_market_return_{horizon}d"
+        ]
+        validation_overprediction = (
+            validation_scored["prediction"]
+            - validation_scored["actual_excess_return"]
+        )
+        prediction_haircut = max(
+            0.0,
+            float(validation_overprediction.quantile(lower_confidence_level)),
+        )
+        validation_scored["prediction_lower_bound"] = (
+            validation_scored["prediction"] - prediction_haircut
+        )
+        selected_haircuts.append(prediction_haircut)
+        if model_kind == "regression":
+            selected_margin, margin_audit = _select_entry_margin(
+                validation_scored,
+                candidates=entry_margin_candidates,
+                transaction_cost_bps=transaction_cost_bps,
+                horizon=horizon,
+                max_positions=max_positions,
+                min_symbols_per_date=min_symbols_per_date,
+                minimum_trades=minimum_validation_trades,
+                cooldown_cohorts=cooldown_cohorts,
+            )
+        else:
+            selected_margin, margin_audit = None, {
+                "selected": False,
+                "reason": "ranking_score_has_no_absolute_return_scale",
+                "trials": [],
+            }
+        if selected_margin is not None:
+            selected_margins.append(selected_margin)
         training_pool = pd.concat([train, validation], ignore_index=True)
         model = _fit(
             xgb,
@@ -334,11 +486,34 @@ def walk_forward_predict(
         )
         scored = _score(xgb, model, test, feature_columns, model_kind)
         scored["fold"] = fold_number
+        scored["entry_margin"] = (
+            float(selected_margin) if selected_margin is not None else np.nan
+        )
+        scored["prediction_haircut"] = prediction_haircut
+        scored["prediction_lower_bound"] = (
+            scored["prediction"] - prediction_haircut
+        )
+        scored["entry_rule_selected"] = selected_margin is not None
+        scored["entry_threshold"] = (
+            transaction_cost_bps / 10_000 + selected_margin
+            if selected_margin is not None
+            else np.nan
+        )
+        scored["expected_net_edge"] = scored["prediction_lower_bound"] - (
+            transaction_cost_bps / 10_000
+        )
         scored["actual_excess_return"] = scored[target]
         scored["actual_return"] = scored[f"target_return_{horizon}d"]
         scored["actual_market_return"] = scored[
             f"target_market_return_{horizon}d"
         ]
+        for output_name, source_name in {
+            "entry_date": f"target_entry_date_{horizon}d",
+            "exit_date": f"target_exit_date_{horizon}d",
+            "entry_price": f"target_entry_open_{horizon}d",
+            "exit_price": f"target_exit_close_{horizon}d",
+        }.items():
+            scored[output_name] = scored.get(source_name, np.nan)
         keep = [
             "date",
             "symbol",
@@ -347,9 +522,19 @@ def walk_forward_predict(
             "prediction_score",
             "predicted_rank",
             "predicted_percentile",
+            "prediction_haircut",
+            "prediction_lower_bound",
+            "entry_margin",
+            "entry_rule_selected",
+            "entry_threshold",
+            "expected_net_edge",
             "actual_excess_return",
             "actual_return",
             "actual_market_return",
+            "entry_date",
+            "exit_date",
+            "entry_price",
+            "exit_price",
         ]
         if model_kind == "regression":
             keep.append("predicted_excess_return")
@@ -380,6 +565,11 @@ def walk_forward_predict(
                 "validation_score_at_best": float(
                     history["validation"][metric_name][best_rounds - 1]
                 ),
+                "entry_margin_selected": selected_margin,
+                "entry_rule_selected": selected_margin is not None,
+                "entry_margin_audit": margin_audit,
+                "prediction_haircut": prediction_haircut,
+                "lower_confidence_level": lower_confidence_level,
             }
         )
 
@@ -390,6 +580,149 @@ def walk_forward_predict(
         ["date", "predicted_rank"]
     )
     predictions = predictions.set_index(["date", "symbol"])
+
+    frozen_predictions = pd.DataFrame()
+    frozen_audit: dict[str, Any] = {
+        "enabled": bool(frozen_holdout_dates),
+        "dates": int(frozen_holdout_dates),
+        "entry_rule_selected": False,
+    }
+    if frozen_holdout_dates:
+        pre_frozen_dates = labeled_dates[: -(frozen_holdout_dates + purge)]
+        frozen_validation_end = len(pre_frozen_dates)
+        frozen_validation_start = frozen_validation_end - validation_dates
+        frozen_train_end = frozen_validation_start - purge
+        frozen_train_dates = pre_frozen_dates[:frozen_train_end]
+        frozen_validation_dates_index = pre_frozen_dates[
+            frozen_validation_start:frozen_validation_end
+        ]
+        frozen_train = labeled[labeled["date"].isin(frozen_train_dates)]
+        frozen_validation = labeled[
+            labeled["date"].isin(frozen_validation_dates_index)
+        ]
+        frozen_test = labeled[labeled["date"].isin(frozen_dates_index)]
+        tuning_model, frozen_rounds, _ = _tune_with_validation(
+            xgb,
+            frozen_train,
+            frozen_validation,
+            feature_columns,
+            target,
+            model_kind,
+            params,
+            rounds,
+            early_stopping_rounds,
+        )
+        frozen_validation_scored = _score(
+            xgb, tuning_model, frozen_validation, feature_columns, model_kind
+        )
+        frozen_validation_scored["actual_excess_return"] = (
+            frozen_validation_scored[target]
+        )
+        frozen_validation_scored["actual_return"] = frozen_validation_scored[
+            f"target_return_{horizon}d"
+        ]
+        frozen_validation_scored["actual_market_return"] = (
+            frozen_validation_scored[f"target_market_return_{horizon}d"]
+        )
+        frozen_overprediction = (
+            frozen_validation_scored["prediction"]
+            - frozen_validation_scored["actual_excess_return"]
+        )
+        frozen_haircut = max(
+            0.0,
+            float(frozen_overprediction.quantile(lower_confidence_level)),
+        )
+        frozen_validation_scored["prediction_lower_bound"] = (
+            frozen_validation_scored["prediction"] - frozen_haircut
+        )
+        if model_kind == "regression":
+            frozen_margin, frozen_margin_audit = _select_entry_margin(
+                frozen_validation_scored,
+                candidates=entry_margin_candidates,
+                transaction_cost_bps=transaction_cost_bps,
+                horizon=horizon,
+                max_positions=max_positions,
+                min_symbols_per_date=min_symbols_per_date,
+                minimum_trades=minimum_validation_trades,
+                cooldown_cohorts=cooldown_cohorts,
+            )
+        else:
+            frozen_margin, frozen_margin_audit = None, {
+                "selected": False,
+                "reason": "ranking_score_has_no_absolute_return_scale",
+                "trials": [],
+            }
+        frozen_model = _fit(
+            xgb,
+            pd.concat([frozen_train, frozen_validation], ignore_index=True),
+            feature_columns,
+            target,
+            model_kind,
+            params,
+            frozen_rounds,
+        )
+        frozen_scored = _score(
+            xgb, frozen_model, frozen_test, feature_columns, model_kind
+        )
+        frozen_scored["fold"] = "frozen"
+        frozen_scored["entry_margin"] = frozen_margin
+        frozen_scored["prediction_haircut"] = frozen_haircut
+        frozen_scored["prediction_lower_bound"] = (
+            frozen_scored["prediction"] - frozen_haircut
+        )
+        frozen_scored["entry_rule_selected"] = frozen_margin is not None
+        frozen_scored["entry_threshold"] = (
+            transaction_cost_bps / 10_000 + frozen_margin
+            if frozen_margin is not None
+            else np.nan
+        )
+        frozen_scored["expected_net_edge"] = frozen_scored[
+            "prediction_lower_bound"
+        ] - (
+            transaction_cost_bps / 10_000
+        )
+        frozen_scored["actual_excess_return"] = frozen_scored[target]
+        frozen_scored["actual_return"] = frozen_scored[
+            f"target_return_{horizon}d"
+        ]
+        frozen_scored["actual_market_return"] = frozen_scored[
+            f"target_market_return_{horizon}d"
+        ]
+        for output_name, source_name in {
+            "entry_date": f"target_entry_date_{horizon}d",
+            "exit_date": f"target_exit_date_{horizon}d",
+            "entry_price": f"target_entry_open_{horizon}d",
+            "exit_price": f"target_exit_close_{horizon}d",
+        }.items():
+            frozen_scored[output_name] = frozen_scored.get(source_name, np.nan)
+        frozen_keep = [
+            "date", "symbol", "fold", "prediction", "prediction_score",
+            "predicted_rank", "predicted_percentile", "entry_margin",
+            "prediction_haircut", "prediction_lower_bound",
+            "entry_rule_selected", "entry_threshold", "expected_net_edge",
+            "actual_excess_return", "actual_return", "actual_market_return",
+            "entry_date", "exit_date", "entry_price", "exit_price",
+        ]
+        if model_kind == "regression":
+            frozen_keep.append("predicted_excess_return")
+        if "market_regime" in frozen_scored:
+            frozen_keep.append("market_regime")
+        frozen_predictions = frozen_scored[frozen_keep].set_index(
+            ["date", "symbol"]
+        ).sort_index()
+        frozen_audit = {
+            "enabled": True,
+            "dates": int(frozen_holdout_dates),
+            "start": pd.Timestamp(frozen_dates_index.min()),
+            "end": pd.Timestamp(frozen_dates_index.max()),
+            "purge_before_frozen": int(purge),
+            "selected_num_boost_round": int(frozen_rounds),
+            "entry_margin": frozen_margin,
+            "prediction_haircut": frozen_haircut,
+            "lower_confidence_level": lower_confidence_level,
+            "entry_rule_selected": frozen_margin is not None,
+            "entry_margin_audit": frozen_margin_audit,
+        }
     final_rounds = max(1, int(round(float(np.median(selected_rounds)))))
     final_model = _fit(
         xgb,
@@ -412,6 +745,37 @@ def walk_forward_predict(
         feature_columns,
         model_kind,
     )
+    live_margin = (
+        float(np.median(selected_margins)) if selected_margins else None
+    )
+    live_haircut = (
+        float(np.median(selected_haircuts)) if selected_haircuts else 0.0
+    )
+    latest_scored["entry_margin"] = live_margin
+    latest_scored["prediction_haircut"] = live_haircut
+    latest_scored["prediction_lower_bound"] = (
+        latest_scored["prediction"] - live_haircut
+    )
+    latest_scored["entry_rule_selected"] = live_margin is not None
+    latest_scored["entry_threshold"] = (
+        transaction_cost_bps / 10_000 + live_margin
+        if live_margin is not None
+        else np.nan
+    )
+    latest_scored["expected_net_edge"] = latest_scored[
+        "prediction_lower_bound"
+    ] - (
+        transaction_cost_bps / 10_000
+    )
+    latest_scored["candidate_decision"] = np.where(
+        latest_scored["entry_rule_selected"]
+        & (
+            latest_scored["prediction_lower_bound"]
+            > latest_scored["entry_threshold"]
+        ),
+        "BUY_CANDIDATE",
+        "WAIT",
+    )
     latest_columns = [
         "date",
         "symbol",
@@ -419,6 +783,13 @@ def walk_forward_predict(
         "prediction_score",
         "predicted_rank",
         "predicted_percentile",
+        "prediction_haircut",
+        "prediction_lower_bound",
+        "entry_margin",
+        "entry_rule_selected",
+        "entry_threshold",
+        "expected_net_edge",
+        "candidate_decision",
     ]
     if model_kind == "regression":
         latest_columns.append("predicted_excess_return")
@@ -441,6 +812,15 @@ def walk_forward_predict(
         "fold_count": int(len(folds)),
         "min_symbols_per_date": min_symbols_per_date,
         "selected_num_boost_round": final_rounds,
+        "entry_margin_candidates": [float(value) for value in entry_margin_candidates],
+        "selected_entry_margin_median": live_margin,
+        "valid_margin_selections": int(len(selected_margins)),
+        "selected_prediction_haircut_median": live_haircut,
+        "lower_confidence_level": float(lower_confidence_level),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "max_positions": int(max_positions),
+        "cooldown_cohorts": int(cooldown_cohorts),
+        "frozen_holdout": frozen_audit,
         "latest_feature_date": pd.Timestamp(latest_date),
         "execution": {
             "signal": "after_close_t",
@@ -450,6 +830,7 @@ def walk_forward_predict(
     }
     return WalkForwardResult(
         predictions=predictions,
+        frozen_predictions=frozen_predictions,
         latest_ranking=latest_ranking,
         folds=folds,
         feature_importance=importance,

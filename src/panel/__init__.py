@@ -10,6 +10,7 @@ from src.panel.evaluation import (
     evaluate_panel_predictions,
     performance_metrics,
     rank_ic_by_date,
+    sparse_panel_backtest,
     top_k_backtest,
 )
 from src.panel.features import (
@@ -40,6 +41,7 @@ __all__ = [
     "normalize_price_frame",
     "performance_metrics",
     "rank_ic_by_date",
+    "sparse_panel_backtest",
     "target_horizon",
     "top_k_backtest",
     "walk_forward_predict",

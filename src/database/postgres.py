@@ -436,6 +436,16 @@ def save_panel_postgres(
         predictions = result.predictions.reset_index().rename(
             columns={"date": "trade_date"}
         )
+        predictions["sample"] = "development"
+        if not result.frozen_predictions.empty:
+            frozen_predictions = result.frozen_predictions.reset_index().rename(
+                columns={"date": "trade_date"}
+            )
+            frozen_predictions["sample"] = "frozen"
+            frozen_predictions["fold"] = None
+            predictions = pd.concat(
+                [predictions, frozen_predictions], ignore_index=True
+            )
         predictions.insert(0, "run_id", run_id)
         predictions.insert(1, "horizon", int(horizon))
         prediction_columns = [
@@ -443,15 +453,26 @@ def save_panel_postgres(
             "horizon",
             "trade_date",
             "symbol",
+            "sample",
             "fold",
             "prediction",
             "prediction_score",
             "predicted_rank",
             "predicted_percentile",
             "predicted_excess_return",
+            "prediction_haircut",
+            "prediction_lower_bound",
+            "entry_margin",
+            "entry_rule_selected",
+            "entry_threshold",
+            "expected_net_edge",
             "actual_excess_return",
             "actual_return",
             "actual_market_return",
+            "entry_date",
+            "exit_date",
+            "entry_price",
+            "exit_price",
             "market_regime",
         ]
         for column in prediction_columns:
@@ -460,6 +481,10 @@ def save_panel_postgres(
         predictions["trade_date"] = pd.to_datetime(
             predictions["trade_date"]
         ).dt.date
+        for date_column in ("entry_date", "exit_date"):
+            predictions[date_column] = pd.to_datetime(
+                predictions[date_column], errors="coerce"
+            ).dt.date
         prediction_parts.append(predictions[prediction_columns])
 
         ranking = result.latest_ranking.reset_index().rename(
@@ -477,6 +502,15 @@ def save_panel_postgres(
             "predicted_rank",
             "predicted_percentile",
             "predicted_excess_return",
+            "prediction_haircut",
+            "prediction_lower_bound",
+            "entry_margin",
+            "entry_rule_selected",
+            "entry_threshold",
+            "expected_net_edge",
+            "candidate_decision",
+            "decision",
+            "publish_gate",
         ]
         for column in ranking_columns:
             if column not in ranking:
