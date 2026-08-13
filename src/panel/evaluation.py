@@ -38,13 +38,17 @@ def rank_ic_by_date(
     prediction_column: str = "prediction",
     actual_column: str = "actual_excess_return",
     min_symbols_per_date: int = 2,
+    eligibility_column: str | None = None,
 ) -> pd.Series:
     """Tính Spearman Rank IC theo từng ngày trên universe đủ lớn."""
 
     if min_symbols_per_date < 2:
         raise ValueError("min_symbols_per_date phải >= 2 để tính Rank IC.")
+    source = _as_columns(predictions)
+    if eligibility_column and eligibility_column in source:
+        source = source[source[eligibility_column].fillna(False)]
     frame = _filter_complete_universe_dates(
-        _as_columns(predictions),
+        source,
         required_columns=[prediction_column, actual_column],
         min_symbols_per_date=min_symbols_per_date,
     )
@@ -214,6 +218,9 @@ def sparse_panel_backtest(
     entry_margin_column: str | None = "entry_margin",
     rule_selected_column: str | None = "entry_rule_selected",
     cooldown_cohorts: int = 0,
+    eligibility_column: str | None = "is_tradable",
+    cost_column: str | None = "estimated_round_trip_cost",
+    prediction_is_net: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Backtest sparse cohorts: 0..max_positions, cash is the default.
 
@@ -258,6 +265,8 @@ def sparse_panel_backtest(
             modes = date_frame["market_regime"].dropna().mode()
             regime = str(modes.iloc[0]) if not modes.empty else None
         candidates = date_frame.copy()
+        if eligibility_column and eligibility_column in candidates:
+            candidates = candidates[candidates[eligibility_column].fillna(False)]
         candidates["entry_margin_used"] = float(entry_margin)
         if entry_margin_column and entry_margin_column in candidates:
             candidates["entry_margin_used"] = pd.to_numeric(
@@ -265,13 +274,20 @@ def sparse_panel_backtest(
             )
         if rule_selected_column and rule_selected_column in candidates:
             candidates = candidates[candidates[rule_selected_column].fillna(False)]
-        candidates["entry_threshold"] = (
-            cost_rate + candidates["entry_margin_used"]
+        if cost_column and cost_column in candidates:
+            candidates["round_trip_cost_used"] = pd.to_numeric(
+                candidates[cost_column], errors="coerce"
+            ).fillna(cost_rate)
+        else:
+            candidates["round_trip_cost_used"] = cost_rate
+        candidates["entry_threshold"] = candidates["entry_margin_used"]
+        if not prediction_is_net:
+            candidates["entry_threshold"] += candidates["round_trip_cost_used"]
+        candidates["expected_net_edge"] = pd.to_numeric(
+            candidates[prediction_column], errors="coerce"
         )
-        candidates["expected_net_edge"] = (
-            pd.to_numeric(candidates[prediction_column], errors="coerce")
-            - cost_rate
-        )
+        if not prediction_is_net:
+            candidates["expected_net_edge"] -= candidates["round_trip_cost_used"]
         candidates = candidates[
             candidates[prediction_column] > candidates["entry_threshold"]
         ]
@@ -292,7 +308,8 @@ def sparse_panel_backtest(
             symbol = str(row["symbol"])
             gross_trade_return = float(row[return_column])
             market_trade_return = float(row[market_return_column])
-            net_trade_return = gross_trade_return - cost_rate
+            row_cost = float(row["round_trip_cost_used"])
+            net_trade_return = gross_trade_return - row_cost
             gross_return += slot_weight * gross_trade_return
             market_return += slot_weight * market_trade_return
             winning_trades += int(net_trade_return > 0)
@@ -316,7 +333,7 @@ def sparse_panel_backtest(
                     "entry_threshold": float(row["entry_threshold"]),
                     "expected_net_edge": float(row["expected_net_edge"]),
                     "gross_return": gross_trade_return,
-                    "cost": cost_rate,
+                    "cost": row_cost,
                     "net_return": net_trade_return,
                     "market_return": market_trade_return,
                     "net_excess_return": net_trade_return - market_trade_return,
@@ -326,7 +343,9 @@ def sparse_panel_backtest(
 
         trade_count = len(symbols)
         invested_fraction = trade_count / max_positions
-        cost = invested_fraction * cost_rate
+        cost = slot_weight * sum(
+            float(row["round_trip_cost_used"]) for row in candidates.to_dict("records")
+        )
         net_return = gross_return - cost
         cohort_record = {
                 "date": current_date,
@@ -428,6 +447,9 @@ def evaluate_panel_predictions(
     cooldown_cohorts: int = 0,
     minimum_holding_sessions: int = 2,
     cost_stress_multipliers: Sequence[float] = (1.0, 1.5, 2.0),
+    eligibility_column: str | None = "is_tradable",
+    cost_column: str | None = "estimated_round_trip_cost",
+    prediction_is_net: bool = False,
 ) -> tuple[dict, pd.DataFrame]:
     """Đánh giá Rank IC và chiến lược sparse sau phí.
 
@@ -440,7 +462,9 @@ def evaluate_panel_predictions(
     if min_symbols_per_date < max(2, top_k):
         raise ValueError("min_symbols_per_date phải >= max(2, top_k).")
     ic = rank_ic_by_date(
-        predictions, min_symbols_per_date=min_symbols_per_date
+        predictions,
+        min_symbols_per_date=min_symbols_per_date,
+        eligibility_column=eligibility_column,
     )
     ic_std = float(ic.std(ddof=1)) if len(ic) > 1 else 0.0
     hac_lag = max(horizon - 1, 0)
@@ -478,6 +502,9 @@ def evaluate_panel_predictions(
         entry_margin_column=entry_margin_column,
         rule_selected_column=rule_selected_column,
         cooldown_cohorts=cooldown_cohorts,
+        eligibility_column=eligibility_column,
+        cost_column=cost_column,
+        prediction_is_net=prediction_is_net,
     )
     backtest.attrs["trade_ledger"] = trades
     annual_periods = 252.0 / interval
@@ -495,7 +522,11 @@ def evaluate_panel_predictions(
             "terminal_liquidation_charged": True,
             "rebalance_every": interval,
             "min_symbols_per_date": min_symbols_per_date,
-            "entry_rule": "prediction > round_trip_cost + validation_selected_margin",
+            "entry_rule": (
+                "predicted_net_excess > validation_selected_margin"
+                if prediction_is_net
+                else "prediction > round_trip_cost + validation_selected_margin"
+            ),
             "execution_prediction_column": execution_prediction_column,
             "cash_is_default": True,
             "cooldown_cohorts": cooldown_cohorts,
@@ -562,9 +593,7 @@ def evaluate_panel_predictions(
     for multiplier in sorted({float(value) for value in cost_stress_multipliers}):
         if multiplier <= 0:
             raise ValueError("Mọi cost stress multiplier phải > 0.")
-        stressed = backtest["gross_return"] - backtest["invested_fraction"] * (
-            transaction_cost_bps / 10_000
-        ) * multiplier
+        stressed = backtest["gross_return"] - backtest["cost"] * multiplier
         stress_metrics = performance_metrics(stressed, periods_per_year=annual_periods)
         stress_metrics["multiplier"] = multiplier
         stress_metrics["transaction_cost_bps"] = transaction_cost_bps * multiplier

@@ -15,8 +15,16 @@ from src.metadata import build_run_metadata
 from src.panel.data import load_price_panel
 from src.panel.evaluation import evaluate_panel_predictions
 from src.panel.features import PANEL_MODEL_FEATURES, add_panel_features
+from src.panel.flows import FLOW_MODEL_FEATURES, add_foreign_flow_features, load_foreign_flow
 from src.panel.news import NEWS_MODEL_FEATURES, add_panel_news_features, load_news_articles
 from src.panel.model import walk_forward_predict
+from src.panel.universe import (
+    apply_point_in_time_eligibility,
+    discover_current_universe,
+    load_universe_registry,
+    normalize_universe_registry,
+    point_in_time_symbols,
+)
 from src.panel.report import (
     build_panel_publish_guard,
     make_panel_performance_chart,
@@ -72,6 +80,22 @@ def resolve_panel_config(config: dict, args: argparse.Namespace) -> dict:
         resolved["database_url"] = args.database_url
     if args.no_postgres:
         resolved["save_to_postgres"] = False
+    universe_mode = getattr(args, "universe", None)
+    if universe_mode:
+        panel["universe_mode"] = universe_mode
+    universe_csv = getattr(args, "universe_csv", None)
+    if universe_csv:
+        panel["universe_csv"] = str(universe_csv)
+    exchanges = getattr(args, "exchanges", None)
+    if exchanges:
+        panel["exchanges"] = exchanges
+    max_symbols = getattr(args, "max_symbols", None)
+    if max_symbols is not None:
+        panel["max_symbols"] = int(max_symbols)
+    flow_csv = getattr(args, "foreign_flow_csv", None)
+    if flow_csv:
+        panel.setdefault("foreign_flow", {})["csv"] = str(flow_csv)
+        panel["foreign_flow"]["enabled"] = True
     news_model = panel.setdefault("news_model", {})
     news_path = getattr(args, "news_articles_csv", None)
     use_news = bool(getattr(args, "use_news", False))
@@ -148,6 +172,61 @@ def resolve_panel_config(config: dict, args: argparse.Namespace) -> dict:
     return resolved
 
 
+def _resolve_universe(config: dict, *, injected: bool = False) -> tuple[list[str], pd.DataFrame, dict]:
+    panel = config["panel"]
+    mode = str(panel.get("universe_mode", "configured")).lower()
+    if injected or mode == "configured":
+        registry = pd.DataFrame(
+            {
+                "symbol": panel["symbols"],
+                "available_at": pd.Timestamp.now(tz="UTC"),
+                "source": config.get("source", "VCI"),
+                "status": "active",
+            }
+        )
+        registry = normalize_universe_registry(registry)
+        return panel["symbols"], registry, {
+            "mode": "configured",
+            "symbols": len(registry),
+            "survivorship_complete": False,
+            "point_in_time_complete": False,
+        }
+    path = panel.get("universe_csv")
+    if path:
+        registry_path = Path(path)
+        if not registry_path.is_absolute():
+            registry_path = PROJECT_ROOT / registry_path
+        registry = load_universe_registry(registry_path)
+        symbols = point_in_time_symbols(
+            registry,
+            config.get("end_date", str(date.today())),
+            exchanges=panel.get("exchanges", ["HOSE", "HNX", "UPCOM"]),
+        )
+        metadata = {
+            "mode": "point_in_time_csv",
+            "source": str(registry_path),
+            "symbols": len(symbols),
+            "survivorship_complete": bool(panel.get("survivorship_complete", False)),
+            "point_in_time_complete": True,
+        }
+    elif mode in {"all-vietnam", "all_vietnam", "current-market", "current_market"}:
+        registry, metadata = discover_current_universe(
+            source=config.get("source", "VCI"),
+            exchanges=panel.get("exchanges", ["HOSE", "HNX", "UPCOM"]),
+        )
+        symbols = registry["symbol"].tolist()
+    else:
+        raise ValueError(f"universe_mode không hỗ trợ: {mode}")
+    maximum = panel.get("max_symbols")
+    if maximum:
+        symbols = symbols[: int(maximum)]
+        registry = registry[registry["symbol"].isin(symbols)].copy()
+        metadata["truncated_to"] = int(maximum)
+    if len(symbols) < int(panel["min_symbols_per_date"]):
+        raise ValueError("Universe sau lọc nhỏ hơn min_symbols_per_date.")
+    return symbols, registry, metadata
+
+
 def run_panel_once(
     config: dict,
     *,
@@ -161,23 +240,48 @@ def run_panel_once(
     )
     run_directory.mkdir(parents=True, exist_ok=True)
 
+    symbols, universe_registry, universe_metadata = _resolve_universe(
+        config, injected=frames is not None
+    )
+    panel_options["symbols"] = symbols
     print(
         f"[{datetime.now(timezone):%Y-%m-%d %H:%M:%S}] "
         f"Lấy {len(panel_options['symbols'])} mã + {panel_options['benchmark_symbol']}..."
     )
     price_panel = load_price_panel(
-        panel_options["symbols"],
+        symbols,
         panel_options["benchmark_symbol"],
         start_date=config.get("start_date", "2015-01-01"),
         end_date=config.get("end_date", str(date.today())),
         source=config.get("source", "VCI"),
         frames=frames,
+        universe_registry=universe_registry,
+        cache_dir=panel_options.get("price_cache_dir"),
+        continue_on_error=bool(panel_options.get("continue_on_fetch_error", False)),
+    )
+    if universe_metadata.get("point_in_time_complete", False):
+        price_panel = apply_point_in_time_eligibility(
+            price_panel,
+            universe_registry,
+            timezone_name=config.get("timezone", "Asia/Ho_Chi_Minh"),
+        )
+    panel_options["_universe_point_in_time_complete"] = bool(
+        universe_metadata.get("point_in_time_complete", False)
     )
     data_quality = price_panel.attrs.get("data_quality_report", {})
+    data_quality["universe"] = universe_metadata
     print("Tạo feature cổ phiếu + benchmark và target có thể giao dịch...")
     featured = add_panel_features(
         price_panel,
         horizons=panel_options["horizons"],
+        price_multiplier=float(config.get("backtest", {}).get("price_multiplier", 1000)),
+        base_round_trip_cost_bps=float(panel_options["transaction_cost_bps"]),
+        min_history_sessions=int(panel_options.get("min_history_sessions", 252)),
+        min_active_sessions_20d=int(panel_options.get("min_active_sessions_20d", 15)),
+        min_median_traded_value_vnd=float(
+            panel_options.get("min_median_traded_value_vnd", 5_000_000_000)
+        ),
+        liquidity_impact_bps=float(panel_options.get("liquidity_impact_bps", 20)),
     )
     news_model = panel_options.get("news_model", {}) or {}
     news_enabled = bool(news_model.get("enabled", False))
@@ -201,6 +305,21 @@ def run_panel_once(
             timezone=config.get("timezone", "Asia/Ho_Chi_Minh"),
         )
         feature_columns.extend(NEWS_MODEL_FEATURES)
+    foreign_flow = panel_options.get("foreign_flow", {}) or {}
+    flow_enabled = bool(foreign_flow.get("enabled", False))
+    if flow_enabled:
+        raw_flow_path = str(foreign_flow.get("csv", "")).strip()
+        if not raw_flow_path:
+            raise ValueError("foreign_flow.enabled=true nhưng chưa có csv.")
+        flow_path = Path(raw_flow_path)
+        if not flow_path.is_absolute():
+            flow_path = PROJECT_ROOT / flow_path
+        featured = add_foreign_flow_features(
+            featured,
+            load_foreign_flow(flow_path),
+            timezone=config.get("timezone", "Asia/Ho_Chi_Minh"),
+        )
+        feature_columns.extend(FLOW_MODEL_FEATURES)
 
     artifacts: dict[int, dict] = {}
     aggregate_latest: list[pd.DataFrame] = []
@@ -209,7 +328,7 @@ def run_panel_once(
         print(f"Walk-forward XGBoost panel horizon {horizon} phiên...")
         result = walk_forward_predict(
             featured,
-            target=f"target_excess_return_{horizon}d",
+            target=f"target_net_excess_return_{horizon}d",
             feature_columns=feature_columns,
             min_train_dates=int(panel_options["min_train_dates"]),
             validation_dates=int(panel_options["validation_dates"]),
@@ -248,6 +367,7 @@ def run_panel_once(
             cost_stress_multipliers=panel_options.get(
                 "cost_stress_multipliers", [1.0, 1.5, 2.0]
             ),
+            prediction_is_net=True,
         )
         development_metrics = metrics
         trades = backtest.attrs.get("trade_ledger", pd.DataFrame()).copy()
@@ -268,6 +388,7 @@ def run_panel_once(
                 cost_stress_multipliers=panel_options.get(
                     "cost_stress_multipliers", [1.0, 1.5, 2.0]
                 ),
+                prediction_is_net=True,
             )
             frozen_trades = frozen_backtest.attrs.get(
                 "trade_ledger", pd.DataFrame()
@@ -283,7 +404,8 @@ def run_panel_once(
             "signal": "after_close_t",
             "entry": "open_t_plus_1",
             "exit": f"close_t_plus_{horizon}",
-            "target": f"target_excess_return_{horizon}d",
+            "target": f"target_net_excess_return_{horizon}d",
+            "gross_target_for_audit": f"target_excess_return_{horizon}d",
             "transaction_cost_bps_full_round_trip_selected_positions": float(
                 panel_options["transaction_cost_bps"]
             ),
@@ -370,6 +492,20 @@ def run_panel_once(
         {f"{horizon}d": artifact["metrics"] for horizon, artifact in artifacts.items()},
     )
     write_json(run_directory / "data_quality_report.json", data_quality)
+    universe_registry.to_csv(run_directory / "universe_registry.csv", index=False)
+    write_json(run_directory / "universe_summary.json", universe_metadata)
+    write_json(
+        run_directory / "feature_availability.json",
+        {
+            "price_liquidity_market_breadth": "applied",
+            "sector": "applied" if universe_registry["sector"].notna().any() else "market_fallback",
+            "foreign_flow": "applied" if flow_enabled else "unavailable_not_imputed",
+            "news": "applied" if news_enabled else "research_only_not_applied",
+            "point_in_time_universe_complete": bool(
+                universe_metadata.get("point_in_time_complete", False)
+            ),
+        },
+    )
     write_json(
         run_directory / "news_model_summary.json",
         {
@@ -432,6 +568,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-symbols-per-date", type=int)
     parser.add_argument("--model-kind", choices=["regression", "ranking"])
     parser.add_argument("--transaction-cost-bps", type=float)
+    parser.add_argument(
+        "--universe",
+        choices=["configured", "all-vietnam", "current-market"],
+        help="Universe cấu hình hoặc snapshot toàn HOSE/HNX/UPCOM.",
+    )
+    parser.add_argument("--universe-csv", help="Registry PIT có symbol/listed_at/delisted_at/available_at.")
+    parser.add_argument("--exchanges", type=_csv_strings, help="HOSE,HNX,UPCOM")
+    parser.add_argument("--max-symbols", type=int, help="Giới hạn smoke test; không dùng để chọn mã theo kết quả.")
+    parser.add_argument("--foreign-flow-csv", help="CSV foreign flow point-in-time.")
     parser.add_argument("--news-articles-csv", help="CSV lịch sử tin đã có available_at.")
     parser.add_argument("--use-news", action="store_true", help="Bật news features; cần --news-articles-csv.")
     parser.add_argument("--database-url")

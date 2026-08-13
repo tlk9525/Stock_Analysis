@@ -32,9 +32,9 @@ failed=0
 for symbol in "${SYMBOLS[@]}"; do
   print -r -- "===== $(date '+%Y-%m-%d %H:%M:%S') | full ${symbol} ====="
   "$RUNNER" full "$symbol"
-  status=$?
-  print -r -- "===== $(date '+%Y-%m-%d %H:%M:%S') | ${symbol} exit=${status} ====="
-  if (( status != 0 )); then
+  exit_code=$?
+  print -r -- "===== $(date '+%Y-%m-%d %H:%M:%S') | ${symbol} exit=${exit_code} ====="
+  if (( exit_code != 0 )); then
     failed=1
   fi
 done

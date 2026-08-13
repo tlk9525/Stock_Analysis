@@ -60,8 +60,23 @@
     "minimum_holding_sessions": 2,
     "entry_margin_candidates": [0.0, 0.0025, 0.005],
     "frozen_holdout_rows": 126,
+    "minimum_test_rows": 126,
+    "lower_confidence_level": 0.80,
+    "minimum_calibration_rows": 126,
     "min_completed_round_trips": 10,
     "cost_stress_multipliers": [1.0, 1.5, 2.0]
+  },
+  "forecast_model": {
+    "enabled": true,
+    "horizons": [5, 10, 20],
+    "quantiles": [0.10, 0.50, 0.90],
+    "minimum_train_rows": 756,
+    "validation_rows": 126,
+    "frozen_holdout_rows": 252,
+    "minimum_frozen_rows": 126,
+    "conformal_coverage": 0.80,
+    "num_boost_round": 400,
+    "early_stopping_rounds": 40
   },
   "signal_guard": {
     "min_roc_auc": 0.54,
@@ -82,6 +97,10 @@
     "max_probability_shortfall_for_watch": 0.02
   },
   "panel": {
+    "universe_mode": "configured",
+    "exchanges": ["HOSE", "HNX", "UPCOM"],
+    "price_cache_dir": "data/cache/panel_prices",
+    "continue_on_fetch_error": true,
     "symbols": ["FPT", "VCB", "MBB", "TCB", "HPG", "VNM", "MWG", "SSI", "HCM", "VIC", "VHM", "GAS"],
     "benchmark_symbol": "VNINDEX",
     "horizons": [5, 10, 20],
@@ -95,6 +114,14 @@
     "min_symbols_per_date": 5,
     "model_kind": "regression",
     "transaction_cost_bps": 50,
+    "min_history_sessions": 252,
+    "min_active_sessions_20d": 15,
+    "min_median_traded_value_vnd": 5000000000,
+    "liquidity_impact_bps": 20,
+    "foreign_flow": {
+      "enabled": false,
+      "csv": ""
+    },
     "entry_margin_candidates": [0.0, 0.0025, 0.005, 0.01],
     "minimum_validation_trades": 3,
     "minimum_holding_sessions": 2,

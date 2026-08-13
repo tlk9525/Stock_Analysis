@@ -1,0 +1,38 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. Live research lưu 1 headline có URL để theo dõi thêm, nhưng chưa đọc và xác minh toàn văn nên không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 6 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.04620891072567912 (dự báo điểm 0.011122172698378563) chưa vượt chi phí + margin 0.0050.",
+    "ML guard: Technical score 0 < 2.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 6 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.04620891072567912 (dự báo điểm 0.011122172698378563) chưa vượt chi phí + margin 0.0050.",
+    "ML decision artifact: NO_EDGE. Technical score 0 < 2.",
+    "Headline [24HMoney]: Cổ phiếu VIX, SHS, CTS, VDS - Có nên mua? Nhóm TỰ DOANH CHỨNG KHOÁN có lãi trong năm 2026? - 24HMoney (2026-08-10T01:40:54+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Cổ phiếu VIX, SHS, CTS, VDS - Có nên mua? Nhóm TỰ DOANH CHỨNG KHOÁN có lãi trong năm 2026? - 24HMoney",
+      "publisher": "24HMoney",
+      "url": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxObnlyTVdYbExxMFNmelp0SGtaVDRUZFVUXzUtVUYxaEN6Zmo3eHk5dTZyQ3M1bGhUNzRUaEI5OFFtcTlDYWVEQl9qWTNvUktSaUNZV3ZnVDlHMHJPdkVOcG5Tam91X1NGdW1wSXloUTFlSzBmU1czMFNvQm5tcWpnSFU5U19LeDh1Znk2MnpPal94NzhEemZtVWxwSnNPYTNYYjNZVGlBS2wtTHd1WTFRMURoaXAyNVg3c2ZuLUdIV1g2WHM?oc=5",
+      "published_at": "2026-08-10T01:40:54+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm 0. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 47.0.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 21.9.); Thanh khoản: Bình thường (1.16 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-13T17:40:10.960394+00:00; News Reader đọc được 0 bài. ML có 6 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest.",
+  "fundamental_view": "Artifact cơ bản: Chứng khoán Vietinbank; kỳ 2026-Q2; P/E 16.47; P/B 2.17; ROE 13.2%; ROA 3.1%; Debt/Equity 3.27; Revenue Growth -38.3%; Profit Growth -91.2%.",
+  "news_view": "Snapshot có 1 headline từ nguồn báo chí. Đây chỉ là danh sách chủ đề cần kiểm chứng; không có nhãn sentiment hoặc dữ liệu nội dung đã xác minh nên không được diễn giải là tin tích cực/tiêu cực."
+}

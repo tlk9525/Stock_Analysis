@@ -463,6 +463,14 @@ def analyze(
 @app.command()
 def rank(
     symbols: str | None = typer.Option(None, help="Danh sách ngăn cách bởi dấu phẩy."),
+    universe: str | None = typer.Option(
+        None,
+        help="configured hoặc all-vietnam (snapshot HOSE/HNX/UPCOM).",
+    ),
+    universe_csv: Path | None = typer.Option(
+        None, help="Registry point-in-time có available_at/listed_at/delisted_at."
+    ),
+    max_symbols: int | None = typer.Option(None, min=2, help="Chỉ dùng smoke test."),
     horizons: str | None = typer.Option(None, help="Ví dụ: 5,20."),
     top_k: int | None = typer.Option(None, min=1),
     news_articles_csv: Path | None = typer.Option(
@@ -474,6 +482,9 @@ def rank(
         False,
         "--use-news",
         help="Bật feature tin; cần --news-articles-csv.",
+    ),
+    foreign_flow_csv: Path | None = typer.Option(
+        None, help="CSV dòng vốn ngoại point-in-time."
     ),
     no_postgres: bool = typer.Option(False),
 ) -> None:
@@ -499,6 +510,12 @@ def rank(
         use_news=use_news,
         database_url=None,
         no_postgres=no_postgres,
+        universe=universe,
+        universe_csv=universe_csv,
+        exchanges=None,
+        max_symbols=max_symbols,
+        foreign_flow_csv=foreign_flow_csv,
+        max_positions=None,
     )
     config = resolve_panel_config(copy.deepcopy(load_config()), args)
     report_directory = run_panel_once(config)

@@ -111,10 +111,14 @@ def _matrix(
             labels = ordered[target].to_numpy(dtype=float)
     if model_kind == "ranking":
         qid = pd.factorize(ordered["date"], sort=True)[0]
+    weights = None
+    if model_kind == "regression" and "sample_weight" in ordered:
+        weights = pd.to_numeric(ordered["sample_weight"], errors="coerce").fillna(1.0)
     matrix = xgb.DMatrix(
         ordered[list(feature_columns)],
         label=labels,
         qid=qid,
+        weight=weights,
         feature_names=list(feature_columns),
     )
     return matrix, ordered
@@ -208,6 +212,7 @@ def _select_entry_margin(
     min_symbols_per_date: int,
     minimum_trades: int,
     cooldown_cohorts: int,
+    prediction_is_net: bool,
 ) -> tuple[float | None, dict[str, Any]]:
     """Select the no-trade margin using validation data only."""
 
@@ -232,6 +237,7 @@ def _select_entry_margin(
             entry_margin_column=None,
             rule_selected_column=None,
             cooldown_cohorts=cooldown_cohorts,
+            prediction_is_net=prediction_is_net,
         )
         performance = performance_metrics(
             cohorts.get("net_return", pd.Series(dtype=float)),
@@ -338,6 +344,7 @@ def walk_forward_predict(
         )
 
     horizon = target_horizon(target)
+    prediction_is_net = target.startswith("target_net_excess_return_")
     purge = horizon if gap is None else int(gap)
     if purge < horizon:
         raise ValueError(
@@ -465,6 +472,7 @@ def walk_forward_predict(
                 min_symbols_per_date=min_symbols_per_date,
                 minimum_trades=minimum_validation_trades,
                 cooldown_cohorts=cooldown_cohorts,
+                prediction_is_net=prediction_is_net,
             )
         else:
             selected_margin, margin_audit = None, {
@@ -495,13 +503,14 @@ def walk_forward_predict(
         )
         scored["entry_rule_selected"] = selected_margin is not None
         scored["entry_threshold"] = (
-            transaction_cost_bps / 10_000 + selected_margin
+            (0.0 if prediction_is_net else transaction_cost_bps / 10_000)
+            + selected_margin
             if selected_margin is not None
             else np.nan
         )
-        scored["expected_net_edge"] = scored["prediction_lower_bound"] - (
-            transaction_cost_bps / 10_000
-        )
+        scored["expected_net_edge"] = scored["prediction_lower_bound"]
+        if not prediction_is_net:
+            scored["expected_net_edge"] -= transaction_cost_bps / 10_000
         scored["actual_excess_return"] = scored[target]
         scored["actual_return"] = scored[f"target_return_{horizon}d"]
         scored["actual_market_return"] = scored[
@@ -540,6 +549,9 @@ def walk_forward_predict(
             keep.append("predicted_excess_return")
         if "market_regime" in scored:
             keep.append("market_regime")
+        for optional in ("is_tradable", "estimated_round_trip_cost", "estimated_round_trip_cost_bps"):
+            if optional in scored:
+                keep.append(optional)
         prediction_parts.append(scored[keep])
 
         metric_name = "rmse" if model_kind == "regression" else "ndcg"
@@ -645,6 +657,7 @@ def walk_forward_predict(
                 min_symbols_per_date=min_symbols_per_date,
                 minimum_trades=minimum_validation_trades,
                 cooldown_cohorts=cooldown_cohorts,
+                prediction_is_net=prediction_is_net,
             )
         else:
             frozen_margin, frozen_margin_audit = None, {
@@ -672,15 +685,14 @@ def walk_forward_predict(
         )
         frozen_scored["entry_rule_selected"] = frozen_margin is not None
         frozen_scored["entry_threshold"] = (
-            transaction_cost_bps / 10_000 + frozen_margin
+            (0.0 if prediction_is_net else transaction_cost_bps / 10_000)
+            + frozen_margin
             if frozen_margin is not None
             else np.nan
         )
-        frozen_scored["expected_net_edge"] = frozen_scored[
-            "prediction_lower_bound"
-        ] - (
-            transaction_cost_bps / 10_000
-        )
+        frozen_scored["expected_net_edge"] = frozen_scored["prediction_lower_bound"]
+        if not prediction_is_net:
+            frozen_scored["expected_net_edge"] -= transaction_cost_bps / 10_000
         frozen_scored["actual_excess_return"] = frozen_scored[target]
         frozen_scored["actual_return"] = frozen_scored[
             f"target_return_{horizon}d"
@@ -707,6 +719,9 @@ def walk_forward_predict(
             frozen_keep.append("predicted_excess_return")
         if "market_regime" in frozen_scored:
             frozen_keep.append("market_regime")
+        for optional in ("is_tradable", "estimated_round_trip_cost", "estimated_round_trip_cost_bps"):
+            if optional in frozen_scored:
+                frozen_keep.append(optional)
         frozen_predictions = frozen_scored[frozen_keep].set_index(
             ["date", "symbol"]
         ).sort_index()
@@ -758,17 +773,22 @@ def walk_forward_predict(
     )
     latest_scored["entry_rule_selected"] = live_margin is not None
     latest_scored["entry_threshold"] = (
-        transaction_cost_bps / 10_000 + live_margin
+        (0.0 if prediction_is_net else transaction_cost_bps / 10_000)
+        + live_margin
         if live_margin is not None
         else np.nan
     )
-    latest_scored["expected_net_edge"] = latest_scored[
-        "prediction_lower_bound"
-    ] - (
-        transaction_cost_bps / 10_000
+    latest_scored["expected_net_edge"] = latest_scored["prediction_lower_bound"]
+    if not prediction_is_net:
+        latest_scored["expected_net_edge"] -= transaction_cost_bps / 10_000
+    tradable = (
+        latest_scored["is_tradable"].fillna(False)
+        if "is_tradable" in latest_scored
+        else pd.Series(True, index=latest_scored.index)
     )
     latest_scored["candidate_decision"] = np.where(
-        latest_scored["entry_rule_selected"]
+        tradable
+        & latest_scored["entry_rule_selected"]
         & (
             latest_scored["prediction_lower_bound"]
             > latest_scored["entry_threshold"]
@@ -793,6 +813,9 @@ def walk_forward_predict(
     ]
     if model_kind == "regression":
         latest_columns.append("predicted_excess_return")
+    for optional in ("is_tradable", "estimated_round_trip_cost", "estimated_round_trip_cost_bps"):
+        if optional in latest_scored:
+            latest_columns.append(optional)
     latest_ranking = latest_scored[latest_columns].set_index(["date", "symbol"])
     latest_ranking = latest_ranking.sort_values("predicted_rank")
 
@@ -818,6 +841,7 @@ def walk_forward_predict(
         "selected_prediction_haircut_median": live_haircut,
         "lower_confidence_level": float(lower_confidence_level),
         "transaction_cost_bps": float(transaction_cost_bps),
+        "prediction_is_net_of_cost": prediction_is_net,
         "max_positions": int(max_positions),
         "cooldown_cohorts": int(cooldown_cohorts),
         "frozen_holdout": frozen_audit,

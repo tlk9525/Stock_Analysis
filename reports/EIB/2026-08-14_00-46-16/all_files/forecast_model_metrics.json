@@ -1,0 +1,179 @@
+{
+  "available": true,
+  "method": "xgboost_direct_quantile_conformal",
+  "execution_contract": "signal_close_t_entry_open_t_plus_1_exit_close_t_plus_h",
+  "horizons": [
+    5,
+    10,
+    20
+  ],
+  "interpolation": "linear_between_direct_model_horizons",
+  "all_horizons_publish_ready": false,
+  "by_horizon": {
+    "5": {
+      "horizon_sessions": 5,
+      "target": "target_return_5d",
+      "train_rows": 2912,
+      "validation_rows": 126,
+      "purge_rows": 5,
+      "frozen_holdout_rows": 252,
+      "selected_num_boost_round": 47,
+      "quantiles": [
+        0.1,
+        0.5,
+        0.9
+      ],
+      "conformal_coverage_target": 0.8,
+      "conformal_adjustment_return": 0.017292409102959816,
+      "frozen_interval_coverage": 0.7976190476190477,
+      "frozen_average_interval_width": 0.1278305076748214,
+      "frozen_point_metrics": {
+        "rows": 252,
+        "mae": 0.0386990182370031,
+        "rmse": 0.05017341420275374,
+        "directional_accuracy": 0.5198412698412699,
+        "correlation": 0.1391117143908504
+      },
+      "baselines": {
+        "zero_return": {
+          "rows": 252,
+          "mae": 0.03896844302751431,
+          "rmse": 0.050391098683876714,
+          "directional_accuracy": 0.6150793650793651,
+          "correlation": null
+        },
+        "historical_mean": {
+          "rows": 252,
+          "mae": 0.03962572844074858,
+          "rmse": 0.050966795608729736,
+          "directional_accuracy": 0.38492063492063494,
+          "correlation": -2.667633298331704e-17
+        }
+      },
+      "pinball_loss": {
+        "0.1": 0.010219572992618838,
+        "0.5": 0.01934950911850155,
+        "0.9": 0.009051813083328825
+      },
+      "beats_best_baseline_mae": true,
+      "frozen_ranking_edge": true,
+      "latest_return_quantiles": {
+        "p10": -0.057666926543755714,
+        "p50": 0.006910022813826799,
+        "p90": 0.07147965476994056
+      },
+      "latest_probability_positive": 0.42063492063492064,
+      "publish_ready": true
+    },
+    "10": {
+      "horizon_sessions": 10,
+      "target": "target_return_10d",
+      "train_rows": 2897,
+      "validation_rows": 126,
+      "purge_rows": 10,
+      "frozen_holdout_rows": 252,
+      "selected_num_boost_round": 1,
+      "quantiles": [
+        0.1,
+        0.5,
+        0.9
+      ],
+      "conformal_coverage_target": 0.8,
+      "conformal_adjustment_return": 0.03990845462760406,
+      "frozen_interval_coverage": 0.876984126984127,
+      "frozen_average_interval_width": 0.21818255043238174,
+      "frozen_point_metrics": {
+        "rows": 252,
+        "mae": 0.04782256705196864,
+        "rmse": 0.06242545403299255,
+        "directional_accuracy": 0.6111111111111112,
+        "correlation": 0.02408936809610294
+      },
+      "baselines": {
+        "zero_return": {
+          "rows": 252,
+          "mae": 0.04781609243529555,
+          "rmse": 0.06237711402778432,
+          "directional_accuracy": 0.6071428571428571,
+          "correlation": null
+        },
+        "historical_mean": {
+          "rows": 252,
+          "mae": 0.04889442514514913,
+          "rmse": 0.06370217358148302,
+          "directional_accuracy": 0.39285714285714285,
+          "correlation": 8.786556909173148e-17
+        }
+      },
+      "pinball_loss": {
+        "0.1": 0.012647025751102395,
+        "0.5": 0.02391128352598432,
+        "0.9": 0.01186341122283036
+      },
+      "beats_best_baseline_mae": false,
+      "frozen_ranking_edge": true,
+      "latest_return_quantiles": {
+        "p10": -0.1016294330962606,
+        "p50": 0.0008413838222622871,
+        "p90": 0.11887615254601913
+      },
+      "latest_probability_positive": 0.40476190476190477,
+      "publish_ready": false
+    },
+    "20": {
+      "horizon_sessions": 20,
+      "target": "target_return_20d",
+      "train_rows": 2867,
+      "validation_rows": 126,
+      "purge_rows": 20,
+      "frozen_holdout_rows": 252,
+      "selected_num_boost_round": 1,
+      "quantiles": [
+        0.1,
+        0.5,
+        0.9
+      ],
+      "conformal_coverage_target": 0.8,
+      "conformal_adjustment_return": 0.0789116132758596,
+      "frozen_interval_coverage": 0.9484126984126984,
+      "frozen_average_interval_width": 0.3547746727786207,
+      "frozen_point_metrics": {
+        "rows": 252,
+        "mae": 0.06375336632999147,
+        "rmse": 0.08174062955825022,
+        "directional_accuracy": 0.5634920634920635,
+        "correlation": -0.0026981337897410743
+      },
+      "baselines": {
+        "zero_return": {
+          "rows": 252,
+          "mae": 0.06361175955643678,
+          "rmse": 0.08172803826044181,
+          "directional_accuracy": 0.7142857142857143,
+          "correlation": null
+        },
+        "historical_mean": {
+          "rows": 252,
+          "mae": 0.06748888924533282,
+          "rmse": 0.08524744389120419,
+          "directional_accuracy": 0.2857142857142857,
+          "correlation": 9.306294371897958e-17
+        }
+      },
+      "pinball_loss": {
+        "0.1": 0.01687632377594492,
+        "0.5": 0.031876683164995735,
+        "0.9": 0.01571835278728611
+      },
+      "beats_best_baseline_mae": false,
+      "frozen_ranking_edge": false,
+      "latest_return_quantiles": {
+        "p10": -0.16135870253071571,
+        "p50": -0.0006718924851156771,
+        "p90": 0.1941362876199224
+      },
+      "latest_probability_positive": 0.29365079365079366,
+      "publish_ready": false
+    }
+  }
+}

@@ -50,6 +50,8 @@ SIGNAL_CHECK_LABELS = {
     "swing_frozen_ranking": "Ranking edge dương trên frozen holdout",
     "swing_net_edge": "Frozen holdout có lợi thế ròng sau phí",
     "swing_cost_stress": "Frozen holdout chịu được stress phí 1.5x",
+    "swing_uncertainty_calibrated": "Dải bất định đã được conformal calibration",
+    "swing_beats_naive_baseline": "Swing vượt baseline excess return bằng 0",
 }
 
 
@@ -216,6 +218,17 @@ def _scenario_text(
         trend = "Trung hạn chưa xấu, ngắn hạn yếu vì giá dưới SMA20."
     else:
         trend = "Xu hướng yếu: giá dưới SMA60, ưu tiên quản trị rủi ro."
+    forecast_method = str(forecast.attrs.get("method") or "")
+    if forecast_method == "xgboost_direct_quantile_conformal":
+        forecast_probability_text = (
+            "Quantile forecast ước tính xác suất return cuối kỳ dương từ residual "
+            f"frozen holdout: {forecast_end['prob_end_above_latest']:.1%}."
+        )
+    else:
+        forecast_probability_text = (
+            "Monte Carlo ước tính xác suất kết thúc trên giá hiện tại: "
+            f"{forecast_end['prob_end_above_latest']:.1%}."
+        )
     return [
         f"Trạng thái tín hiệu: {signal_status_label(decision['status'])}.",
         *[f"Điều kiện phát hành tín hiệu: {reason}." for reason in decision.get("reasons", [])],
@@ -223,7 +236,7 @@ def _scenario_text(
         f"Xu hướng kỹ thuật nghiêng về: {technical['bias']}.",
         f"XGBoost ước tính xác suất giá đóng cửa phiên tới cao hơn giá mở cửa: {latest_probabilities['xgboost']:.1%}.",
         f"Mô hình Logistic đối chứng: {latest_probabilities['logistic_regression']:.1%}.",
-        f"Monte Carlo ước tính xác suất kết thúc trên giá hiện tại: {forecast_end['prob_end_above_latest']:.1%}.",
+        forecast_probability_text,
         f"Mức dừng lỗ tham chiếu {format_price(risk_plan['stop_loss'])}, mục tiêu 1 {format_price(risk_plan['target_1'])}, tỷ lệ lợi nhuận/rủi ro {format_number(risk_plan['reward_risk'])}.",
     ]
 
@@ -370,53 +383,6 @@ def _capital_scenario_box(strategy: dict, risk_plan: dict) -> str:
     """
 
 
-def _threshold_sensitivity_rows(strategy: dict) -> list[tuple[str, str, str]]:
-    scenarios = strategy.get("threshold_sensitivity") or []
-    rows = []
-    for item in scenarios:
-        threshold = safe_float(item.get("signal_threshold"))
-        net = safe_float(item.get("net_total_return"))
-        cost_sum = safe_float(item.get("transaction_cost_sum"))
-        active_sessions = int(item.get("active_sessions") or 0)
-        round_trips = int(item.get("completed_round_trips") or 0)
-        rows.append(
-            (
-                f"Ngưỡng {format_number(threshold, 2)}",
-                format_signed_percent(net),
-                (
-                    f"{active_sessions} phiên active/{round_trips} vòng; "
-                    f"phí cộng dồn {format_percent(cost_sum)}; "
-                    f"Sharpe {format_number(safe_float(item.get('sharpe_ratio')), 2)}."
-                ),
-            )
-        )
-    return rows or [("Chưa có sensitivity", "N/A", "Cần chạy lại model để sinh threshold_sensitivity.")]
-
-
-def _top_n_sensitivity_rows(strategy: dict) -> list[tuple[str, str, str]]:
-    scenarios = strategy.get("top_n_trade_sensitivity") or []
-    rows = []
-    for item in scenarios:
-        top_n = int(item.get("top_n") or 0)
-        net = safe_float(item.get("net_total_return"))
-        gross = safe_float(item.get("gross_total_return"))
-        cost_sum = safe_float(item.get("transaction_cost_sum"))
-        min_probability = safe_float(item.get("min_probability_included"))
-        round_trips = int(item.get("completed_round_trips") or 0)
-        rows.append(
-            (
-                f"Giới hạn tối đa {top_n} vòng",
-                format_signed_percent(net),
-                (
-                    f"Gross {format_signed_percent(gross)}; phí {format_percent(cost_sum)}; "
-                    f"thực chạy {round_trips} vòng; ngưỡng xác suất trong nhóm {format_percent(min_probability)}; "
-                    f"Sharpe {format_number(safe_float(item.get('sharpe_ratio')), 2)}."
-                ),
-            )
-        )
-    return rows or [("Chưa có top-N", "N/A", "Cần chạy lại model để sinh top_n_trade_sensitivity.")]
-
-
 def _turnover_sensitivity_rows(strategy: dict) -> list[dict[str, str]]:
     """Build one consolidated view for base, threshold and trade-count scenarios."""
 
@@ -508,45 +474,6 @@ def _turnover_sensitivity_markdown_rows(strategy: dict) -> list[str]:
         )
         for row in rows
     ]
-
-
-def _turnover_sensitivity_table(strategy: dict) -> str:
-    rows = _turnover_sensitivity_rows(strategy)
-    if not rows:
-        return _table(
-            [
-                (
-                    "Chưa có dữ liệu",
-                    "N/A",
-                    "Cần chạy lại model để sinh threshold_sensitivity/top_n_trade_sensitivity.",
-                )
-            ]
-        )
-    return _html_table(
-        [
-            "Kịch bản",
-            "Cách chọn",
-            "Vòng",
-            "Gross trước phí",
-            "Phí",
-            "Net sau phí",
-            "Sharpe",
-            "Ghi chú",
-        ],
-        [
-            [
-                _escape(row["scenario"]),
-                _escape(row["selection_rule"]),
-                _escape(row["round_trips"]),
-                _escape(row["gross"]),
-                _escape(row["cost"]),
-                _escape(row["net"]),
-                _escape(row["sharpe"]),
-                _escape(row["probability_note"]),
-            ]
-            for row in rows
-        ],
-    )
 
 
 def _best_after_cost_threshold(strategy: dict) -> dict | None:
@@ -1101,6 +1028,13 @@ def write_report(
             "",
             f"## Dự báo {config['forecast_sessions']} phiên",
             "",
+            (
+                "- Phương pháp: XGBoost direct quantile 5/10/20D + conformal calibration; "
+                f"toàn bộ horizon qua gate: {'có' if (metrics.get('forecast_model', {}) or {}).get('all_horizons_publish_ready') else 'chưa'}."
+                if (metrics.get("forecast_model", {}) or {}).get("method")
+                == "xgboost_direct_quantile_conformal"
+                else "- Phương pháp: Monte Carlo fallback."
+            ),
             f"- P50 cuối kỳ {forecast_end['p50']:.2f} ({forecast_end['p50'] / latest - 1:.2%}).",
             f"- P10/P90 cuối kỳ {forecast_end['p10']:.2f} / {forecast_end['p90']:.2f}.",
             f"- Lịch giao dịch: {calendar_note}",
@@ -1804,6 +1738,151 @@ def _interactive_chart_markup(
     return markup, scripts
 
 
+FORECAST_CHART_CSS = r"""
+    .forecast-workspace { background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); }
+    .forecast-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px 12px; border-bottom:1px solid var(--line); }
+    .forecast-head h3 { margin:0 0 4px; font-size:17px; }
+    .forecast-head p { margin:0; color:var(--muted); font-size:12px; }
+    .forecast-badge { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; border-radius:999px; color:#0f766e; background:#e8f8f5; border:1px solid #bce9df; font-size:11px; font-weight:800; white-space:nowrap; }
+    .forecast-badge.warning { color:#8a4b00; background:var(--soft-amber); border-color:#f4d89a; }
+    .forecast-toolbar { display:flex; flex-wrap:wrap; gap:7px; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--soft-slate); }
+    .forecast-toolbar button { appearance:none; border:1px solid var(--line); border-radius:7px; padding:7px 10px; color:var(--ink); background:var(--panel); font:inherit; font-size:12px; font-weight:750; cursor:pointer; }
+    .forecast-toolbar button.active { color:#fff; background:var(--blue); border-color:var(--blue); }
+    .forecast-stage { position:relative; min-height:390px; padding:8px 10px 6px; }
+    #future-forecast-canvas { width:100%; height:390px; display:block; touch-action:none; }
+    .forecast-tooltip { position:absolute; z-index:4; min-width:190px; padding:10px 11px; border-radius:9px; color:var(--ink); background:color-mix(in srgb,var(--panel) 94%,transparent); border:1px solid var(--line); box-shadow:0 12px 28px rgba(15,23,42,.18); font-size:12px; line-height:1.55; pointer-events:none; transform:translate(12px,-50%); display:none; }
+    .forecast-legend { display:flex; flex-wrap:wrap; gap:14px; padding:0 18px 14px; color:var(--muted); font-size:11px; }
+    .forecast-legend span::before { content:""; display:inline-block; width:16px; height:3px; margin-right:6px; border-radius:3px; vertical-align:middle; background:var(--legend-color); }
+    [data-theme="dark"] .forecast-badge { color:#78e0ce; background:#123a38; border-color:#245c57; }
+"""
+
+
+FORECAST_CHART_JS = r"""
+(() => {
+  const canvas = document.getElementById('future-forecast-canvas');
+  const source = document.getElementById('future-forecast-data');
+  const root = document.getElementById('future-forecast-workspace');
+  if (!canvas || !source || !root) return;
+  const payload = JSON.parse(source.textContent || '{}');
+  const allRows = payload.rows || [];
+  const tooltip = root.querySelector('.forecast-tooltip');
+  let horizon = Math.min(20, allRows.length);
+  let showBand = true;
+  let hoverIndex = null;
+  const fmt = new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 2});
+  const css = (name, fallback) => getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
+
+  function rows() { return allRows.slice(0, horizon); }
+  function setup() {
+    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(320, Math.round(rect.width * dpr));
+    canvas.height = Math.round(390 * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return {ctx, width:rect.width, height:390};
+  }
+  function line(ctx, points, color, width=2) {
+    ctx.beginPath(); points.forEach((p,i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y));
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.stroke();
+  }
+  function draw() {
+    const visible = rows(); if (!visible.length) return;
+    const {ctx,width,height} = setup();
+    const pad={l:58,r:20,t:22,b:38}, w=width-pad.l-pad.r, h=height-pad.t-pad.b;
+    const values=visible.flatMap(r => [r.p10,r.p50,r.p90]).filter(Number.isFinite);
+    let min=Math.min(...values), max=Math.max(...values); const extra=Math.max((max-min)*.12, max*.005);
+    min-=extra; max+=extra;
+    const x=i => pad.l + (visible.length===1 ? w/2 : i*w/(visible.length-1));
+    const y=v => pad.t + (max-v)*h/(max-min || 1);
+    ctx.clearRect(0,0,width,height);
+    ctx.font='11px Inter,system-ui,sans-serif'; ctx.fillStyle=css('--muted','#68758a');
+    ctx.strokeStyle=css('--line','#e3e9f2'); ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){ const yy=pad.t+i*h/4, value=max-i*(max-min)/4; ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(width-pad.r,yy);ctx.stroke();ctx.fillText(fmt.format(value),6,yy+4); }
+    const tickStep=Math.max(1,Math.ceil(visible.length/5));
+    visible.forEach((r,i)=>{ if(i%tickStep===0 || i===visible.length-1) ctx.fillText(r.date.slice(5),Math.max(pad.l,x(i)-24),height-13); });
+    const lower=visible.map((r,i)=>({x:x(i),y:y(r.p10)}));
+    const median=visible.map((r,i)=>({x:x(i),y:y(r.p50)}));
+    const upper=visible.map((r,i)=>({x:x(i),y:y(r.p90)}));
+    if(showBand){ ctx.beginPath(); lower.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); [...upper].reverse().forEach(p=>ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.fillStyle='rgba(37,99,235,.14)'; ctx.fill(); }
+    line(ctx,lower,'#38bdf8',1.2); line(ctx,upper,'#38bdf8',1.2); line(ctx,median,css('--blue','#2563eb'),2.6);
+    visible.forEach((r,i)=>{ if(r.anchor){ctx.beginPath();ctx.arc(x(i),y(r.p50),4,0,Math.PI*2);ctx.fillStyle='#f59e0b';ctx.fill();} });
+    if(hoverIndex!==null && hoverIndex<visible.length){ const i=hoverIndex;ctx.beginPath();ctx.moveTo(x(i),pad.t);ctx.lineTo(x(i),pad.t+h);ctx.strokeStyle=css('--muted','#68758a');ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.arc(x(i),y(visible[i].p50),4.5,0,Math.PI*2);ctx.fillStyle=css('--blue','#2563eb');ctx.fill(); }
+  }
+  function updateTooltip(event) {
+    const visible=rows(), rect=canvas.getBoundingClientRect(), padL=58, padR=20;
+    const ratio=Math.max(0,Math.min(1,(event.clientX-rect.left-padL)/(rect.width-padL-padR)));
+    hoverIndex=Math.round(ratio*Math.max(visible.length-1,0)); const row=visible[hoverIndex];
+    if(!row)return; tooltip.style.display='block'; tooltip.style.left=`${Math.min(rect.width-215,Math.max(6,event.clientX-rect.left))}px`; tooltip.style.top=`${Math.max(55,event.clientY-rect.top)}px`;
+    tooltip.innerHTML=`<strong>${row.date}${row.anchor?' · mốc model':''}</strong><br>P50: ${fmt.format(row.p50)}<br>P10–P90: ${fmt.format(row.p10)} – ${fmt.format(row.p90)}<br>Xác suất dương: ${fmt.format(row.probability*100)}%`; draw();
+  }
+  root.querySelectorAll('[data-forecast-range]').forEach(button=>button.addEventListener('click',()=>{ horizon=Math.min(Number(button.dataset.forecastRange),allRows.length); root.querySelectorAll('[data-forecast-range]').forEach(b=>b.classList.toggle('active',b===button)); hoverIndex=null; tooltip.style.display='none'; draw(); }));
+  const bandButton=root.querySelector('[data-forecast-band]'); if(bandButton)bandButton.addEventListener('click',()=>{showBand=!showBand;bandButton.classList.toggle('active',showBand);draw();});
+  canvas.addEventListener('mousemove',updateTooltip); canvas.addEventListener('mouseleave',()=>{hoverIndex=null;tooltip.style.display='none';draw();});
+  window.addEventListener('resize',draw); window.addEventListener('dashboard-theme-change',draw); draw();
+})();
+"""
+
+
+def _interactive_forecast_markup(
+    forecast: pd.DataFrame,
+    symbol: str,
+) -> tuple[str, str]:
+    rows = []
+    for index, row in forecast.iterrows():
+        rows.append(
+            {
+                "date": str(pd.Timestamp(index).date()),
+                "p10": _chart_number(row.get("p10")),
+                "p50": _chart_number(row.get("p50")),
+                "p90": _chart_number(row.get("p90")),
+                "probability": _chart_number(row.get("prob_end_above_latest")),
+                "anchor": bool(row.get("is_model_anchor", False)),
+            }
+        )
+    method = str(forecast.attrs.get("method") or "scenario_forecast")
+    model_metrics = forecast.attrs.get("forecast_model_metrics", {}) or {}
+    publish_ready = bool(model_metrics.get("all_horizons_publish_ready", False))
+    method_label = (
+        "XGBoost quantile + conformal"
+        if method == "xgboost_direct_quantile_conformal"
+        else "Monte Carlo fallback"
+    )
+    if method == "xgboost_direct_quantile_conformal" and not publish_ready:
+        method_label += " · research-only"
+    payload = json.dumps(
+        {"symbol": symbol, "method": method, "rows": rows},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).replace("</", "<\\/")
+    markup = f"""
+    <section class="forecast-workspace" id="future-forecast-workspace">
+      <div class="forecast-head">
+        <div><h3>Dự báo tương lai ngắn hạn · {_escape(symbol)}</h3><p>P10/P50/P90 cho các phiên tới; mốc cam là dự báo trực tiếp 5/10/20D. Giá được neo tại close hiện tại, còn target model dùng open[t+1] → close[t+h], nên vùng giá chỉ là kịch bản quy đổi.</p></div>
+        <span class="forecast-badge{' warning' if not publish_ready else ''}">● {_escape(method_label)}</span>
+      </div>
+      <div class="forecast-toolbar" role="toolbar" aria-label="Công cụ biểu đồ dự báo">
+        <button type="button" data-forecast-range="5">5 phiên</button>
+        <button type="button" data-forecast-range="10">10 phiên</button>
+        <button type="button" class="active" data-forecast-range="20">20 phiên</button>
+        <button type="button" class="active" data-forecast-band>Dải P10–P90</button>
+      </div>
+      <div class="forecast-stage">
+        <canvas id="future-forecast-canvas" role="img" aria-label="Biểu đồ dự báo tương lai tương tác của {_escape(symbol)}"></canvas>
+        <div class="forecast-tooltip"></div>
+      </div>
+      <div class="forecast-legend">
+        <span style="--legend-color:#2563eb">P50</span><span style="--legend-color:#38bdf8">P10/P90</span><span style="--legend-color:#f59e0b">Mốc model trực tiếp</span>
+      </div>
+    </section>
+    """
+    scripts = (
+        '<script type="application/json" id="future-forecast-data">'
+        f"{payload}</script><script>{FORECAST_CHART_JS}</script>"
+    )
+    return markup, scripts
+
+
 def write_dashboard(
     config: dict,
     frame: pd.DataFrame,
@@ -1848,6 +1927,10 @@ def write_dashboard(
         frame,
         str(config["symbol"]),
     )
+    interactive_forecast, interactive_forecast_scripts = _interactive_forecast_markup(
+        forecast,
+        str(config["symbol"]),
+    )
     result_cards = "".join(
         [
             _metric_card("Giá hiện tại", format_price(latest), f"{levels['latest_date']} - nghìn VND/cp"),
@@ -1871,7 +1954,14 @@ def write_dashboard(
                 _metric_card(
                     "Expected excess return 5D",
                     format_signed_percent(safe_float(swing.get("latest_expected_excess_return"))),
-                    "Dự báo return vượt VNINDEX; không phải xác suất phiên kế tiếp.",
+                    (
+                        "Cận dưới đã hiệu chỉnh: "
+                        + format_signed_percent(
+                            safe_float(
+                                swing.get("latest_expected_excess_return_lower_bound")
+                            )
+                        )
+                    ),
                 ),
                 _metric_card(
                     "Frozen holdout",
@@ -1938,6 +2028,18 @@ def write_dashboard(
                 "Ranking edge frozen",
                 "Đạt" if swing_gate.get("frozen_ranking_edge") else "Không đạt",
                 "Correlation dự báo-excess return phải dương trên frozen holdout.",
+            ),
+            (
+                "Cận dưới excess return 5D",
+                format_signed_percent(
+                    safe_float(swing.get("latest_expected_excess_return_lower_bound"))
+                ),
+                "Phải vượt chi phí + margin; không dùng riêng dự báo điểm để mở lệnh.",
+            ),
+            (
+                "Baseline MAE",
+                "Đạt" if swing_gate.get("beats_zero_baseline_mae") else "Không đạt",
+                "XGBoost phải tốt hơn dự báo excess return bằng 0 trên frozen holdout.",
             ),
             (
                 "Stress phí 1.5x",
@@ -2066,8 +2168,9 @@ def write_dashboard(
     .capital-scenario {{ background:rgba(255,255,255,.98); color:var(--ink); border:1px solid rgba(255,255,255,.45); border-radius:14px; padding:16px; box-shadow:0 18px 40px rgba(1,14,29,.28); }}
     .capital-scenario label {{ display:block; color:var(--navy); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }}
     .capital-input-row {{ display:flex; align-items:center; gap:8px; margin-top:8px; }}
-    .capital-input-row input {{ width:100%; min-width:0; padding:10px 11px; border:1px solid #b9c8d9; border-radius:8px; color:var(--ink); font:inherit; font-size:17px; font-weight:750; }}
-    .capital-input-row input:focus {{ outline:3px solid rgba(37,99,235,.2); border-color:var(--blue); }}
+    .capital-input-row input {{ width:100%; min-width:0; padding:10px 11px; border:1px solid #60a5fa; border-radius:8px; background:#eaf4ff; color:#0b2b55; caret-color:#1d4ed8; box-shadow:inset 0 1px 0 rgba(255,255,255,.85); font:inherit; font-size:17px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:.015em; }}
+    .capital-input-row input::selection {{ background:#1d4ed8; color:#fff; }}
+    .capital-input-row input:focus {{ outline:3px solid rgba(96,165,250,.42); border-color:#2563eb; background:#f8fbff; }}
     .capital-input-row span {{ color:var(--muted); font-size:13px; font-weight:750; }}
     .capital-scenario p {{ margin:8px 0 0; color:var(--muted); font-size:12px; line-height:1.45; }}
     .capital-scenario-metrics {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; }}
@@ -2135,6 +2238,7 @@ def write_dashboard(
     @media (max-width:1200px) {{ .result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .grid,.two,.dashboard-grid,.header-layout,.decision-summary {{ grid-template-columns:1fr; }} .capital-scenario {{ max-width:460px; }} .gate-summary {{ border-left:0; border-top:1px solid #dbe5f0; padding:18px 0 0; }} }}
     @media (max-width:620px) {{ .result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:1fr; }} td {{ display:block; width:100%!important; border:0; padding:6px 4px; }} tr {{ display:block; border-top:1px solid var(--line); padding:8px 0; }} .quick-nav {{ position:static; }} }}
     {INTERACTIVE_CHART_CSS}
+    {FORECAST_CHART_CSS}
   </style>
 </head>
 <body>
@@ -2186,7 +2290,8 @@ def write_dashboard(
     <div class="metrics fundamental-metrics">{fundamental_cards}</div>
     <div class="two"><div class="stack">{fundamental_panel}</div><div class="stack">{news_panel}</div></div>
     <div id="forecast" class="section-title"><h2>Dự báo</h2><span class="section-kicker">Kịch bản giá và lịch sử drawdown</span></div>
-    <div class="two"><div class="stack">{forecast_panel}{calendar_panel}</div><section><h2>Biểu đồ dự báo</h2><img src="forecast_chart.png" alt="Biểu đồ dự báo"></section></div>
+    {interactive_forecast}
+    <div class="two"><div class="stack">{forecast_panel}{calendar_panel}</div><details class="accordion static-fallback"><summary><strong>Biểu đồ dự báo tĩnh</strong><span class="accordion-note">ảnh dự phòng / in báo cáo</span></summary><div class="accordion-body"><img src="forecast_chart.png" alt="Biểu đồ dự báo tĩnh"></div></details></div>
     <section><h2>Lịch sử giá và mức sụt giảm</h2><img src="history_chart.png" alt="Biểu đồ lịch sử giá"></section>
     <p class="disclaimer">Báo cáo dùng để học tập và lập kịch bản, không phải khuyến nghị mua/bán.</p>
   </main>
@@ -2224,6 +2329,7 @@ def write_dashboard(
     }})();
   </script>
   {interactive_chart_scripts}
+  {interactive_forecast_scripts}
 </body>
 </html>
 """

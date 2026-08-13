@@ -1,0 +1,52 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 2 bài để phân loại chủ đề (ket_qua_kinh_doanh: 1, co_tuc_va_hanh_dong_doanh_nghiep: 1, nganh: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.03530548888994933 (dự báo điểm 0.0018226972315460443) chưa vượt chi phí + margin 0.0100.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.03530548888994933 (dự báo điểm 0.0018226972315460443) chưa vượt chi phí + margin 0.0100.",
+    "News Reader [VOV.VN]: Một số cổ phiếu cần quan tâm 12/8: Cơ hội tiềm năng với AST và BWE - VOV.VN | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh (2026-08-11T22:00:00+00:00)",
+    "News Reader [Vietstock]: BWE: Thông báo giao dịch thực hiện quyền mua cổ phiếu của tổ chức có liên quan đến người nội bộ CTCP Nước Thủ Dầu Một - Vietstock | nhóm: khác (2026-08-11T09:49:45+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Một số cổ phiếu cần quan tâm 12/8: Cơ hội tiềm năng với AST và BWE - VOV.VN",
+      "publisher": "VOV.VN",
+      "url": "https://vov.vn/thi-truong/mot-so-co-phieu-can-quan-tam-128-co-hoi-tiem-nang-voi-ast-va-bwe-post1323138.vov",
+      "published_at": "2026-08-11T22:00:00+00:00"
+    },
+    {
+      "title": "BWE: Thông báo giao dịch thực hiện quyền mua cổ phiếu của tổ chức có liên quan đến người nội bộ CTCP Nước Thủ Dầu Một - Vietstock",
+      "publisher": "Vietstock",
+      "url": "https://vietstock.vn/2026/08/bwe-thong-bao-giao-dich-thuc-hien-quyen-mua-co-phieu-cua-to-chuc-co-lien-quan-den-nguoi-noi-bo-ctcp-nuoc-thu-dau-mot-739-1479358.amp",
+      "published_at": "2026-08-11T09:49:45+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 2. Chi tiết artifact: Xu hướng: Tích cực (Giá nằm trên SMA20 và SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Tích cực (RSI 55.5.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 31.4, -DI vượt +DI.); Thanh khoản: Thấp (0.64 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-13T17:33:54.869307+00:00; News Reader đọc được 2 bài. ML có 8 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest.",
+  "fundamental_view": "Artifact cơ bản: Nước - Môi trường Bình Dương; kỳ 2026-Q2; P/E 9.12; P/B 1.54; ROE 18.0%; ROA 7.1%; Debt/Equity 1.42; Revenue Growth -7.8%; Profit Growth 7.4%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 2 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 1, co_tuc_va_hanh_dong_doanh_nghiep: 1, nganh: 1. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá."
+}

@@ -20,6 +20,7 @@ from src.features.technical import (
     technical_assessment,
 )
 from src.forecast.monte_carlo import simulate_forecast
+from src.forecast.supervised import train_supervised_forecast
 from src.metadata import build_run_metadata
 from src.models.xgboost import train_models
 from src.reports.dashboard import (
@@ -57,6 +58,18 @@ def run_once(config: dict) -> Path:
         benchmark = fetch_history({**config, "symbol": benchmark_symbol})
         data = add_market_features(data, benchmark)
 
+    forecast_model_options = config.get("forecast_model", {}) or {}
+    forecast_model_enabled = bool(forecast_model_options.get("enabled", True))
+    if forecast_model_enabled:
+        if not bool(market_options.get("enabled", False)):
+            raise ValueError(
+                "forecast_model cần market_features.enabled=true để giữ cùng contract target."
+            )
+        for horizon in sorted(
+            {int(value) for value in forecast_model_options.get("horizons", [5, 10, 20])}
+        ):
+            data = add_swing_target(data, horizon_sessions=horizon)
+
     swing_options = config.get("swing_strategy", {}) or {}
     swing_enabled = bool(swing_options.get("enabled", False))
     if swing_enabled:
@@ -88,9 +101,32 @@ def run_once(config: dict) -> Path:
         latest_probabilities["swing_entry_margin"] = swing_latest[
             "selected_entry_margin"
         ]
+        latest_probabilities["swing_expected_excess_return_5d_lower_bound"] = swing_latest[
+            "expected_excess_return_5d_lower_bound"
+        ]
 
-    print("Mô phỏng Monte Carlo...")
-    forecast = simulate_forecast(data, config)
+    print("Mô phỏng Monte Carlo cho kịch bản rủi ro...")
+    monte_carlo_forecast = simulate_forecast(data, config)
+    forecast_model_metrics = {
+        "available": False,
+        "method": "monte_carlo_fallback",
+    }
+    forecast_models: dict[int, object] = {}
+    forecast = monte_carlo_forecast
+    if forecast_model_enabled:
+        print("Huấn luyện direct quantile forecast 5/10/20D và conformal calibration...")
+        try:
+            forecast, forecast_model_metrics, forecast_models = train_supervised_forecast(
+                data, config
+            )
+        except Exception as exc:
+            forecast_model_metrics = {
+                "available": False,
+                "method": "monte_carlo_fallback",
+                "error": str(exc),
+            }
+            print(f"Cảnh báo: supervised forecast thất bại, dùng Monte Carlo fallback: {exc}")
+    metrics["forecast_model"] = forecast_model_metrics
     levels = current_levels(data)
     technical = technical_assessment(levels)
     risk_plan = build_risk_plan(levels, forecast, config)
@@ -161,6 +197,10 @@ def run_once(config: dict) -> Path:
         run_directory / f"forecast_{config['forecast_sessions']}_sessions.csv",
         index=False,
     )
+    monte_carlo_forecast.reset_index(names="date").to_csv(
+        run_directory / f"monte_carlo_forecast_{config['forecast_sessions']}_sessions.csv",
+        index=False,
+    )
     for name, frame in fundamental_frames.items():
         frame.to_csv(run_directory / f"{name}.csv", index=False)
     raw_directory = run_directory / "raw"
@@ -178,9 +218,16 @@ def run_once(config: dict) -> Path:
     booster.save_model(str(run_directory / "xgboost_model.json"))
     if swing_booster is not None:
         swing_booster.save_model(str(run_directory / "xgboost_swing_5d.json"))
+    for horizon, forecast_model in forecast_models.items():
+        forecast_model.save_model(
+            str(run_directory / f"xgboost_quantile_forecast_{horizon}d.json")
+        )
     write_json(run_directory / "model_metrics.json", metrics)
     if swing_metrics is not None:
         write_json(run_directory / "swing_model_metrics.json", swing_metrics)
+    write_json(
+        run_directory / "forecast_model_metrics.json", forecast_model_metrics
+    )
     write_json(run_directory / "latest_probabilities.json", latest_probabilities)
     write_json(run_directory / "latest_levels.json", levels)
     write_json(run_directory / "technical_assessment.json", technical)

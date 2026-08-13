@@ -157,6 +157,44 @@ def test_sparse_backtest_keeps_cash_when_predictions_do_not_clear_cost() -> None
     assert cohorts["net_return"].eq(0).all()
 
 
+def test_sparse_backtest_trades_only_eligible_rows_and_uses_row_cost() -> None:
+    dates = pd.bdate_range("2024-01-02", periods=6)
+    rows = []
+    for current_date in dates:
+        rows.extend(
+            [
+                {
+                    "date": current_date,
+                    "symbol": "LIQUID",
+                    "prediction": 0.02,
+                    "actual_return": 0.03,
+                    "actual_market_return": 0.0,
+                    "is_tradable": True,
+                    "estimated_round_trip_cost": 0.007,
+                },
+                {
+                    "date": current_date,
+                    "symbol": "ILLIQUID",
+                    "prediction": 0.50,
+                    "actual_return": 0.50,
+                    "actual_market_return": 0.0,
+                    "is_tradable": False,
+                    "estimated_round_trip_cost": 0.20,
+                },
+            ]
+        )
+    cohorts, trades = sparse_panel_backtest(
+        pd.DataFrame(rows),
+        max_positions=1,
+        min_symbols_per_date=2,
+        horizon=5,
+        prediction_is_net=True,
+    )
+    assert set(trades["symbol"]) == {"LIQUID"}
+    assert np.isclose(trades.iloc[0]["cost"], 0.007)
+    assert np.isclose(trades.iloc[0]["net_return"], 0.023)
+
+
 def test_frozen_holdout_is_scored_after_purge_and_never_selects_margin() -> None:
     result = walk_forward_predict(
         make_model_panel(days=120, symbols=5),

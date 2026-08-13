@@ -54,6 +54,7 @@ trap cleanup EXIT INT TERM
 
 STAMP="$(date '+%Y-%m-%d_%H-%M-%S')"
 LOG_FILE="$LOG_DIR/vn100_full_batch_${STAMP}.log"
+print -r -- "Đang chạy batch VN100 (${#SYMBOLS[@]} mã). Theo dõi log: ${LOG_FILE}"
 exec >> "$LOG_FILE" 2>&1
 
 print -r -- "===== ${STAMP} | VN100 full batch started (${#SYMBOLS[@]} symbols) ====="
@@ -62,9 +63,9 @@ failed=0
 for symbol in "${SYMBOLS[@]}"; do
   print -r -- "===== $(date '+%Y-%m-%d %H:%M:%S') | full ${symbol} ====="
   "$RUNNER" full "$symbol" "${RUN_ARGS[@]}"
-  status=$?
-  print -r -- "===== $(date '+%Y-%m-%d %H:%M:%S') | ${symbol} exit=${status} ====="
-  if (( status != 0 )); then
+  exit_code=$?
+  print -r -- "===== $(date '+%Y-%m-%d %H:%M:%S') | ${symbol} exit=${exit_code} ====="
+  if (( exit_code != 0 )); then
     failed=1
   fi
 done

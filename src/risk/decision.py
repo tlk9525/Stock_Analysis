@@ -34,6 +34,9 @@ def _build_swing_signal_decision(
     frozen = (swing.get("frozen_holdout", {}) or {}).get("backtest", {}) or {}
     development = (swing.get("development_oos", {}) or {}).get("backtest", {}) or {}
     expected = safe_float(swing.get("latest_expected_excess_return"))
+    expected_lower_bound = safe_float(
+        swing.get("latest_expected_excess_return_lower_bound")
+    )
     margin = safe_float(swing.get("selected_entry_margin"), 0.0) or 0.0
     required_return = swing_cost + margin
     min_trades = int(strategy.get("min_completed_round_trips", 10))
@@ -49,7 +52,14 @@ def _build_swing_signal_decision(
         "swing_frozen_ranking": bool(gate.get("frozen_ranking_edge", False)),
         "swing_net_edge": bool(gate.get("net_edge", False)),
         "swing_cost_stress": bool(gate.get("cost_stress_1_5x", False)),
-        "swing_latest_edge": expected is not None and expected > required_return,
+        "swing_uncertainty_calibrated": bool(
+            gate.get("uncertainty_calibrated", False)
+        ),
+        "swing_beats_naive_baseline": bool(
+            gate.get("beats_zero_baseline_mae", False)
+        ),
+        "swing_latest_edge": expected_lower_bound is not None
+        and expected_lower_bound > required_return,
         "technical_context": technical_score >= min_technical_score,
         "reward_risk": reward_risk is not None and reward_risk >= min_reward_risk,
         "fresh_data": age_days <= max_data_age_days,
@@ -68,7 +78,14 @@ def _build_swing_signal_decision(
         "swing_frozen_ranking": "Correlation dự báo-return frozen holdout không dương.",
         "swing_net_edge": "Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
         "swing_cost_stress": "Frozen holdout không chịu được stress phí 1.5x.",
-        "swing_latest_edge": f"Expected excess return {expected if expected is not None else 'N/A'} chưa vượt chi phí + margin {required_return:.4f}.",
+        "swing_uncertainty_calibrated": "Dải bất định chưa có đủ residual OOS để conformal calibration.",
+        "swing_beats_naive_baseline": "MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+        "swing_latest_edge": (
+            "Cận dưới expected excess return "
+            f"{expected_lower_bound if expected_lower_bound is not None else 'N/A'} "
+            f"(dự báo điểm {expected if expected is not None else 'N/A'}) chưa vượt "
+            f"chi phí + margin {required_return:.4f}."
+        ),
         "technical_context": f"Technical score {technical_score} < {min_technical_score}.",
         "reward_risk": f"Reward/risk {reward_risk if reward_risk is not None else 'N/A'} < {min_reward_risk:.2f}.",
         "fresh_data": f"Dữ liệu mới nhất đã cách {age_days} ngày lịch.",
@@ -87,6 +104,8 @@ def _build_swing_signal_decision(
         "thresholds": {
             "minimum_completed_round_trips": min_trades,
             "required_expected_excess_return": required_return,
+            "latest_expected_excess_return_point": expected,
+            "latest_expected_excess_return_lower_bound": expected_lower_bound,
             "min_technical_score": min_technical_score,
             "min_reward_risk": min_reward_risk,
             "max_data_age_days": max_data_age_days,

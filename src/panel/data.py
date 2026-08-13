@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from datetime import date
+from pathlib import Path
 
 import pandas as pd
 
@@ -51,6 +52,8 @@ def fetch_price_frames(
     source: str = "VCI",
     frames: Mapping[str, pd.DataFrame] | None = None,
     fetcher: PriceFetcher | None = None,
+    cache_dir: str | Path | None = None,
+    continue_on_error: bool = False,
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
     """Load multiple stocks and one benchmark.
 
@@ -75,23 +78,47 @@ def fetch_price_frames(
     loader = fetcher or _default_fetcher
     injected = {str(key).strip().upper(): value for key, value in (frames or {}).items()}
 
+    cache_path = Path(cache_dir) if cache_dir else None
+    if cache_path:
+        cache_path.mkdir(parents=True, exist_ok=True)
+
     def load(symbol: str) -> pd.DataFrame:
         if symbol in injected:
             raw = injected[symbol]
         elif frames is not None:
             raise ValueError(f"Không có frame inject cho mã {symbol}.")
         else:
-            raw = loader(symbol, start_date, end, source)
+            symbol_cache = cache_path / f"{symbol}.csv" if cache_path else None
+            if symbol_cache is not None and symbol_cache.exists():
+                raw = pd.read_csv(symbol_cache)
+            else:
+                raw = loader(symbol, start_date, end, source)
+                if symbol_cache is not None and raw is not None and not raw.empty:
+                    raw.to_csv(symbol_cache, index=False)
         return normalize_price_frame(raw, symbol)
 
-    stock_frames = {symbol: load(symbol) for symbol in normalized_symbols}
-    return stock_frames, load(benchmark)
+    stock_frames: dict[str, pd.DataFrame] = {}
+    failures: dict[str, str] = {}
+    for symbol in normalized_symbols:
+        try:
+            stock_frames[symbol] = load(symbol)
+        except Exception as exc:
+            if not continue_on_error:
+                raise
+            failures[symbol] = f"{type(exc).__name__}: {exc}"
+    if not stock_frames:
+        raise ValueError("Không tải được dữ liệu của mã cổ phiếu nào.")
+    benchmark_frame = load(benchmark)
+    for frame in stock_frames.values():
+        frame.attrs["universe_fetch_failures"] = failures
+    return stock_frames, benchmark_frame
 
 
 def assemble_price_panel(
     stock_frames: Mapping[str, pd.DataFrame],
     benchmark_frame: pd.DataFrame,
     benchmark_symbol: str = "VNINDEX",
+    universe_registry: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Assemble stock OHLCV and aligned benchmark OHLCV into a long panel.
 
@@ -155,6 +182,27 @@ def assemble_price_panel(
         raise ValueError("Cổ phiếu và benchmark không có ngày giao dịch trùng nhau.")
 
     panel["benchmark_symbol"] = benchmark_name
+    if universe_registry is not None and not universe_registry.empty:
+        metadata = universe_registry.copy()
+        metadata["symbol"] = metadata["symbol"].astype(str).str.upper().str.strip()
+        keep = [
+            column
+            for column in (
+                "symbol",
+                "exchange",
+                "sector",
+                "listed_at",
+                "delisted_at",
+                "available_at",
+            )
+            if column in metadata
+        ]
+        panel = panel.merge(
+            metadata[keep].drop_duplicates("symbol", keep="last"),
+            on="symbol",
+            how="left",
+            validate="many_to_one",
+        )
     result = panel.set_index(["date", "symbol"]).sort_index()
     reports = [*quality_by_symbol.values(), benchmark_report]
     result.attrs["data_quality_report"] = {
@@ -166,6 +214,14 @@ def assemble_price_panel(
             sum(item.get("quarantined_rows", 0) for item in reports)
         ),
         "aligned_panel_rows": int(len(result)),
+        "universe_fetch_failures": next(
+            (
+                frame.attrs.get("universe_fetch_failures", {})
+                for frame in stock_frames.values()
+                if frame.attrs.get("universe_fetch_failures")
+            ),
+            {},
+        ),
     }
     return result
 
@@ -177,9 +233,15 @@ def load_price_panel(
 ) -> pd.DataFrame:
     """Fetch and assemble a panel in one call, convenient for ``panel_main``."""
 
+    universe_registry = kwargs.pop("universe_registry", None)
     stock_frames, benchmark_frame = fetch_price_frames(
         symbols,
         benchmark_symbol,
         **kwargs,
     )
-    return assemble_price_panel(stock_frames, benchmark_frame, benchmark_symbol)
+    return assemble_price_panel(
+        stock_frames,
+        benchmark_frame,
+        benchmark_symbol,
+        universe_registry=universe_registry,
+    )

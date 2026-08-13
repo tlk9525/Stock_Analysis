@@ -60,6 +60,25 @@ def _regression_metrics(actual: pd.Series, predicted: np.ndarray) -> dict:
     }
 
 
+def _finite_sample_quantile(values: np.ndarray, confidence: float) -> float:
+    if not 0.5 < confidence < 1.0:
+        raise ValueError("swing_strategy.lower_confidence_level phải nằm trong (0.5, 1).")
+    if not len(values):
+        raise ValueError("Không có OOS residual để hiệu chỉnh uncertainty.")
+    level = min(1.0, math.ceil((len(values) + 1) * confidence) / len(values))
+    return float(np.quantile(values, level, method="higher"))
+
+
+def _baseline_metrics(actual: pd.Series, historical_mean: float) -> dict:
+    rows = len(actual)
+    return {
+        "zero_excess_return": _regression_metrics(actual, np.zeros(rows)),
+        "historical_mean": _regression_metrics(
+            actual, np.full(rows, float(historical_mean))
+        ),
+    }
+
+
 def _strategy_options(config: dict) -> dict:
     options = config.get("swing_strategy", {}) or {}
     if not isinstance(options, dict):
@@ -204,6 +223,20 @@ def train_swing_strategy(
     validation = split_config.setdefault("validation", {})
     validation["gap_rows"] = max(int(validation.get("gap_rows", 1)), horizon)
     splits, walk_settings = build_walk_forward_splits(len(development), split_config)
+    minimum_test_rows = int(
+        strategy.get("minimum_test_rows", walk_settings["test_rows"])
+    )
+    if minimum_test_rows < 1 or minimum_test_rows > walk_settings["test_rows"]:
+        raise ValueError(
+            "swing_strategy.minimum_test_rows phải nằm trong [1, validation.test_rows]."
+        )
+    splits = [
+        split
+        for split in splits
+        if split["test_end"] - split["test_start"] >= minimum_test_rows
+    ]
+    if not splits:
+        raise ValueError("Không còn walk-forward fold đủ số dòng test tối thiểu.")
     params, rounds, early_stopping = _regression_params(config)
 
     oos_parts: list[pd.DataFrame] = []
@@ -268,6 +301,9 @@ def train_swing_strategy(
     dev_metrics = _regression_metrics(
         development_oos[target], development_oos["predicted_excess_return_5d"].to_numpy()
     )
+    development_baselines = _baseline_metrics(
+        development_oos[target], float(development[target].mean())
+    )
     dev_backtest, dev_details = _swing_backtest(
         development_oos,
         config,
@@ -294,6 +330,21 @@ def train_swing_strategy(
     frozen_regression = _regression_metrics(
         frozen_scored[target], frozen_scored["predicted_excess_return_5d"].to_numpy()
     )
+    frozen_baselines = _baseline_metrics(
+        frozen_scored[target], float(development[target].mean())
+    )
+    confidence = float(strategy.get("lower_confidence_level", 0.80))
+    residuals = np.abs(
+        development_oos[target].to_numpy(dtype=float)
+        - development_oos["predicted_excess_return_5d"].to_numpy(dtype=float)
+    )
+    conformal_radius = _finite_sample_quantile(residuals, confidence)
+    frozen_lower = (
+        frozen_scored["predicted_excess_return_5d"].to_numpy(dtype=float)
+        - conformal_radius
+    )
+    frozen_actual = frozen_scored[target].to_numpy(dtype=float)
+    frozen_lower_coverage = float(np.mean(frozen_actual >= frozen_lower))
     frozen_backtest, frozen_details = _swing_backtest(
         frozen_scored, config, strategy, entry_margin=chosen_margin
     )
@@ -328,6 +379,10 @@ def train_swing_strategy(
         "net_edge": frozen_backtest["net_total_return"] > 0 and (frozen_backtest["sharpe_ratio"] or 0) > 0,
         "cost_stress_1_5x": bool(stress_15) and stress_15["net_total_return"] > 0 and (stress_15["sharpe_ratio"] or 0) > 0,
         "settlement_aware": frozen_backtest["minimum_holding_sessions"] >= 2,
+        "uncertainty_calibrated": len(development_oos)
+        >= int(strategy.get("minimum_calibration_rows", 126)),
+        "beats_zero_baseline_mae": frozen_regression["mae"]
+        < frozen_baselines["zero_excess_return"]["mae"],
     }
     gate["passed"] = all(gate.values())
 
@@ -340,6 +395,7 @@ def train_swing_strategy(
     latest_prediction = float(
         final_model.predict(xgb.DMatrix(latest_features, feature_names=feature_columns))[0]
     )
+    latest_lower_bound = latest_prediction - conformal_radius
     importance = final_model.get_score(importance_type="gain")
     metrics = {
         "available": True,
@@ -354,14 +410,32 @@ def train_swing_strategy(
             "purged_rows_before_holdout": horizon,
             "frozen_holdout_rows": int(len(frozen_holdout)),
             "gap_rows": int(walk_settings["gap_rows"]),
+            "minimum_test_rows": minimum_test_rows,
             "folds": fold_records,
         },
-        "development_oos": {"regression": dev_metrics, "backtest": dev_backtest},
-        "frozen_holdout": {"regression": frozen_regression, "backtest": frozen_backtest},
+        "development_oos": {
+            "regression": dev_metrics,
+            "baselines": development_baselines,
+            "backtest": dev_backtest,
+        },
+        "frozen_holdout": {
+            "regression": frozen_regression,
+            "baselines": frozen_baselines,
+            "lower_bound_coverage": frozen_lower_coverage,
+            "backtest": frozen_backtest,
+        },
         "cost_stress": stress,
         "selected_num_boost_round": chosen_rounds,
         "selected_entry_margin": chosen_margin,
         "latest_expected_excess_return": latest_prediction,
+        "latest_expected_excess_return_lower_bound": latest_lower_bound,
+        "uncertainty": {
+            "method": "split_conformal_absolute_oos_residual",
+            "confidence_level": confidence,
+            "calibration_rows": int(len(development_oos)),
+            "radius": conformal_radius,
+            "frozen_lower_bound_coverage": frozen_lower_coverage,
+        },
         "publish_gate": gate,
         "feature_importance_gain": dict(
             sorted(
@@ -380,6 +454,7 @@ def train_swing_strategy(
     frozen_scored.attrs["backtest_trades"] = frozen_details.attrs.get("trades")
     latest = {
         "expected_excess_return_5d": latest_prediction,
+        "expected_excess_return_5d_lower_bound": latest_lower_bound,
         "selected_entry_margin": chosen_margin,
         "as_of": str(latest_features.index[0].date()),
     }
