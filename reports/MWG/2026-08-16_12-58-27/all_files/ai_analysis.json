@@ -1,0 +1,62 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 3 bài để phân loại chủ đề (ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 2, vi_mo: 1, nganh: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Development OOS chỉ có 6 trade; cần >= 10.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.04313081237086647 (dự báo điểm 0.0025205756537616253) chưa vượt chi phí + margin 0.0050.",
+    "ML guard: Technical score -1 < 2.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Development OOS chỉ có 6 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.04313081237086647 (dự báo điểm 0.0025205756537616253) chưa vượt chi phí + margin 0.0050.",
+    "ML decision artifact: NO_EDGE. Technical score -1 < 2.",
+    "News Reader [VnEconomy]: MWG mua lại 71.560 cổ phiếu quỹ, nâng cao giá trị cổ đông - VnEconomy | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-16T02:35:46+00:00)",
+    "News Reader [nguoiquansat.vn]: Hơn 2.600 nhân viên nghỉ việc, Thế Giới Di Động (MWG) gom lại cổ phiếu với giá rẻ hơn 7 lần thị trường - nguoiquansat.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep (2026-08-15T12:53:01+00:00)",
+    "News Reader [Tin nhanh chứng khoán]: Đầu tư Thế giới Di động (MWG): Doanh thu 7 tháng đạt hơn 11.000 tỷ đồng, tăng trưởng 29% - Tin nhanh chứng khoán | nhóm: ket_qua_kinh_doanh, nganh (2026-08-15T01:31:19+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "MWG mua lại 71.560 cổ phiếu quỹ, nâng cao giá trị cổ đông - VnEconomy",
+      "publisher": "VnEconomy",
+      "url": "https://vneconomy.vn/mwg-mua-lai-71560-co-phieu-quy.htm",
+      "published_at": "2026-08-16T02:35:46+00:00"
+    },
+    {
+      "title": "Hơn 2.600 nhân viên nghỉ việc, Thế Giới Di Động (MWG) gom lại cổ phiếu với giá rẻ hơn 7 lần thị trường - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/hon-2-600-nhan-vien-nghi-viec-the-gioi-di-dong-mwg-gom-lai-co-phieu-voi-gia-re-hon-7-lan-thi-truong-310697.html",
+      "published_at": "2026-08-15T12:53:01+00:00"
+    },
+    {
+      "title": "Đầu tư Thế giới Di động (MWG): Doanh thu 7 tháng đạt hơn 11.000 tỷ đồng, tăng trưởng 29% - Tin nhanh chứng khoán",
+      "publisher": "Tin nhanh chứng khoán",
+      "url": "https://m.tinnhanhchungkhoan.vn/dau-tu-the-gioi-di-dong-mwg-doanh-thu-7-thang-dat-hon-11000-ty-dong-tang-truong-29-post395944.amp",
+      "published_at": "2026-08-15T01:31:19+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm -1. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 49.7.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 22.7.); Thanh khoản: Thấp (0.59 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Thế giới di động; kỳ 2026-Q2; P/E 10.86; P/B 2.99; ROE 29.2%; ROA 11.2%; Debt/Equity 1.89; Revenue Growth 29.6%; Profit Growth 100.4%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 3 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 2, vi_mo: 1, nganh: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T05:58:46.527625+00:00; News Reader đọc được 3 bài. ML có 9 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

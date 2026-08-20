@@ -1,0 +1,32 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. Live research lưu 1 headline có URL để theo dõi thêm, nhưng chưa đọc và xác minh toàn văn nên không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 5 trade; cần >= 10.",
+    "ML guard: Cận dưới expected excess return -0.03302705061506095 (dự báo điểm 0.0016757046105340123) chưa vượt chi phí + margin 0.0100.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 5 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.03302705061506095 (dự báo điểm 0.0016757046105340123) chưa vượt chi phí + margin 0.0100.",
+    "Headline [CafeF]: VN-Index tiến sát 1.800 điểm, thêm cổ phiếu ngân hàng lên sàn - CafeF (2026-08-12T09:35:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "VN-Index tiến sát 1.800 điểm, thêm cổ phiếu ngân hàng lên sàn - CafeF",
+      "publisher": "CafeF",
+      "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxOLUpMVjF2MF9ZS29seHczYkpnMHlNa1FkV2dWekt2VzltaHhaaWdpbExWeFl0SXBheHJiVzdNZFdFeE41V0txZGN6T0JnMzZxcm9sOVYwRE82UDJxOVVPREdmSlBCaGJ0QnhEQTNXZWY4WGpnby1nMFJBYlZLM2RoUGpLc1pEVjRIYV8xSUI0a0NaalJyRk1zMmhvVXh6RHlY?oc=5",
+      "published_at": "2026-08-12T09:35:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 4. Chi tiết artifact: Xu hướng: Tích cực (Giá nằm trên SMA20 và SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 50.6.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 17.7.); Thanh khoản: Bình thường (0.77 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: HDBank; kỳ 2026-Q2; P/E 6.79; P/B 1.54; ROE 23.9%; ROA 2.0%; Debt/Equity 10.59; Revenue Growth 9.4%; Profit Growth 58.1%.",
+  "news_view": "Snapshot có 1 headline từ nguồn báo chí. Đây chỉ là danh sách chủ đề cần kiểm chứng; không có nhãn sentiment hoặc dữ liệu nội dung đã xác minh nên không được diễn giải là tin tích cực/tiêu cực.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T05:44:50.078439+00:00; News Reader đọc được 0 bài. ML có 3 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

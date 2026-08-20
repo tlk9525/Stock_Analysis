@@ -1,0 +1,53 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 3 bài để phân loại chủ đề (nganh: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Development OOS chỉ có 2 trade; cần >= 10.",
+    "ML guard: Frozen holdout chỉ có 1 trade; cần >= 10.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.04295273879856154 (dự báo điểm 0.0078026726841926575) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -4 < 2.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Development OOS chỉ có 2 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 1 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.04295273879856154 (dự báo điểm 0.0078026726841926575) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -4 < 2.",
+    "News Reader [nguoiquansat.vn]: Vingroup chuyển nhượng gần 5 triệu cổ phiếu VHM - nguoiquansat.vn | nhóm: khác (2026-08-10T08:50:01+00:00)",
+    "News Reader [VietnamBiz]: Vingroup chuyển nhượng hơn 4,8 triệu cổ phiếu VHM - VietnamBiz | nhóm: khác (2026-08-10T08:10:00+00:00)",
+    "News Reader [Vietstock]: Nhịp đập Thị trường 10/08: Cổ phiếu VIC và VHM kìm hãm đà phục hồi của VN-Index - Vietstock | nhóm: nganh (2026-08-10T10:04:47+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Vingroup chuyển nhượng gần 5 triệu cổ phiếu VHM - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/vingroup-chuyen-nhuong-gan-5-trieu-co-phieu-vhm-309619.html",
+      "published_at": "2026-08-10T08:50:01+00:00"
+    },
+    {
+      "title": "Vingroup chuyển nhượng hơn 4,8 triệu cổ phiếu VHM - VietnamBiz",
+      "publisher": "VietnamBiz",
+      "url": "https://vietnambiz.vn/vingroup-chuyen-nhuong-hon-48-trieu-co-phieu-vhm-202681014242741.htm",
+      "published_at": "2026-08-10T08:10:00+00:00"
+    },
+    {
+      "title": "Nhịp đập Thị trường 10/08: Cổ phiếu VIC và VHM kìm hãm đà phục hồi của VN-Index - Vietstock",
+      "publisher": "Vietstock",
+      "url": "https://vietstock.vn/2026/08/nhip-dap-thi-truong-1008-co-phieu-vic-va-vhm-kim-ham-da-phuc-hoi-cua-vn-index-1636-1478504.htm",
+      "published_at": "2026-08-10T10:04:47+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -4. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Cẩn thận (MACD dưới signal, histogram âm.); RSI14: Yếu (RSI 42.2.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 21.5.); Thanh khoản: Đột biến (1.76 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Vinhomes; kỳ 2026-Q2; P/E 7.02; P/B 2.16; ROE 32.7%; ROA 9.0%; Debt/Equity 3.05; Revenue Growth 177.8%; Profit Growth 200.8%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 3 bài; phân nhóm rule-based: nganh: 1. Tác động cần kiểm chứng: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T06:26:38.298415+00:00; News Reader đọc được 3 bài. ML có 6 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

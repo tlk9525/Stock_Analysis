@@ -1,0 +1,47 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. Live research lưu 2 headline có URL để theo dõi thêm, nhưng chưa đọc và xác minh toàn văn nên không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Development OOS chỉ có 6 trade; cần >= 10.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: Cận dưới expected excess return -0.06284841292026788 (dự báo điểm -0.0018955643754452467) chưa vượt chi phí + margin 0.0100.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Development OOS chỉ có 6 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.06284841292026788 (dự báo điểm -0.0018955643754452467) chưa vượt chi phí + margin 0.0100.",
+    "Headline [Tạp chí điện tử Thương Trường]: Novaland (NVL) điều chỉnh kế hoạch sử dụng hơn 8.000 tỷ đồng huy động từ cổ đông, ưu tiên thanh toán nợ - Tạp chí điện tử Thương Trường (2026-08-13T07:58:00+00:00)",
+    "Headline [YouTube]: Cổ phiếu BĐS “né luật” | Nghị quyết 12 #NVL #PDR #DXG #KDH - YouTube (2026-08-15T12:00:09+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Novaland (NVL) điều chỉnh kế hoạch sử dụng hơn 8.000 tỷ đồng huy động từ cổ đông, ưu tiên thanh toán nợ - Tạp chí điện tử Thương Trường",
+      "publisher": "Tạp chí điện tử Thương Trường",
+      "url": "https://news.google.com/rss/articles/CBMi3AFBVV95cUxPcDJHLXhtVjVYQ2ZmZElkQWc0QndFZFBEVXotZ1ZHbFJ6Rk84em9OYlVZSlZ5aDBjMUNHLV9ldUhLSTBlclRrMjF0NVFNUmxBa2x6ckJtQXVkQ3lwRUg4Z3Q5TzZkZEtCbzBKMnJOdW02dzd1d2RIVnRGalEtYV9IY2JkZGtSNWJYS2ZrcTIwdFBMclUwRDdEZ1JEb0RZOGtfT1ZuNVlqcjQxbGVZRW1vb0o5eDRwSDVXbmU1b3g1a2tsT05YQzl2NzBoU0VSM1EwcFl1SUJsSnZoeHdn?oc=5",
+      "published_at": "2026-08-13T07:58:00+00:00"
+    },
+    {
+      "title": "Cổ phiếu BĐS “né luật” | Nghị quyết 12 #NVL #PDR #DXG #KDH - YouTube",
+      "publisher": "YouTube",
+      "url": "https://news.google.com/rss/articles/CBMiQkFVX3lxTE9RUzVKdkc4cWFjR1BUVE16bGtqTEQ4Wk9ld1VMMUlWa3dtcUo5QlR5Vmg0MUk2SW5BdGJWZHJmSUpCZw?oc=5",
+      "published_at": "2026-08-15T12:00:09+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 4. Chi tiết artifact: Xu hướng: Tích cực (Giá nằm trên SMA20 và SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 51.3.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 23.6.); Thanh khoản: Bình thường (0.83 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Novaland; kỳ 2026-Q2; P/E 7.16; P/B 0.66; ROE 9.5%; ROA 1.7%; Debt/Equity 2.96; Revenue Growth -22.1%.",
+  "news_view": "Snapshot có 2 headline từ nguồn báo chí. Đây chỉ là danh sách chủ đề cần kiểm chứng; không có nhãn sentiment hoặc dữ liệu nội dung đã xác minh nên không được diễn giải là tin tích cực/tiêu cực.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T06:03:09.756190+00:00; News Reader đọc được 0 bài. ML có 7 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

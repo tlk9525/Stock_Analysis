@@ -1,0 +1,69 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 4 bài để phân loại chủ đề (ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 4, vi_mo: 2, nganh: 4, rui_ro: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -3. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 42.9.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 31.4, -DI vượt +DI.); Thanh khoản: Bình thường (0.99 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Hạ tầng Kỹ thuật TP.HCM; kỳ 2026-Q2; P/E 81.54; P/B 0.97; ROE 1.2%; ROA 0.3%; Debt/Equity 2.36; Revenue Growth 2.9%; Profit Growth -57.8%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 4 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 4, vi_mo: 2, nganh: 4, rui_ro: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T03:17:27.853772+00:00; News Reader đọc được 4 bài. ML có 8 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest. Final report dùng fallback grounded từ artifact local.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Development OOS chỉ có 0 trade; cần >= 10.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: Cận dưới expected excess return -0.050279377478636866 (dự báo điểm -0.0015866105677559972) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -3 < 2.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng.",
+    "Ollama AI chưa hoàn tất trong lệnh full: Exit: "
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Development OOS chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.050279377478636866 (dự báo điểm -0.0015866105677559972) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -3 < 2.",
+    "News Reader [VnEconomy]: CII tiếp tục nâng sở hữu tại PC1 lên 12,08% sau loạt giao dịch - VnEconomy | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, nganh, rui_ro (2026-08-16T02:34:41+00:00)",
+    "News Reader [Nhadautu.vn]: CII liên tục gom PC1, đã cắt lỗ một phần Tasco - Nhadautu.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-16T03:08:22+00:00)",
+    "News Reader [Tin nhanh chứng khoán]: Nhóm Đầu tư Hạ tầng Kỹ thuật TP.HCM (CII) mua thêm 494.600 cổ phiếu PC1 - Tin nhanh chứng khoán | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-15T01:33:20+00:00)",
+    "News Reader [An ninh Tiền tệ]: Nhóm CII tiếp tục tăng sở hữu lên hơn 12% vốn tại PC1 - An ninh Tiền tệ | nhóm: co_tuc_va_hanh_dong_doanh_nghiep, nganh (2026-08-16T01:48:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "CII tiếp tục nâng sở hữu tại PC1 lên 12,08% sau loạt giao dịch - VnEconomy",
+      "publisher": "VnEconomy",
+      "url": "https://vneconomy.vn/cii-tiep-tuc-nang-so-huu-tai-pc1-len-1208-sau-loat-giao-dich.htm",
+      "published_at": "2026-08-16T02:34:41+00:00"
+    },
+    {
+      "title": "CII liên tục gom PC1, đã cắt lỗ một phần Tasco - Nhadautu.vn",
+      "publisher": "Nhadautu.vn",
+      "url": "https://nhadautu.vn/cii-lien-tuc-gom-pc1-da-cat-lo-mot-phan-tasco-d107005.html",
+      "published_at": "2026-08-16T03:08:22+00:00"
+    },
+    {
+      "title": "Nhóm Đầu tư Hạ tầng Kỹ thuật TP.HCM (CII) mua thêm 494.600 cổ phiếu PC1 - Tin nhanh chứng khoán",
+      "publisher": "Tin nhanh chứng khoán",
+      "url": "https://www.tinnhanhchungkhoan.vn/nhom-dau-tu-ha-tang-ky-thuat-tphcm-cii-mua-them-494600-co-phieu-pc1-post395947.html",
+      "published_at": "2026-08-15T01:33:20+00:00"
+    },
+    {
+      "title": "Nhóm CII tiếp tục tăng sở hữu lên hơn 12% vốn tại PC1 - An ninh Tiền tệ",
+      "publisher": "An ninh Tiền tệ",
+      "url": "https://antt.nguoiduatin.vn/nhom-cii-tiep-tuc-tang-so-huu-len-hon-12-von-tai-pc1-205260816083739375.htm",
+      "published_at": "2026-08-16T01:48:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json."
+}

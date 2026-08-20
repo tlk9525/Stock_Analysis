@@ -1,0 +1,65 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 3 bài để phân loại chủ đề (ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 3, nganh: 3, rui_ro: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Development OOS chỉ có 0 trade; cần >= 10.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.025144444258415888 (dự báo điểm 0.0011450171004980803) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -4 < 2.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Development OOS chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.025144444258415888 (dự báo điểm 0.0011450171004980803) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -4 < 2.",
+    "News Reader [Thời báo Tài chính Việt Nam]: VIB chốt ngày chia cổ phiếu thưởng 9,5%, tiếp đà tăng vốn khi dư nợ cho vay tiến sát 400.000 tỷ đồng - Thời báo Tài chính Việt Nam | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-11T10:43:17+00:00)",
+    "News Reader [Vietstock]: VIB sắp phát hành thêm 323 triệu cổ cp, nâng vốn điều lệ lên 37,274 tỷ đồng - Vietstock | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-11T09:45:45+00:00)",
+    "News Reader [Báo Pháp Luật Việt Nam]: VIB chốt quyền thưởng cổ phiếu tỷ lệ 9,5%, vốn điều lệ tiến sát mốc 37.300 tỷ đồng - Báo Pháp Luật Việt Nam | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-11T10:38:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "VIB chốt ngày chia cổ phiếu thưởng 9,5%, tiếp đà tăng vốn khi dư nợ cho vay tiến sát 400.000 tỷ đồng - Thời báo Tài chính Việt Nam",
+      "publisher": "Thời báo Tài chính Việt Nam",
+      "url": "https://thoibaotaichinhvietnam.vn/vib-chot-ngay-chia-co-phieu-thuong-9-5-tiep-da-tang-von-khi-du-no-cho-vay-tien-sat-400-000-ty-dong-202151.html",
+      "published_at": "2026-08-11T10:43:17+00:00"
+    },
+    {
+      "title": "VIB sắp phát hành thêm 323 triệu cổ cp, nâng vốn điều lệ lên 37,274 tỷ đồng - Vietstock",
+      "publisher": "Vietstock",
+      "url": "https://vietstock.vn/2026/08/vib-sap-phat-hanh-them-323-trieu-co-cp-nang-von-dieu-le-len-37274-ty-dong-757-1479222.htm",
+      "published_at": "2026-08-11T09:45:45+00:00"
+    },
+    {
+      "title": "VIB chốt quyền thưởng cổ phiếu tỷ lệ 9,5%, vốn điều lệ tiến sát mốc 37.300 tỷ đồng - Báo Pháp Luật Việt Nam",
+      "publisher": "Báo Pháp Luật Việt Nam",
+      "url": "https://doanhnhan.baophapluat.vn/vib-chot-quyen-thuong-co-phieu-ty-le-9-5-von-dieu-le-tien-sat-moc-37-300-ty-dong.html",
+      "published_at": "2026-08-11T10:38:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -4. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 37.6.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 26.1, -DI vượt +DI.); Thanh khoản: Thấp (0.68 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: VIBBank; kỳ 2026-Q2; P/E 6.61; P/B 1.02; ROE 15.7%; ROA 1.3%; Debt/Equity 11.15; Revenue Growth 4.9%; Profit Growth -8.2%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 3 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 3, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 3, nganh: 3, rui_ro: 1. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T06:27:35.026300+00:00; News Reader đọc được 3 bài. ML có 10 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

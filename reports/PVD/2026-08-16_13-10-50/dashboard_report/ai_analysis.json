@@ -1,0 +1,44 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. Live research lưu 1 headline có URL để theo dõi thêm, nhưng chưa đọc và xác minh toàn văn nên không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.044976459568663696 (dự báo điểm -0.00172142602968961) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -1 < 2.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.044976459568663696 (dự báo điểm -0.00172142602968961) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -1 < 2.",
+    "Headline [CafeF]: PVD:Tổng Công ty Cổ phần Khoan và Dịch vụ Khoan Dầu khí (HOSE) - CafeF (2026-08-11T07:00:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "PVD:Tổng Công ty Cổ phần Khoan và Dịch vụ Khoan Dầu khí (HOSE) - CafeF",
+      "publisher": "CafeF",
+      "url": "https://news.google.com/rss/articles/CBMiXEFVX3lxTFBtbm1NZ2s2MU9Yck9WZFpJb21HdWNuTHNmc0xNWURwX2dRR3hSLXZsNGs4eHNHYTBXRVhGY2tKUEk1QlQ5MG44ZGhtYTNDVzBnWnhLN2R1MGVIOVN3?oc=5",
+      "published_at": "2026-08-11T07:00:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm -1. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 44.3.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 13.8.); Thanh khoản: Bình thường (0.90 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Khoan Dầu khí PVDrilling; kỳ 2026-Q2; P/E 14.98; P/B 0.96; ROE 6.5%; ROA 3.9%; Debt/Equity 0.69; Revenue Growth 23.7%; Profit Growth -32.2%.",
+  "news_view": "Snapshot có 1 headline từ nguồn báo chí. Đây chỉ là danh sách chủ đề cần kiểm chứng; không có nhãn sentiment hoặc dữ liệu nội dung đã xác minh nên không được diễn giải là tin tích cực/tiêu cực.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T06:11:07.385959+00:00; News Reader đọc được 0 bài. ML có 9 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

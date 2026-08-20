@@ -1,0 +1,44 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 1 bài để phân loại chủ đề (chưa có nhóm khớp rule), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.04635656422116219 (dự báo điểm 0.0019389563240110874) chưa vượt chi phí + margin 0.0075.",
+    "ML guard: Technical score -3 < 2.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.04635656422116219 (dự báo điểm 0.0019389563240110874) chưa vượt chi phí + margin 0.0075.",
+    "ML decision artifact: NO_EDGE. Technical score -3 < 2.",
+    "News Reader [Fili.vn]: SBG, ANT, CEO, DGW, HDG, LDG vào rổ Small Cap của MSCI Frontier Markets - Fili.vn | nhóm: khác (2026-08-11T07:00:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "SBG, ANT, CEO, DGW, HDG, LDG vào rổ Small Cap của MSCI Frontier Markets - Fili.vn",
+      "publisher": "Fili.vn",
+      "url": "https://fili.vn/2026/08/sbg-ant-ceo-dgw-hdg-ldg-vao-ro-small-cap-cua-msci-frontier-markets-3358-1480028.htm",
+      "published_at": "2026-08-11T07:00:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -3. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 36.8.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 48.2, -DI vượt +DI.); Thanh khoản: Bình thường (0.76 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-13T18:01:56.346080+00:00; News Reader đọc được 1 bài. ML có 9 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest.",
+  "fundamental_view": "Artifact cơ bản: Tập đoàn Hà Đô; kỳ 2026-Q2; P/E 9.18; P/B 0.99; ROE 10.9%; ROA 5.1%; Debt/Equity 0.72; Revenue Growth -17.5%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 1 bài; phân nhóm rule-based: chưa có nhóm khớp rule. Tác động cần kiểm chứng: mở URL gốc để xác minh bối cảnh. Đây không phải sentiment hay dự báo tác động giá."
+}

@@ -1,0 +1,56 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 3 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, nganh: 3), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Frozen holdout chỉ có 7 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.04677058466016437 (dự báo điểm 0.0044904486276209354) chưa vượt chi phí + margin 0.0075.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 7 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.04677058466016437 (dự báo điểm 0.0044904486276209354) chưa vượt chi phí + margin 0.0075.",
+    "News Reader [Chứng khoán DNSE]: Gợi ý mã cổ phiếu tiềm năng: GVR - Chứng khoán DNSE | nhóm: ket_qua_kinh_doanh, nganh (2026-08-10T18:47:43+00:00)",
+    "News Reader [congly.vn]: Chứng khoán trưa 10/8: BCM tăng trần, GAS - GVR kéo VN-Index tiến sát 1.780 điểm - congly.vn | nhóm: ket_qua_kinh_doanh, nganh (2026-08-10T06:21:55+00:00)",
+    "News Reader [nguoiquansat.vn]: VN-Index thăng hoa, GEX, GAS, GVR... tím trần - nguoiquansat.vn | nhóm: nganh (2026-08-10T07:10:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Gợi ý mã cổ phiếu tiềm năng: GVR - Chứng khoán DNSE",
+      "publisher": "Chứng khoán DNSE",
+      "url": "https://www.dnse.com.vn/tin-tuc/goi-y-ma-co-phieu-tiem-nang-gvr",
+      "published_at": "2026-08-10T18:47:43+00:00"
+    },
+    {
+      "title": "Chứng khoán trưa 10/8: BCM tăng trần, GAS - GVR kéo VN-Index tiến sát 1.780 điểm - congly.vn",
+      "publisher": "congly.vn",
+      "url": "https://doanhnhan.congly.vn/chung-khoan-trua-10-8-bcm-tang-tran-gas-gvr-keo-vn-index-tien-sat-1-780-diem.html",
+      "published_at": "2026-08-10T06:21:55+00:00"
+    },
+    {
+      "title": "VN-Index thăng hoa, GEX, GAS, GVR... tím trần - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/vn-index-thang-hoa-gex-gas-gvr-tim-tran-309530.html",
+      "published_at": "2026-08-10T07:10:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 4. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Tích cực (RSI 56.4.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng tăng (ADX 35.8, +DI vượt -DI.); Thanh khoản: Đột biến (1.63 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Tập đoàn CN Cao su VN; kỳ 2026-Q2; P/E 17.50; P/B 2.06; ROE 12.2%; ROA 8.2%; Debt/Equity 0.35; Revenue Growth 20.5%; Profit Growth 58.2%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 3 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, nganh: 3. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T05:42:05.951445+00:00; News Reader đọc được 3 bài. ML có 7 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

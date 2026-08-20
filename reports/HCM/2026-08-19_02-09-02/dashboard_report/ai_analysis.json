@@ -1,0 +1,62 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 3 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 2, nganh: 2), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Development OOS chỉ có 5 trade; cần >= 10.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.038307024373533505 (dự báo điểm 0.002169310348108411) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -1 < 2.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Development OOS chỉ có 5 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.038307024373533505 (dự báo điểm 0.002169310348108411) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -1 < 2.",
+    "News Reader [VnEconomy]: Dragon Capital dự chi 850 tỷ mua hơn 85 triệu cổ phiếu HCM - VnEconomy | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-18T07:18:30+00:00)",
+    "News Reader [Nhịp sống kinh doanh]: Dragon Capital dự chi hơn 850 tỷ đồng mua thêm 85 triệu cổ phiếu HCM - Nhịp sống kinh doanh | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-18T06:10:00+00:00)",
+    "News Reader [nguoiquansat.vn]: Dragon Capital đăng ký mua hơn 85 triệu cổ phiếu HCM - nguoiquansat.vn | nhóm: co_tuc_va_hanh_dong_doanh_nghiep (2026-08-18T03:50:01+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Dragon Capital dự chi 850 tỷ mua hơn 85 triệu cổ phiếu HCM - VnEconomy",
+      "publisher": "VnEconomy",
+      "url": "https://vneconomy.vn/dragon-capital-du-chi-850-ty-mua-hon-85-trieu-co-phieu-hcm.htm",
+      "published_at": "2026-08-18T07:18:30+00:00"
+    },
+    {
+      "title": "Dragon Capital dự chi hơn 850 tỷ đồng mua thêm 85 triệu cổ phiếu HCM - Nhịp sống kinh doanh",
+      "publisher": "Nhịp sống kinh doanh",
+      "url": "https://nhipsongkinhdoanh.vn/dragon-capital-du-chi-hon-850-ty-dong-mua-them-85-trieu-co-phieu-hcm-31969.htm",
+      "published_at": "2026-08-18T06:10:00+00:00"
+    },
+    {
+      "title": "Dragon Capital đăng ký mua hơn 85 triệu cổ phiếu HCM - nguoiquansat.vn",
+      "publisher": "nguoiquansat.vn",
+      "url": "https://nguoiquansat.vn/dragon-capital-dang-ky-mua-hon-85-trieu-co-phieu-hcm-311111.html",
+      "published_at": "2026-08-18T03:50:01+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm -1. Chi tiết artifact: Xu hướng: Trung tính (Giá trên SMA60 nhưng chưa vượt SMA20.); MACD: Cẩn thận (MACD dưới signal, histogram âm.); RSI14: Trung tính (RSI 48.7.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 14.9.); Thanh khoản: Bình thường (0.81 lần trung bình.); Stochastic: Cực trị (%K 10.0, %D 20.5.)",
+  "fundamental_view": "Artifact cơ bản: Chứng khoán HSC; kỳ 2026-Q2; P/E 19.34; P/B 1.97; ROE 9.8%; ROA 3.1%; Debt/Equity 1.82; Revenue Growth 15.1%; Profit Growth 42.0%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 3 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 3, vi_mo: 2, nganh: 2. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-18T19:09:17.597087+00:00; News Reader đọc được 3 bài. ML có 9 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

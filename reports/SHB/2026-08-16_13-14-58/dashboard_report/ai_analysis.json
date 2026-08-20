@@ -1,0 +1,53 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 2 bài để phân loại chủ đề (co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 1, nganh: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -3. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 40.8.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 36.5, -DI vượt +DI.); Thanh khoản: Bình thường (0.84 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: SHB; kỳ 2026-Q2; P/E 4.55; P/B 0.74; ROE 17.2%; ROA 1.3%; Debt/Equity 11.81; Revenue Growth -6.0%; Profit Growth -2.3%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 2 bài; phân nhóm rule-based: co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 1, nganh: 1. Tác động cần kiểm chứng: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T06:15:14.498138+00:00; News Reader đọc được 2 bài. ML có 8 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest. Final report dùng fallback grounded từ artifact local.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.033758893317265226 (dự báo điểm -0.001901185023598373) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -3 < 2.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng.",
+    "Ollama AI chưa hoàn tất trong lệnh full: Exit: "
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.033758893317265226 (dự báo điểm -0.001901185023598373) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -3 < 2.",
+    "News Reader [Báo Dân trí]: Khối ngoại bất ngờ gom mạnh cổ phiếu SHB - Báo Dân trí | nhóm: khác (2026-08-10T12:12:55+00:00)",
+    "News Reader [An ninh Tiền tệ]: SHB lên kế hoạch phát hành 3.000 tỷ đồng trái phiếu riêng lẻ - An ninh Tiền tệ | nhóm: co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-14T10:20:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Khối ngoại bất ngờ gom mạnh cổ phiếu SHB - Báo Dân trí",
+      "publisher": "Báo Dân trí",
+      "url": "https://dantri.com.vn/kinh-doanh/khoi-ngoai-bat-ngo-gom-manh-co-phieu-shb-20260810163033823.htm",
+      "published_at": "2026-08-10T12:12:55+00:00"
+    },
+    {
+      "title": "SHB lên kế hoạch phát hành 3.000 tỷ đồng trái phiếu riêng lẻ - An ninh Tiền tệ",
+      "publisher": "An ninh Tiền tệ",
+      "url": "https://antt.nguoiduatin.vn/shb-len-ke-hoach-phat-hanh-3000-ty-dong-trai-phieu-rieng-le-20526081416362319.htm",
+      "published_at": "2026-08-14T10:20:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json."
+}

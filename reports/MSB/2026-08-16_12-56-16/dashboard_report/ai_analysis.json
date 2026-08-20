@@ -1,0 +1,47 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 2 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 2, vi_mo: 2, nganh: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Frozen holdout chỉ có 4 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.02899377722904206 (dự báo điểm 0.0068424781784415245) chưa vượt chi phí + margin 0.0050.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 4 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.02899377722904206 (dự báo điểm 0.0068424781784415245) chưa vượt chi phí + margin 0.0050.",
+    "News Reader [Chứng khoán DNSE]: MSB chốt quyền phát hành 624 triệu cổ phiếu, dự kiến tăng vốn lên 37.000 tỷ đồng - Chứng khoán DNSE | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo (2026-08-13T14:28:00+00:00)",
+    "News Reader [MoneyF]: MSB chốt ngày phát hành 624 triệu cổ phiếu thưởng, tăng vốn lên 37.440 tỷ đồng - MoneyF | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh (2026-08-13T08:56:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "MSB chốt quyền phát hành 624 triệu cổ phiếu, dự kiến tăng vốn lên 37.000 tỷ đồng - Chứng khoán DNSE",
+      "publisher": "Chứng khoán DNSE",
+      "url": "https://www.dnse.com.vn/senses/tin-tuc/msb-chot-quyen-phat-hanh-624-trieu-co-phieu-du-kien-tang-von-len-37000-ty-dong-35269226",
+      "published_at": "2026-08-13T14:28:00+00:00"
+    },
+    {
+      "title": "MSB chốt ngày phát hành 624 triệu cổ phiếu thưởng, tăng vốn lên 37.440 tỷ đồng - MoneyF",
+      "publisher": "MoneyF",
+      "url": "https://moneyf.vn/msb-chot-ngay-phat-hanh-624-trieu-co-phieu-thuong-qetb52hl",
+      "published_at": "2026-08-13T08:56:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Hồi phục / nghiêng tăng; điểm 2. Chi tiết artifact: Xu hướng: Tích cực (Giá nằm trên SMA20 và SMA60.); MACD: Cẩn thận (MACD dưới signal, histogram âm.); RSI14: Tích cực (RSI 55.5.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 20.1.); Thanh khoản: Bình thường (1.34 lần trung bình.); Stochastic: Cực trị (%K 81.2, %D 77.1.)",
+  "fundamental_view": "Artifact cơ bản: MSB Bank; kỳ 2026-Q2; P/E 8.55; P/B 1.11; ROE 13.7%; ROA 1.5%; Debt/Equity 8.75; Revenue Growth -4.0%; Profit Growth 1.1%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 2 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 2, vi_mo: 2, nganh: 1. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T05:56:32.479658+00:00; News Reader đọc được 2 bài. ML có 5 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

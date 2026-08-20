@@ -1078,23 +1078,105 @@ def _metric_card(label: str, value: str, detail: str = "") -> str:
     )
 
 
-def _table(rows: list[tuple[str, str, str]]) -> str:
+def _pulse_card(
+    label: str,
+    value: str,
+    detail: str = "",
+    tone: str = "neutral",
+    status: str = "",
+) -> str:
+    """Render a compact, stateful market KPI for the dashboard hero."""
+
+    status_markup = (
+        f'<div class="pulse-status">{_escape(status)}</div>' if status else ""
+    )
+    return (
+        f'<article class="pulse-card {_escape(tone)}">'
+        '<div class="pulse-head">'
+        f'<div class="pulse-label"><span class="pulse-mark" aria-hidden="true"></span>{_escape(label)}</div>'
+        '<span class="pulse-help" aria-hidden="true">?</span>'
+        "</div>"
+        f'<div class="pulse-value">{_escape(value)}</div>'
+        f'<div class="pulse-detail">{_escape(detail)}</div>'
+        f"{status_markup}"
+        "</article>"
+    )
+
+
+def _status_tone(value: object) -> str:
+    """Classify human-readable dashboard states without changing their meaning."""
+
+    normalized = str(value or "").strip().casefold()
+    if not normalized:
+        return "neutral"
+    if any(token in normalized for token in ("không đạt", "chưa đạt", "fail", "insufficient", "reduce")):
+        return "negative"
+    if normalized in {"đạt", "ok", "có dữ liệu", "actionable", "buy_candidate", "tích cực", "ổn định"}:
+        return "positive"
+    if any(token in normalized for token in ("watch", "wait", "no_edge", "research_only", "n/a", "chưa có", "cẩn thận", "yếu")):
+        return "warning"
+    return "neutral"
+
+
+def _status_chip(value: object) -> str:
+    return f'<span class="status-chip {_status_tone(value)}">{_escape(value)}</span>'
+
+
+def _table(
+    rows: list[tuple[str, str, str]],
+    *,
+    headers: tuple[str, str, str] = ("Hạng mục", "Kết quả", "Cách đọc"),
+    status_column: bool = False,
+) -> str:
+    """Render a compact, readable dashboard table with optional status badges."""
+
     body = "".join(
-        f"<tr><td>{_escape(name)}</td><td>{_escape(value)}</td><td>{_escape(detail)}</td></tr>"
+        "<tr>"
+        f"<td>{_escape(name)}</td>"
+        f"<td class=\"table-value\">{_status_chip(value) if status_column else _escape(value)}</td>"
+        f"<td class=\"table-detail\">{_escape(detail)}</td>"
+        "</tr>"
         for name, value, detail in rows
     )
-    return f"<table><tbody>{body}</tbody></table>"
+    head = "".join(f"<th>{_escape(header)}</th>" for header in headers)
+    return f'<div class="table-wrap report-table-wrap"><table class="report-table"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
 
 
-def _html_table(headers: list[str], rows: list[list[str]]) -> str:
+def _html_table(headers: list[str], rows: list[list[str]], *, status_column: int | None = None) -> str:
     """Render a responsive HTML table from already-escaped cells."""
 
     head = "".join(f"<th>{_escape(header)}</th>" for header in headers)
-    body = "".join(
-        "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
-        for row in rows
+
+    def render_row(row: list[str]) -> str:
+        cells = []
+        for index, cell in enumerate(row):
+            class_attr = ' class="table-value"' if index == status_column else ""
+            value = _status_chip(cell) if index == status_column else cell
+            cells.append(f"<td{class_attr}>{value}</td>")
+        return "<tr>" + "".join(cells) + "</tr>"
+
+    body = "".join(render_row(row) for row in rows)
+    return f'<div class="table-wrap report-table-wrap"><table class="report-table"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+def _gate_overview(checks: dict[str, object], detail_table: str) -> str:
+    """Keep the release gate legible while retaining every audit condition on demand."""
+
+    total = len(checks)
+    passed = [signal_check_label(name) for name, value in checks.items() if value]
+    failed = [signal_check_label(name) for name, value in checks.items() if not value]
+    failed_markup = (
+        "".join(f'<li><span class="status-dot negative"></span>{_escape(label)}</li>' for label in failed)
+        if failed
+        else '<li><span class="status-dot positive"></span>Không có điều kiện nào chưa đạt.</li>'
     )
-    return f'<div class="table-wrap"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+    return f"""
+    <div class="gate-overview">
+      <div class="gate-score"><strong>{len(passed)}/{total}</strong><span>điều kiện đã đạt</span></div>
+      <div class="gate-next"><span class="eyebrow">Cần cải thiện</span><ul>{failed_markup}</ul></div>
+    </div>
+    <details class="detail-section gate-detail"><summary>Xem toàn bộ {total} điều kiện kiểm định</summary>{detail_table}</details>
+    """
 
 
 def _accordion(title: str, body: str, *, open_by_default: bool = False, note: str = "") -> str:
@@ -1164,7 +1246,7 @@ def _news_impact_section(report_directory: Path) -> str:
       <h3>News feature importance</h3>
       {_html_table(["Feature tin", "Gain"], importance_rows)}
       <h3>Điều kiện bật news vào signal chính</h3>
-      {_html_table(["Gate", "Kết quả"], gate_rows)}
+      {_html_table(["Gate", "Kết quả"], gate_rows, status_column=1)}
       <p class="muted">{_escape(impact.get("limitation") or "News model đang là lớp research/shadow.")}</p>
     </section>
     """
@@ -1254,9 +1336,24 @@ def enhance_dashboard_with_research(report_directory: Path, ai_result: dict | No
         reader_rows,
     ) if reader_rows else "<p class=\"muted\">News Reader chưa đọc được bài gốc nào.</p>"
 
+    ai_snapshot = ""
     ai_section = ""
     if analysis:
         decision = _escape(analysis.get("decision_status") or "UNKNOWN")
+        ai_snapshot = f"""
+        <article class="ai-summary">
+          <div>
+            <div class="eyebrow">AI research · có kiểm chứng</div>
+            <h3>AI tóm tắt từ artifact, headline và trích đoạn đã lưu</h3>
+            <p>{_escape(analysis.get("summary") or "AI chưa trả về phần tóm tắt cho report này.")}</p>
+          </div>
+          <div class="ai-summary-meta">
+            <span>Trạng thái signal gốc</span>
+            <strong>{decision}</strong>
+            <span>AI không có quyền ghi đè publish guard hoặc tạo lệnh mua/bán.</span>
+          </div>
+        </article>
+        """
         ai_section = _accordion(
             "Phân tích AI có kiểm chứng",
             f"""
@@ -1289,11 +1386,15 @@ def enhance_dashboard_with_research(report_directory: Path, ai_result: dict | No
     )
     enrichment = f"""
     <!-- FinAI dynamic enrichment start -->
-    {ai_section}
-    {news_impact}
-    {_accordion("Tin web đã lấy", live_table, note="headline + nguồn")}
-    {_accordion("News Reader: bài đã đọc và trích đoạn", reader_table, note="bấm mở trích đoạn")}
-    {statement_section}
+    <section class="research-workspace" aria-labelledby="research-heading">
+      <div class="section-title"><div><div class="eyebrow">Evidence-first research</div><h2 id="research-heading">AI phân tích & tin tức có nguồn</h2></div><span class="section-kicker">AI chỉ tóm tắt dữ liệu đã lưu, không tự tạo tín hiệu</span></div>
+      {ai_snapshot}
+      <div class="two">
+        <div class="stack">{ai_section}{_accordion("Tin web đã lấy", live_table, note="headline + nguồn")}</div>
+        <div class="stack">{_accordion("News Reader: bài đã đọc và trích đoạn", reader_table, note="bấm mở trích đoạn")}{news_impact}</div>
+      </div>
+      {statement_section}
+    </section>
     <!-- FinAI dynamic enrichment end -->
     """
     start = "<!-- FinAI dynamic enrichment start -->"
@@ -1319,6 +1420,7 @@ def _interactive_chart_payload(frame: pd.DataFrame, symbol: str) -> str:
 
     chart_frame = frame.tail(1600).copy()
     close = pd.to_numeric(chart_frame.get("close"), errors="coerce")
+    chart_drawdown = close.div(close.cummax()).sub(1)
 
     def series(name: str, fallback: pd.Series | None = None) -> pd.Series:
         if name in chart_frame:
@@ -1346,6 +1448,7 @@ def _interactive_chart_payload(frame: pd.DataFrame, symbol: str) -> str:
             "macd": series("macd"),
             "macdSignal": series("macd_signal"),
             "macdHist": series("macd_hist"),
+            "drawdown": chart_drawdown,
         }
     ).iterrows():
         if pd.isna(values["close"]):
@@ -1405,20 +1508,20 @@ INTERACTIVE_CHART_CSS = r"""
       border:1px solid #273247; box-shadow:0 24px 55px rgba(7,15,29,.24);
     }
     .terminal-head {
-      display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap;
-      padding:15px 18px; color:#e8edf7; background:linear-gradient(100deg,#111827,#132238);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap;
+      padding:19px 20px; color:#e8edf7; background:linear-gradient(100deg,#111827,#132238);
       border-bottom:1px solid #273247;
     }
-    .symbol-block { display:flex; align-items:center; gap:13px; }
-    .symbol-mark {
-      display:grid; place-items:center; width:43px; height:43px; border-radius:10px;
-      background:linear-gradient(145deg,#2563eb,#0f766e); color:#fff; font-weight:900;
-    }
-    .symbol-block strong { display:block; font-size:17px; }
-    .quote-line { display:flex; align-items:baseline; gap:8px; margin-top:3px; }
-    .quote-price { font-size:22px; font-weight:850; letter-spacing:-.03em; }
-    .quote-change.positive { color:#2dd4bf; }
-    .quote-change.negative { color:#f87171; }
+    .chart-title-block { min-width:0; }
+    .chart-title-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .chart-title-row h2 { margin:0; font-size:20px; color:#f8fafc; letter-spacing:-.02em; }
+    .chart-chip { padding:5px 9px; border-radius:7px; background:#1e2b40; color:#aab7cb; font:700 12px ui-monospace,SFMono-Regular,monospace; }
+    .chart-snapshot { display:flex; align-items:center; gap:10px 15px; flex-wrap:wrap; margin-top:10px; color:#aab7c6; font:600 12px ui-monospace,SFMono-Regular,monospace; }
+    .chart-snapshot strong { color:#f8fafc; font-size:13px; }
+    .chart-snapshot .up,.chart-snapshot .positive { color:#2dd4bf; }.chart-snapshot .down,.chart-snapshot .negative { color:#fb7185; }
+    .chart-snapshot .sma20 { color:#60a5fa; }.chart-snapshot .sma60 { color:#fbbf24; }
+    .terminal-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .data-table-trigger { color:#bcd4ff!important; border-color:#315784!important; background:#111e31!important; }
     .live-label { display:flex; align-items:center; gap:7px; color:#9eabbf; font-size:12px; }
     .live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 5px rgba(34,197,94,.12); }
     .chart-toolbar {
@@ -1428,6 +1531,8 @@ INTERACTIVE_CHART_CSS = r"""
     .chart-toolbar .ui-button { color:#b9c3d4; background:#151f2f; border-color:#2b374b; padding:6px 9px; }
     .chart-toolbar .ui-button:hover { color:#fff; border-color:#5b7295; }
     .chart-toolbar .ui-button.active { color:#fff; background:#2563eb; border-color:#3b82f6; }
+    .chart-toolbar .mdd-toggle { color:#fda4af; border-color:#7f1d2d; background:#27141b; }
+    .chart-toolbar .mdd-toggle.active { color:#fecdd3; border-color:#e11d48; background:#4c1723; }
     .tool-separator { width:1px; height:24px; background:#2b374b; margin:0 2px; }
     .chart-stage { position:relative; height:640px; min-height:440px; background:#0b111c; touch-action:none; }
     #market-canvas { display:block; width:100%; height:100%; cursor:crosshair; }
@@ -1446,11 +1551,25 @@ INTERACTIVE_CHART_CSS = r"""
     .legend-item::before { content:""; display:inline-block; width:18px; height:3px; margin-right:6px; vertical-align:middle; border-radius:5px; background:var(--legend); }
     .chart-help { margin-left:auto; }
     .static-fallback img { margin-top:12px; }
+    .market-data-modal { width:min(1120px,calc(100vw - 32px)); max-height:min(82vh,800px); margin:auto; padding:0; color:#e7edf7; background:#0d131d; border:1px solid #2b3a50; border-radius:14px; box-shadow:0 28px 90px rgba(0,0,0,.62); }
+    .market-data-modal::backdrop { background:rgba(0,0,0,.7); backdrop-filter:blur(4px); }
+    .market-data-shell { display:flex; flex-direction:column; max-height:min(82vh,800px); }
+    .market-data-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border-bottom:1px solid #263449; background:linear-gradient(100deg,#101925,#121d2d); }
+    .market-data-head h2 { margin:0; color:#f8fafc; font-size:17px; }.market-data-head p { margin:4px 0 0; color:#8f9bad; font-size:12px; }
+    .market-data-actions { display:flex; align-items:center; gap:8px; }.market-data-close { min-width:32px; padding:6px 9px; color:#aebbd0!important; background:transparent!important; }
+    .market-data-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid #1d2a3d; background:#0b111b; }
+    .market-data-search { min-width:min(280px,100%); padding:8px 10px; color:#dbe5f3; border:1px solid #2b3b52; border-radius:8px; background:#111b2a; font:12px ui-monospace,SFMono-Regular,monospace; }.market-data-search:focus { outline:2px solid rgba(96,165,250,.42); border-color:#60a5fa; }
+    .market-data-scroll { min-height:0; overflow:auto; }.market-data-table { min-width:980px; width:100%; border-collapse:collapse; font:12px ui-monospace,SFMono-Regular,monospace; }
+    .market-data-table th { position:sticky; top:0; z-index:1; padding:10px 9px; color:#8f9bad; border-bottom:1px solid #2b3a50; background:#121b28; font-size:10px; text-transform:none; letter-spacing:0; white-space:nowrap; }
+    .market-data-table td { padding:9px; color:#b7c5d8; border-top:1px solid #1d2a3a; white-space:nowrap; }.market-data-table tbody tr:hover { background:#142238; }.market-data-table td.up { color:#2dd4bf; font-weight:750; }.market-data-table td.down { color:#fb7185; font-weight:750; }.market-data-table td.sma20 { color:#7db7ff; font-weight:750; }.market-data-table td.sma60 { color:#fbbf24; font-weight:750; }.market-data-table td.rsi { color:#34d399; font-weight:750; }.market-data-table td.mdd { color:#fda4af; font-weight:750; }
+    .market-data-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; color:#8f9bad; border-top:1px solid #263449; background:#0b111b; font-size:12px; }.market-data-pagination { display:flex; gap:7px; }.market-data-pagination .ui-button { padding:5px 9px; }.market-data-empty { padding:22px 18px; color:#8f9bad; text-align:center; }
     @media (max-width:760px) {
       .chart-stage { height:520px; }
       .chart-help { width:100%; margin-left:0; }
       .tool-separator { display:none; }
       .terminal-head { align-items:flex-start; }
+      .chart-title-row h2 { font-size:17px; }
+      .market-data-modal { width:calc(100vw - 18px); max-height:88vh; }.market-data-shell { max-height:88vh; }.market-data-head,.market-data-toolbar,.market-data-footer { padding-left:12px; padding-right:12px; }.market-data-search { width:100%; min-width:0; }
     }
 """
 
@@ -1468,7 +1587,9 @@ INTERACTIVE_CHART_JS = r"""
     try { localStorage.setItem('vn-stock-dashboard-theme', theme); } catch (_) {}
     window.dispatchEvent(new Event('dashboard-theme-change'));
   };
-  setTheme(preferredTheme() || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  // Financial workspace starts in dark mode like the charting surface; users can
+  // still persist a light preference with the toggle.
+  setTheme(preferredTheme() || 'dark');
   themeButton?.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
 
   const source = document.getElementById('market-chart-data');
@@ -1478,11 +1599,58 @@ INTERACTIVE_CHART_JS = r"""
   const payload = JSON.parse(source.textContent);
   const rows = payload.rows || [];
   if (!rows.length) return;
+  const dataModal = document.getElementById('market-data-modal');
+  const dataBody = document.getElementById('market-data-body');
+  const dataEmpty = document.getElementById('market-data-empty');
+  const dataPage = document.getElementById('market-data-page');
+  const dataSearch = document.getElementById('market-data-search');
+  const dataSort = document.getElementById('market-data-sort');
+  const dataPrev = document.getElementById('market-data-prev');
+  const dataNext = document.getElementById('market-data-next');
+  const tableState = { query:'', newestFirst:true, page:0, pageSize:20 };
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+  const tableNumber = (value, digits = 2) => finite(value) ? Number(value).toLocaleString('vi-VN', { minimumFractionDigits:digits, maximumFractionDigits:digits }) : '—';
+  const tableVolume = (value) => finite(value) ? Math.round(Number(value)).toLocaleString('vi-VN') : '—';
+  const tableRows = () => rows.filter((row) => row.date.includes(tableState.query)).sort((left, right) => tableState.newestFirst ? right.date.localeCompare(left.date) : left.date.localeCompare(right.date));
+  const renderDataTable = () => {
+    if (!dataBody || !dataPage || !dataEmpty) return;
+    const filtered = tableRows();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / tableState.pageSize));
+    tableState.page = Math.min(tableState.page, totalPages - 1);
+    const start = tableState.page * tableState.pageSize;
+    const pageRows = filtered.slice(start, start + tableState.pageSize);
+    dataBody.innerHTML = pageRows.map((row) => {
+      const closeClass = Number(row.close) >= Number(row.open) ? 'up' : 'down';
+      const drawdown = finite(row.drawdown) ? `${(Number(row.drawdown) * 100).toFixed(2)}%` : '—';
+      return `<tr><td>${escapeHtml(row.date)}</td><td>${tableNumber(row.open)}</td><td class="up">${tableNumber(row.high)}</td><td class="down">${tableNumber(row.low)}</td><td class="${closeClass}">${tableNumber(row.close)}</td><td>${tableVolume(row.volume)}</td><td class="sma20">${tableNumber(row.sma20)}</td><td class="sma60">${tableNumber(row.sma60)}</td><td class="rsi">${tableNumber(row.rsi, 1)}</td><td class="sma20">${tableNumber(row.macd, 3)}</td><td class="mdd">${drawdown}</td></tr>`;
+    }).join('');
+    dataEmpty.hidden = pageRows.length > 0;
+    dataPage.textContent = filtered.length ? `Trang ${tableState.page + 1}/${totalPages} · Hiển thị ${pageRows.length}/${filtered.length} phiên` : 'Không có dữ liệu';
+    if (dataPrev) dataPrev.disabled = tableState.page === 0;
+    if (dataNext) dataNext.disabled = tableState.page >= totalPages - 1;
+    if (dataSort) dataSort.textContent = `Thứ tự ngày: ${tableState.newestFirst ? 'Mới nhất trước' : 'Cũ nhất trước'}`;
+  };
+  document.querySelectorAll('[data-open-data-table]').forEach((button) => button.addEventListener('click', () => {
+    renderDataTable();
+    if (!dataModal) return;
+    if (typeof dataModal.showModal === 'function') dataModal.showModal(); else dataModal.setAttribute('open', '');
+  }));
+  document.getElementById('market-data-close')?.addEventListener('click', () => dataModal?.close?.());
+  dataSearch?.addEventListener('input', () => { tableState.query = dataSearch.value.trim(); tableState.page = 0; renderDataTable(); });
+  dataSort?.addEventListener('click', () => { tableState.newestFirst = !tableState.newestFirst; tableState.page = 0; renderDataTable(); });
+  dataPrev?.addEventListener('click', () => { tableState.page = Math.max(0, tableState.page - 1); renderDataTable(); });
+  dataNext?.addEventListener('click', () => { tableState.page += 1; renderDataTable(); });
+  document.getElementById('market-data-export')?.addEventListener('click', () => {
+    const columns = [['Ngày','Mở','Cao','Thấp','Đóng','Khối lượng','SMA20','SMA60','RSI14','MACD','Drawdown']];
+    tableRows().forEach((row) => columns.push([row.date,row.open,row.high,row.low,row.close,row.volume,row.sma20,row.sma60,row.rsi,row.macd,row.drawdown]));
+    const csv = `\ufeff${columns.map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\n')}`;
+    const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })); link.download = `${payload.symbol}_technical_data.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  });
   const ctx = canvas.getContext('2d');
   const tooltip = document.getElementById('chart-tooltip');
   const state = {
     count: Math.min(260, rows.length), end: rows.length, mode: 'candle', indicator: 'rsi',
-    overlays: { sma20: true, sma60: true, bollinger: false }, tool: 'cursor',
+    overlays: { sma20: true, sma60: true, bollinger: false, mdd: true }, tool: 'cursor',
     drawings: [], draft: null, hover: null, dragging: null,
   };
   let cssWidth = 0;
@@ -1567,6 +1735,32 @@ INTERACTIVE_CHART_JS = r"""
       if (row) ctx.fillText(row.date.slice(5), Math.max(left, lineX - 20), cssHeight - 8);
     }
     ctx.setLineDash([]);
+
+    if (state.overlays.mdd) {
+      const troughIndex = data.reduce((selected, row, index) => (
+        finite(row.drawdown) && Number(row.drawdown) < Number(data[selected]?.drawdown ?? 0)
+          ? index : selected
+      ), 0);
+      const drawdown = Number(data[troughIndex]?.drawdown);
+      if (Number.isFinite(drawdown) && drawdown < -0.0005) {
+        let peakIndex = 0;
+        let peakClose = -Infinity;
+        for (let index = 0; index <= troughIndex; index += 1) {
+          const close = Number(data[index]?.close);
+          if (Number.isFinite(close) && close >= peakClose) { peakClose = close; peakIndex = index; }
+        }
+        const zoneLeft = x(peakIndex) - xStep / 2;
+        const zoneRight = x(troughIndex) + xStep / 2;
+        ctx.save();
+        ctx.fillStyle = 'rgba(251,113,133,.11)';
+        ctx.fillRect(zoneLeft, top, Math.max(xStep, zoneRight - zoneLeft), priceHeight);
+        ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(251,113,133,.62)'; ctx.lineWidth = 1;
+        ctx.strokeRect(zoneLeft, top, Math.max(xStep, zoneRight - zoneLeft), priceHeight);
+        ctx.setLineDash([]); ctx.fillStyle = '#fda4af';
+        ctx.fillText(`MDD vùng xem: ${(drawdown * 100).toFixed(2)}%`, zoneLeft + 7, top + 17);
+        ctx.restore();
+      }
+    }
 
     if (state.overlays.bollinger) {
       ctx.beginPath(); let started = false;
@@ -1683,21 +1877,29 @@ def _interactive_chart_markup(
     previous = float(close.iloc[-2]) if len(close) > 1 else latest
     change = 0.0 if previous == 0 else latest / previous - 1
     tone = "positive" if change >= 0 else "negative"
+    latest_row = frame.iloc[-1] if not frame.empty else pd.Series(dtype=float)
+    latest_date = pd.Timestamp(frame.index[-1]).strftime("%Y-%m-%d") if not frame.empty else "N/A"
+    open_price = safe_float(latest_row.get("open")) or latest
+    high_price = safe_float(latest_row.get("high")) or latest
+    low_price = safe_float(latest_row.get("low")) or latest
+    sma20 = safe_float(latest_row.get("sma_20"))
+    sma60 = safe_float(latest_row.get("sma_60"))
     markup = f"""
     <section class="market-terminal" aria-labelledby="market-chart-heading">
       <div class="terminal-head">
-        <div class="symbol-block">
-          <span class="symbol-mark">{_escape(symbol[:3])}</span>
-          <div><strong id="market-chart-heading">{_escape(symbol)} · HOSE/Việt Nam</strong>
-            <div class="quote-line"><span class="quote-price">{format_price(latest)}</span>
-              <span class="quote-change {tone}">{change:+.2%}</span></div>
-          </div>
+        <div class="chart-title-block">
+          <div class="chart-title-row"><h2 id="market-chart-heading">Biểu đồ giá &amp; SMA (20, 60)</h2><span class="chart-chip">{_escape(symbol)} · 1N mặc định</span></div>
+          <div class="chart-snapshot"><span>{latest_date}</span><span>O: <strong>{format_price(open_price)}</strong></span><span>H: <strong class="up">{format_price(high_price)}</strong></span><span>L: <strong class="down">{format_price(low_price)}</strong></span><span>C: <strong class="{tone}">{format_price(latest)}</strong></span><span class="sma20">SMA20: <strong>{format_price(sma20)}</strong></span><span class="sma60">SMA60: <strong>{format_price(sma60)}</strong></span></div>
         </div>
-        <span class="live-label"><span class="live-dot"></span>Dữ liệu EOD · chart tương tác</span>
+        <div class="terminal-actions"><button class="ui-button data-table-trigger" type="button" data-open-data-table>Bảng dữ liệu</button><span class="live-label"><span class="live-dot"></span>Dữ liệu EOD · chart tương tác</span></div>
       </div>
       <div class="chart-toolbar" role="toolbar" aria-label="Công cụ biểu đồ">
         <button class="ui-button active" type="button" data-mode="candle">Nến</button>
         <button class="ui-button" type="button" data-mode="line">Đường</button>
+        <span class="tool-separator"></span>
+        <button class="ui-button active" type="button" data-overlay="sma20">SMA20</button>
+        <button class="ui-button active" type="button" data-overlay="sma60">SMA60</button>
+        <button class="ui-button mdd-toggle active" type="button" data-overlay="mdd" title="MDD của vùng giá đang hiển thị">Vùng MDD</button>
         <span class="tool-separator"></span>
         <button class="ui-button" type="button" data-range="65">3T</button>
         <button class="ui-button" type="button" data-range="130">6T</button>
@@ -1705,8 +1907,6 @@ def _interactive_chart_markup(
         <button class="ui-button" type="button" data-range="780">3N</button>
         <button class="ui-button" type="button" data-range="all">Tất cả</button>
         <span class="tool-separator"></span>
-        <button class="ui-button active" type="button" data-overlay="sma20">SMA20</button>
-        <button class="ui-button active" type="button" data-overlay="sma60">SMA60</button>
         <button class="ui-button" type="button" data-overlay="bollinger">Bollinger</button>
         <button class="ui-button active" type="button" data-indicator="rsi">RSI</button>
         <button class="ui-button" type="button" data-indicator="macd">MACD</button>
@@ -1726,9 +1926,18 @@ def _interactive_chart_markup(
         <span class="legend-item" style="--legend:#ef5350">Giảm</span>
         <span class="legend-item" style="--legend:#f59e0b">SMA20</span>
         <span class="legend-item" style="--legend:#60a5fa">SMA60</span>
+        <span class="legend-item" style="--legend:#fb7185">MDD vùng xem</span>
         <span class="chart-help">Cuộn để zoom · kéo để pan · chọn công cụ rồi vẽ trực tiếp trên vùng giá</span>
       </div>
     </section>
+    <dialog class="market-data-modal" id="market-data-modal" aria-labelledby="market-data-heading">
+      <div class="market-data-shell">
+        <header class="market-data-head"><div><h2 id="market-data-heading">Bảng dữ liệu chi tiết &amp; chỉ báo kỹ thuật</h2><p>{_escape(symbol)} · dữ liệu EOD trong report hiện tại</p></div><div class="market-data-actions"><button class="ui-button" type="button" id="market-data-export">Xuất CSV</button><button class="ui-button market-data-close" type="button" id="market-data-close" aria-label="Đóng bảng dữ liệu">×</button></div></header>
+        <div class="market-data-toolbar"><input class="market-data-search" id="market-data-search" type="search" placeholder="Tìm theo ngày (YYYY-MM-DD)" aria-label="Tìm theo ngày"><button class="ui-button" type="button" id="market-data-sort">Thứ tự ngày: Mới nhất trước</button></div>
+        <div class="market-data-scroll"><table class="market-data-table"><thead><tr><th>Ngày</th><th>Mở</th><th>Cao</th><th>Thấp</th><th>Đóng</th><th>Khối lượng</th><th>SMA20</th><th>SMA60</th><th>RSI14</th><th>MACD</th><th>Drawdown</th></tr></thead><tbody id="market-data-body"></tbody></table><p class="market-data-empty" id="market-data-empty" hidden>Không có dòng khớp ngày tìm kiếm.</p></div>
+        <footer class="market-data-footer"><span id="market-data-page">—</span><div class="market-data-pagination"><button class="ui-button" type="button" id="market-data-prev" aria-label="Trang trước">‹</button><button class="ui-button" type="button" id="market-data-next" aria-label="Trang sau">›</button></div></footer>
+      </div>
+    </dialog>
     """
     payload = _interactive_chart_payload(frame, symbol)
     scripts = (
@@ -1883,6 +2092,85 @@ def _interactive_forecast_markup(
     return markup, scripts
 
 
+# The dashboard remains a standalone HTML artifact. The widget only calls the
+# local workspace API when the report is opened through ``src.web_server``.
+CHAT_WIDGET_CSS = r"""
+    .report-chat-launcher { position:fixed; right:24px; bottom:24px; z-index:40; display:inline-flex; align-items:center; gap:9px; border:1px solid #77aaff; border-radius:999px; padding:13px 17px; background:linear-gradient(135deg,#165dca,#2563eb); color:#fff; box-shadow:0 16px 38px rgba(20,77,175,.38); font:800 14px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; }
+    .report-chat-launcher:hover { filter:brightness(1.08); transform:translateY(-1px); }
+    .report-chat-launcher .chat-spark { display:grid; width:20px; height:20px; place-items:center; border-radius:50%; background:rgba(255,255,255,.2); font-size:14px; }
+    .report-chat-panel { position:fixed; right:24px; bottom:84px; z-index:41; width:min(390px,calc(100vw - 32px)); overflow:hidden; border:1px solid #315d99; border-radius:18px; background:#091323; color:#eaf2ff; box-shadow:0 24px 64px rgba(0,0,0,.42); }
+    .report-chat-panel[hidden] { display:none; }
+    .report-chat-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:15px 16px 13px; background:linear-gradient(110deg,#133c72,#172554); border-bottom:1px solid #315d99; }
+    .report-chat-head strong { display:block; font-size:14px; }
+    .report-chat-head small { display:block; margin-top:3px; color:#b7cbe7; font-size:11px; line-height:1.35; }
+    .report-chat-close { border:0; border-radius:8px; padding:3px 8px; background:rgba(255,255,255,.1); color:#fff; font-size:19px; line-height:1; cursor:pointer; }
+    .report-chat-messages { display:grid; gap:10px; max-height:min(48vh,430px); overflow:auto; padding:14px; background:#091323; }
+    .report-chat-message { max-width:92%; padding:10px 12px; border:1px solid #223b5d; border-radius:12px; background:#101e31; color:#e2edf9; font-size:13px; line-height:1.5; white-space:pre-wrap; }
+    .report-chat-message.user { justify-self:end; border-color:#3475dc; background:#1d4ed8; color:#fff; }
+    .report-chat-message.system { border-color:#29445f; background:#0c192a; color:#bfcee1; font-size:12px; }
+    .report-chat-message .chat-note { display:block; margin-top:6px; color:#f6c55c; font-size:11px; font-weight:700; }
+    .report-chat-form { display:flex; gap:8px; padding:12px; border-top:1px solid #223b5d; background:#0d1828; }
+    .report-chat-input { min-width:0; flex:1; resize:none; border:1px solid #355678; border-radius:10px; padding:10px; background:#08111d; color:#fff; font:13px/1.4 Inter,ui-sans-serif,system-ui,sans-serif; }
+    .report-chat-input:focus { outline:2px solid rgba(77,150,255,.35); border-color:#67a2ff; }
+    .report-chat-send { align-self:flex-end; border:0; border-radius:10px; padding:10px 12px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer; }
+    .report-chat-send:disabled { opacity:.55; cursor:wait; }
+    @media (max-width:620px) { .report-chat-launcher { right:16px; bottom:16px; padding:12px 14px; } .report-chat-panel { right:16px; bottom:74px; } }
+"""
+
+
+CHAT_WIDGET_MARKUP = """
+  <button id="report-chat-launcher" class="report-chat-launcher" type="button" aria-expanded="false" aria-controls="report-chat-panel"><span class="chat-spark">✦</span>Hỏi AI</button>
+  <aside id="report-chat-panel" class="report-chat-panel" hidden aria-label="Trợ lý AI cho report">
+    <div class="report-chat-head"><div><strong>StockLens AI</strong><small>Chỉ dùng dữ liệu của report đang mở · không phải khuyến nghị đầu tư.</small></div><button id="report-chat-close" class="report-chat-close" type="button" aria-label="Đóng trợ lý">×</button></div>
+    <div id="report-chat-messages" class="report-chat-messages" aria-live="polite"></div>
+    <form id="report-chat-form" class="report-chat-form"><textarea id="report-chat-input" class="report-chat-input" rows="2" maxlength="2000" placeholder="Hỏi về chỉ số, model hoặc dữ liệu của report này…" aria-label="Câu hỏi cho trợ lý AI"></textarea><button id="report-chat-send" class="report-chat-send" type="submit">Gửi</button></form>
+  </aside>
+"""
+
+
+CHAT_WIDGET_SCRIPT = r"""
+  <script>
+    (() => {
+      const launcher = document.getElementById('report-chat-launcher');
+      const panel = document.getElementById('report-chat-panel');
+      const close = document.getElementById('report-chat-close');
+      const messages = document.getElementById('report-chat-messages');
+      const form = document.getElementById('report-chat-form');
+      const input = document.getElementById('report-chat-input');
+      const send = document.getElementById('report-chat-send');
+      if (!launcher || !panel || !messages || !form || !input || !send) return;
+      const report = decodeURIComponent(window.location.pathname.replace(/^\/reports\//, ''));
+      const localWorkspace = window.location.pathname.startsWith('/reports/');
+      const history = [];
+      const append = (role, content, fallback) => {
+        const element = document.createElement('div');
+        element.className = 'report-chat-message ' + role;
+        element.textContent = content;
+        if (fallback) { const note = document.createElement('span'); note.className = 'chat-note'; note.textContent = 'Đang dùng trả lời dự phòng từ artifact.'; element.appendChild(note); }
+        messages.appendChild(element); messages.scrollTop = messages.scrollHeight;
+      };
+      const setOpen = (open) => { panel.hidden = !open; launcher.setAttribute('aria-expanded', String(open)); if (open) input.focus(); };
+      append('system', localWorkspace ? 'Mình có ngữ cảnh riêng của report này. Bạn có thể hỏi cách đọc chỉ số, chất lượng model, rủi ro và nguồn dữ liệu.' : 'Để dùng AI, hãy mở report từ Local Workspace (python -m src.web_server). Chat không gửi dữ liệu ra ngoài report local.', false);
+      launcher.addEventListener('click', () => setOpen(panel.hidden));
+      close.addEventListener('click', () => setOpen(false));
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault(); const message = input.value.trim(); if (!message || send.disabled) return;
+        append('user', message, false); history.push({ role: 'user', content: message }); input.value = ''; send.disabled = true;
+        const pending = document.createElement('div'); pending.className = 'report-chat-message system'; pending.textContent = 'Đang đối chiếu artifact của report…'; messages.appendChild(pending); messages.scrollTop = messages.scrollHeight;
+        try {
+          if (!localWorkspace) throw new Error('Report chưa được mở qua Local Workspace.');
+          const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ report, message, history: history.slice(-8) }) });
+          const payload = await response.json(); if (!response.ok) throw new Error(payload.error || 'Không thể trả lời câu hỏi lúc này.');
+          pending.remove(); append('assistant', payload.answer || 'Chưa có câu trả lời.', Boolean(payload.fallback)); history.push({ role: 'assistant', content: payload.answer || '' }); while (history.length > 8) history.shift();
+        } catch (error) { pending.remove(); append('system', error.message || 'Không thể kết nối trợ lý AI.', false); }
+        finally { send.disabled = false; input.focus(); }
+      });
+      input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
+    })();
+  </script>
+"""
+
+
 def write_dashboard(
     config: dict,
     frame: pd.DataFrame,
@@ -1931,19 +2219,77 @@ def write_dashboard(
         forecast,
         str(config["symbol"]),
     )
+    closes = pd.to_numeric(frame.get("close"), errors="coerce").dropna()
+    previous_close = safe_float(closes.iloc[-2]) if len(closes) > 1 else latest
+    daily_change = None if not previous_close else latest / previous_close - 1
+    sma20 = safe_float(levels.get("sma20"))
+    sma60 = safe_float(levels.get("sma60"))
+    rsi14 = safe_float(levels.get("rsi14"))
+    macd = safe_float(levels.get("macd"))
+    macd_signal = safe_float(levels.get("macd_signal"))
+    macd_hist = safe_float(levels.get("macd_hist"))
+    annualized_volatility = safe_float(levels.get("vol20"))
+    annualized_volatility = (
+        annualized_volatility * np.sqrt(252)
+        if annualized_volatility is not None
+        else None
+    )
+    max_drawdown = safe_float(levels.get("max_drawdown"))
+    sma_tone = "positive" if sma20 is not None and sma60 is not None and sma20 >= sma60 else "negative"
+    rsi_tone = "positive" if rsi14 is not None and 30 <= rsi14 <= 70 else "warning"
+    macd_tone = "positive" if macd_hist is not None and macd_hist >= 0 else "negative"
+    market_pulse_cards = "".join(
+        [
+            _pulse_card(
+                "Giá đóng cửa",
+                format_price(latest),
+                f"{format_signed_percent(daily_change, 2)} so với phiên trước · {levels['latest_date']}",
+                "positive" if daily_change is not None and daily_change >= 0 else "negative",
+                "Biến động phiên gần nhất",
+            ),
+            _pulse_card(
+                "Xu hướng SMA",
+                "SMA20 ≥ SMA60" if sma_tone == "positive" else "SMA20 < SMA60",
+                f"SMA20 {format_price(sma20)} · SMA60 {format_price(sma60)}",
+                sma_tone,
+                "Xu hướng giá ngắn và trung hạn",
+            ),
+            _pulse_card(
+                "RSI (14)",
+                format_number(rsi14, 1),
+                "Trung tính (30–70)" if rsi_tone == "positive" else "Ngoài vùng trung tính",
+                rsi_tone,
+                "Động lượng 14 phiên",
+            ),
+            _pulse_card(
+                "MACD (12,26,9)",
+                format_number(macd, 3),
+                f"Signal {format_number(macd_signal, 3)} · Hist {format_number(macd_hist, 3)}",
+                macd_tone,
+                "Xung lực giá hiện tại",
+            ),
+            _pulse_card(
+                "Biến động năm",
+                format_percent(annualized_volatility, 1),
+                "Quy đổi từ biến động 20 phiên gần nhất",
+                "warning",
+                "Vol 20D × √252",
+            ),
+            _pulse_card(
+                "Sụt giảm tối đa",
+                format_percent(max_drawdown, 1),
+                f"Đỉnh {levels.get('drawdown_peak') or 'N/A'} → đáy {levels.get('drawdown_trough') or 'N/A'}",
+                "negative",
+                "MDD lịch sử · chỉ báo rủi ro",
+            ),
+        ]
+    )
     result_cards = "".join(
         [
-            _metric_card("Giá hiện tại", format_price(latest), f"{levels['latest_date']} - nghìn VND/cp"),
             _metric_card("Xu hướng kỹ thuật", technical["bias"], f"Điểm {technical['score']}"),
             _metric_card("Trạng thái tín hiệu", signal_status_label(decision["status"]), "; ".join(signal_check_label(name) for name in decision.get("failed_checks", [])) or "Đã vượt qua tất cả điều kiện phát hành"),
             _metric_card("Mua mới", str(investment_recommendation["entry_action"]), str(investment_recommendation["title"])),
-            _metric_card(
-                "Lệnh mới hôm nay",
-                f"{int(investment_recommendation.get('recommended_new_entries') or 0)} lệnh",
-                "Chỉ là 1 khi signal ACTIONABLE; không lấy số vòng lịch sử làm khuyến nghị.",
-            ),
             _metric_card("Đang giữ", str(investment_recommendation["holding_action"]), str(investment_recommendation["holding_reason"])),
-            _metric_card("Model health", str(investment_recommendation["model_health"]), str(investment_recommendation["model_health_reason"])),
             _metric_card("Dự báo", format_price(safe_float(forecast_end["p50"])), f"P50 sau {config['forecast_sessions']} phiên - {format_percent(forecast_end['p50'] / latest - 1)}"),
             _metric_card("Quản trị rủi ro", f"Lợi nhuận/rủi ro {format_number(risk_plan['reward_risk'])}", f"Dừng lỗ {format_price(risk_plan['stop_loss'])} / Mục tiêu {format_price(risk_plan['target_1'])}"),
         ]
@@ -1995,17 +2341,22 @@ def write_dashboard(
         for item in [fundamental_lookup.get(metric_name)]
     )
     technical_table = _table(
-        [(item["name"], item["status"], item["detail"]) for item in technical["signals"]]
+        [(item["name"], item["status"], item["detail"]) for item in technical["signals"]],
+        headers=("Chỉ báo", "Trạng thái", "Cách đọc"),
+        status_column=True,
     )
     model_table = _table(
         [
             ("XGBoost", format_number(metrics["xgboost"]["balanced_accuracy"], 3), f"AUC {format_number(metrics['xgboost']['roc_auc'], 3)}"),
             ("Logistic", format_number(metrics["logistic_baseline"]["balanced_accuracy"], 3), f"AUC {format_number(metrics['logistic_baseline']['roc_auc'], 3)}"),
             ("Đa số", format_number(metrics["majority_baseline"]["balanced_accuracy"], 3), "Mốc so sánh"),
-        ]
+        ],
+        headers=("Mô hình", "Balanced accuracy", "Đối chiếu"),
     )
     investment_recommendation_table = _table(
-        _investment_recommendation_rows(investment_recommendation)
+        _investment_recommendation_rows(investment_recommendation),
+        headers=("Tình huống", "Kết luận", "Cách đọc"),
+        status_column=True,
     )
     swing_table = _table(
         [
@@ -2053,7 +2404,9 @@ def write_dashboard(
             ),
         ]
         if swing.get("available")
-        else [("Trạng thái", "Chưa chạy", "Bật swing_strategy.enabled để chạy chiến lược 5D.")]
+        else [("Trạng thái", "Chưa chạy", "Bật swing_strategy.enabled để chạy chiến lược 5D.")],
+        headers=("Tiêu chí", "Kết quả", "Cách đọc"),
+        status_column=True,
     )
     risk_table = _table(
         [
@@ -2071,7 +2424,9 @@ def write_dashboard(
                 "Điều kiện phát hành tín hiệu",
             )
             for name, passed in decision.get("checks", {}).items()
-        ]
+        ],
+        headers=("Điều kiện", "Kết quả", "Ý nghĩa"),
+        status_column=True,
     )
     fundamental_rows = [
         (item["metric_label"], format_metric(item["metric_value"], item["metric_unit"]), item.get("period") or "")
@@ -2112,7 +2467,7 @@ def write_dashboard(
     model_quality_panel = _accordion(
         "So sánh mô hình",
         model_table,
-        open_by_default=True,
+        open_by_default=False,
         note="XGBoost vs Logistic",
     )
     recommendation_panel = _accordion(
@@ -2126,16 +2481,21 @@ def write_dashboard(
         "Chiến lược swing 5 phiên: frozen holdout & T+2",
         swing_table
         + '<p class="muted">Chiến lược này không dùng top-N hay threshold tối ưu trên OOS. Margin được chọn trong validation của từng fold; frozen holdout chỉ dùng một lần để kiểm định. Stop-loss không được giả định vượt qua ràng buộc chứng khoán chưa về.</p>',
-        open_by_default=True,
+        open_by_default=False,
         note="stateful cash → long → cash",
     )
     technical_panel = _accordion("Tín hiệu kỹ thuật", technical_table, open_by_default=False, note="chi tiết")
-    decision_panel = _accordion("Điều kiện phát hành tín hiệu", decision_table, open_by_default=True, note=signal_status_label(decision["status"]))
-    risk_panel = _accordion("Quản trị rủi ro", risk_table, open_by_default=True, note="stop / target")
+    decision_panel = _accordion(
+        "Điều kiện phát hành tín hiệu",
+        _gate_overview(decision.get("checks", {}), decision_table),
+        open_by_default=True,
+        note=signal_status_label(decision["status"]),
+    )
+    risk_panel = _accordion("Quản trị rủi ro", risk_table, open_by_default=False, note="stop / target")
     feature_panel = _accordion("Mức độ quan trọng của đặc trưng", feature_table, open_by_default=False, note="top feature")
     fundamental_panel = _accordion("Phân tích cơ bản", fundamental_table, open_by_default=False, note="BCTC/tỷ số")
     news_panel = _accordion("Tin tức doanh nghiệp", news_table, open_by_default=False, note="research only")
-    forecast_panel = _accordion("Dự báo ngắn hạn", forecast_table, open_by_default=True, note=f"{config['forecast_sessions']} phiên")
+    forecast_panel = _accordion("Dự báo ngắn hạn", forecast_table, open_by_default=False, note=f"{config['forecast_sessions']} phiên")
     calendar_panel = _accordion(
         "Lịch giao dịch Việt Nam dùng cho forecast",
         (
@@ -2183,6 +2543,25 @@ def write_dashboard(
     .quick-nav a {{ text-decoration:none; color:#38506b; background:#fff; border:1px solid var(--line); border-radius:7px; padding:8px 11px; font-weight:750; font-size:12px; }}
     .quick-nav a:hover {{ color:var(--blue); border-color:#b9d2ff; background:var(--soft-blue); }}
     .metrics {{ display:grid; gap:12px; }}
+    .market-pulse {{ grid-template-columns:repeat(6,minmax(190px,1fr)); gap:16px; }}
+    .pulse-card {{ display:flex; flex-direction:column; min-height:174px; padding:18px; border:1px solid var(--line); border-radius:17px; background:linear-gradient(145deg,var(--panel),color-mix(in srgb,var(--panel) 92%,#1e3a5f)); box-shadow:var(--shadow); position:relative; overflow:hidden; }}
+    .pulse-card::before {{ content:""; position:absolute; inset:0 0 auto; height:3px; background:#64748b; }}
+    .pulse-card.positive::before {{ background:#10b981; }}
+    .pulse-card.negative::before {{ background:#f87171; }}
+    .pulse-card.warning::before {{ background:#fbbf24; }}
+    .pulse-head {{ display:flex; align-items:center; justify-content:space-between; gap:10px; }}
+    .pulse-label {{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:11px; font-weight:850; letter-spacing:.065em; text-transform:uppercase; }}
+    .pulse-mark {{ width:9px; height:9px; border:2px solid currentColor; border-radius:50%; opacity:.9; }}
+    .pulse-help {{ display:grid; place-items:center; width:20px; height:20px; border:1px solid currentColor; border-radius:50%; color:var(--muted); font-size:12px; font-weight:850; opacity:.8; }}
+    .pulse-value {{ margin-top:22px; color:var(--ink); font-size:31px; font-weight:850; line-height:1.04; letter-spacing:-.045em; font-variant-numeric:tabular-nums; }}
+    .pulse-card.positive .pulse-value,.pulse-card.positive .pulse-mark {{ color:#10d993; }}
+    .pulse-card.negative .pulse-value,.pulse-card.negative .pulse-mark {{ color:#fb7185; }}
+    .pulse-card.warning .pulse-value,.pulse-card.warning .pulse-mark {{ color:#fbbf24; }}
+    .pulse-detail {{ margin-top:10px; color:var(--muted); font-size:12px; line-height:1.42; }}
+    .pulse-status {{ margin-top:auto; padding:7px 9px; border:1px solid var(--line); border-radius:8px; color:var(--muted); background:color-mix(in srgb,var(--panel) 82%,var(--soft-slate)); font-size:11px; font-weight:750; line-height:1.25; }}
+    .pulse-card.positive .pulse-status {{ color:#20c997; border-color:rgba(16,185,129,.38); background:rgba(16,185,129,.09); }}
+    .pulse-card.negative .pulse-status {{ color:#fb7185; border-color:rgba(248,113,113,.42); background:rgba(248,113,113,.09); }}
+    .pulse-card.warning .pulse-status {{ color:#fbbf24; border-color:rgba(251,191,36,.4); background:rgba(251,191,36,.08); }}
     .result-metrics {{ grid-template-columns:repeat(4,minmax(165px,1fr)); }}
     .strategy-metrics {{ grid-template-columns:repeat(4,minmax(160px,1fr)); }}
     .fundamental-metrics {{ grid-template-columns:repeat(7,minmax(130px,1fr)); }}
@@ -2212,6 +2591,30 @@ def write_dashboard(
     .two {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }}
     .dashboard-grid {{ display:grid; grid-template-columns:minmax(0,1.32fr) minmax(340px,.68fr); gap:22px; align-items:start; }}
     .stack {{ display:grid; gap:14px; }}
+    .research-workspace {{ padding:24px; border:1px solid #31516f; border-radius:15px; background:linear-gradient(115deg,#0b1422 0%,#101e31 52%,#0e1726 100%); color:#e9eff9; box-shadow:0 22px 50px rgba(7,15,29,.18); }}
+    .research-workspace h2,.research-workspace h3 {{ color:#f7fbff; }}
+    .research-workspace .eyebrow {{ color:#5da6ff; }}
+    .research-workspace .muted {{ color:#aebbd0; }}
+    .research-workspace .section-title {{ align-items:flex-start; gap:16px; margin:0 0 18px; }}
+    .research-workspace .section-title > div {{ min-width:0; }}
+    .research-workspace .section-title h2 {{ margin:3px 0 0; line-height:1.25; }}
+    .research-workspace .section-kicker {{ display:block; max-width:340px; padding:8px 10px; border:1px solid rgba(93,166,255,.24); border-radius:8px; background:rgba(7,18,33,.38); color:#b8c8dd; font-size:11px; line-height:1.45; }}
+    .research-workspace .two {{ width:100%; min-width:0; }}
+    .research-workspace .stack {{ min-width:0; grid-template-columns:minmax(0,1fr); }}
+    .research-workspace .grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }}
+    .research-workspace .accordion {{ min-width:0; max-width:100%; box-shadow:none; background:#111d2e; border-color:#2a405c; }}
+    .research-workspace section {{ background:#0d1726; border-color:#2a405c; box-shadow:none; }}
+    .research-workspace .accordion > summary {{ min-width:0; background:#111d2e; color:#e8effa; border-color:#2a405c; }}
+    .research-workspace .accordion-body {{ background:#0d1726; }}
+    .research-workspace .accordion-note {{ color:#93a7c0; }}
+    .research-workspace td:nth-child(2) {{ color:#86b8ff; }}
+    .research-workspace th {{ background:#17263a; color:#aebbd0; border-color:#2a405c; }}
+    .research-workspace td {{ border-color:#263b55; }}
+    .ai-summary {{ display:grid; grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr); gap:22px; padding:20px; margin:0 0 18px; border:1px solid #245a8f; border-radius:12px; background:linear-gradient(105deg,rgba(37,99,235,.19),rgba(14,116,144,.14)); }}
+    .ai-summary h3 {{ margin:4px 0 10px; font-size:17px; line-height:1.35; }}
+    .ai-summary p {{ margin:0; color:#d5dfed; line-height:1.55; }}
+    .ai-summary-meta {{ display:grid; align-content:center; gap:8px; padding-left:18px; border-left:1px solid #325979; }}
+    .ai-summary-meta strong {{ color:#6bdcc8; font-size:19px; }}
     h2 {{ margin:0 0 12px; font-size:18px; letter-spacing:0; }}
     table {{ width:100%; border-collapse:collapse; font-size:14px; }}
     th {{ padding:10px 8px; border-bottom:2px solid var(--line); text-align:left; background:var(--soft-slate); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }}
@@ -2222,6 +2625,33 @@ def write_dashboard(
     .table-wrap {{ overflow-x:auto; }}
     .table-wrap table {{ min-width:680px; }}
     .table-wrap td {{ white-space:normal; }}
+    .report-table-wrap {{ border:1px solid var(--line); border-radius:10px; background:var(--panel); }}
+    .report-table {{ min-width:620px; font-size:13px; }}
+    .report-table th {{ position:sticky; top:0; z-index:1; padding:11px 12px; background:var(--soft-slate); }}
+    .report-table td {{ padding:12px; line-height:1.42; }}
+    .report-table tbody tr:nth-child(even) {{ background:color-mix(in srgb,var(--soft-slate) 48%,transparent); }}
+    .report-table tbody tr:hover {{ background:color-mix(in srgb,var(--blue) 7%,var(--panel)); }}
+    .report-table td:first-child {{ width:31%; color:var(--ink); }}
+    .report-table .table-value {{ width:22%; color:var(--ink); font-variant-numeric:tabular-nums; }}
+    .report-table .table-detail {{ width:47%; color:var(--muted); font-weight:500; }}
+    .status-chip {{ display:inline-flex; align-items:center; width:max-content; max-width:100%; padding:5px 8px; border:1px solid currentColor; border-radius:999px; font-size:11px; font-weight:850; line-height:1.2; letter-spacing:.025em; }}
+    .status-chip.positive {{ color:#087d59; background:#e8f8f1; border-color:#9ee1c8; }}
+    .status-chip.negative {{ color:#b4233c; background:#fff0f2; border-color:#fec3cc; }}
+    .status-chip.warning {{ color:#9a5b00; background:#fff7e8; border-color:#f6d391; }}
+    .status-chip.neutral {{ color:#526175; background:#eef2f7; border-color:#d7e0ea; }}
+    .gate-overview {{ display:grid; grid-template-columns:minmax(150px,.36fr) minmax(0,1fr); gap:16px; align-items:stretch; margin-bottom:12px; }}
+    .gate-score {{ display:grid; align-content:center; gap:4px; min-height:104px; padding:16px; border-radius:10px; background:linear-gradient(145deg,#ecf8f4,#f7fcfa); border:1px solid #b8e5d4; }}
+    .gate-score strong {{ color:#087d59; font-size:30px; line-height:1; letter-spacing:-.05em; }}
+    .gate-score span {{ color:#467565; font-size:12px; font-weight:700; }}
+    .gate-next {{ padding:14px 16px; border:1px solid #f3d0d6; border-radius:10px; background:#fff9fa; }}
+    .gate-next .eyebrow {{ color:#b4233c; font-size:10px; }}
+    .gate-next ul {{ display:grid; gap:6px; padding:0; margin:8px 0 0; list-style:none; }}
+    .gate-next li {{ display:flex; align-items:flex-start; gap:8px; color:#5c3540; font-size:12px; line-height:1.35; }}
+    .status-dot {{ width:7px; height:7px; flex:0 0 auto; margin-top:5px; border-radius:999px; }}
+    .status-dot.positive {{ background:#10b981; }}
+    .status-dot.negative {{ background:#ef476f; }}
+    .gate-detail {{ margin:0; padding:0; border:0; }}
+    .gate-detail > summary {{ color:var(--blue); font-size:12px; }}
     .muted {{ color:var(--muted); line-height:1.55; }}
     details {{ border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin:8px 0; }}
     .accordion {{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:0; overflow:hidden; }}
@@ -2235,10 +2665,12 @@ def write_dashboard(
     summary {{ cursor:pointer; font-weight:700; }}
     details p {{ white-space:pre-wrap; line-height:1.55; }}
     a {{ color:var(--blue); }}
-    @media (max-width:1200px) {{ .result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .grid,.two,.dashboard-grid,.header-layout,.decision-summary {{ grid-template-columns:1fr; }} .capital-scenario {{ max-width:460px; }} .gate-summary {{ border-left:0; border-top:1px solid #dbe5f0; padding:18px 0 0; }} }}
-    @media (max-width:620px) {{ .result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:1fr; }} td {{ display:block; width:100%!important; border:0; padding:6px 4px; }} tr {{ display:block; border-top:1px solid var(--line); padding:8px 0; }} .quick-nav {{ position:static; }} }}
+    @media (max-width:1200px) {{ .market-pulse,.result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .grid,.two,.dashboard-grid,.header-layout,.decision-summary,.ai-summary {{ grid-template-columns:1fr; }} .capital-scenario {{ max-width:460px; }} .gate-summary,.ai-summary-meta {{ border-left:0; border-top:1px solid #dbe5f0; padding:18px 0 0; }} .ai-summary-meta {{ border-color:#325979; }} }}
+    @media (max-width:900px) {{ .research-workspace .section-title {{ flex-direction:column; gap:10px; }} .research-workspace .section-kicker {{ max-width:none; width:100%; }} }}
+    @media (max-width:620px) {{ .market-pulse,.result-metrics,.fundamental-metrics,.strategy-metrics {{ grid-template-columns:1fr; }} .gate-overview {{ grid-template-columns:1fr; }} td {{ display:block; width:100%!important; border:0; padding:6px 4px; }} tr {{ display:block; border-top:1px solid var(--line); padding:8px 0; }} .report-table {{ min-width:0; }} .report-table thead {{ display:none; }} .report-table tr {{ padding:10px 12px; }} .report-table td:first-child {{ padding-top:0; }} .report-table .table-detail {{ padding-bottom:0; }} .quick-nav {{ position:static; }} }}
     {INTERACTIVE_CHART_CSS}
     {FORECAST_CHART_CSS}
+    {CHAT_WIDGET_CSS}
   </style>
 </head>
 <body>
@@ -2253,6 +2685,7 @@ def write_dashboard(
     </div>
   </header>
   <nav class="quick-nav">
+    <a href="#research">AI & tin có nguồn</a>
     <a href="#technical">Kỹ thuật</a>
     <a href="#overview">Tổng quan</a>
     <a href="#fundamental">Cơ bản & tin</a>
@@ -2274,11 +2707,16 @@ def write_dashboard(
         <span>{_escape(', '.join(signal_check_label(name) for name in failed_checks) if failed_checks else 'Tất cả điều kiện phát hành hiện có đều đạt.')}</span>
       </div>
     </section>
+    <div class="metrics market-pulse" aria-label="Chỉ số thị trường đọc nhanh">{market_pulse_cards}</div>
     <div id="technical" class="section-title"><h2>Trading workspace</h2><span class="section-kicker">Nến động, chỉ báo và công cụ vẽ · dữ liệu cuối ngày</span></div>
     {interactive_chart}
     <div class="two">
       <div class="stack">{technical_panel}</div>
       <details class="accordion static-fallback"><summary><strong>Biểu đồ kỹ thuật tĩnh</strong><span class="accordion-note">ảnh dự phòng / in báo cáo</span></summary><div class="accordion-body"><img src="technical_chart.png" alt="Biểu đồ kỹ thuật tĩnh"></div></details>
+    </div>
+    <div id="research">
+      <!-- FinAI dynamic enrichment start -->
+      <!-- FinAI dynamic enrichment end -->
     </div>
     <div id="overview" class="section-title"><h2>Kết quả chính</h2><span class="section-kicker">KPI đọc nhanh trước, chi tiết bấm mở bên dưới</span></div>
     <div class="metrics result-metrics">{result_cards}</div>
@@ -2295,6 +2733,7 @@ def write_dashboard(
     <section><h2>Lịch sử giá và mức sụt giảm</h2><img src="history_chart.png" alt="Biểu đồ lịch sử giá"></section>
     <p class="disclaimer">Báo cáo dùng để học tập và lập kịch bản, không phải khuyến nghị mua/bán.</p>
   </main>
+  {CHAT_WIDGET_MARKUP}
   <script>
     (() => {{
       const box = document.querySelector('.capital-scenario');
@@ -2330,6 +2769,7 @@ def write_dashboard(
   </script>
   {interactive_chart_scripts}
   {interactive_forecast_scripts}
+  {CHAT_WIDGET_SCRIPT}
 </body>
 </html>
 """

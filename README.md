@@ -38,6 +38,32 @@ Trên macOS, nếu XGBoost báo thiếu `libomp.dylib`:
 brew install libomp
 ```
 
+## Trợ lý AI dạng bong bóng trong dashboard
+
+Dashboard có nút `✦ Hỏi AI` cố định ở góc dưới phải. Trợ lý đọc đúng artifact
+của report đang mở (không dùng dữ liệu của mã khác), giữ tối đa 8 lượt hội thoại
+trong phiên và không được ghi đè `NO_EDGE`/publish guard.
+
+Chạy workspace local để bật API chat:
+
+```bash
+ollama serve
+.venv/bin/python -m src.web_server
+```
+
+Mở report từ `http://127.0.0.1:8787` thay vì mở file `dashboard.html` trực tiếp.
+Model mặc định là `qwen3:1.7b`; có thể đổi model đã cài bằng biến môi trường:
+
+```bash
+FINAI_CHAT_MODEL=qwen3:8b .venv/bin/python -m src.web_server
+```
+
+Nếu Ollama tạm ngừng, chat trả lời dự phòng chỉ từ các fact đã lưu trong
+artifact và báo rõ trạng thái đó.
+
+Muốn fine-tune trợ lý bằng Kaggle QLoRA, xem hướng dẫn và notebook sẵn sàng
+upload tại [`training/README.md`](training/README.md).
+
 ## Cấu trúc mã nguồn
 
 ```text
@@ -343,6 +369,33 @@ Bạn cũng có thể đổi giờ bằng tham số:
 ```bash
 ./run_daily_loop.sh HCM --run-time 20:00
 ```
+
+## Web workspace local
+
+Mở một trang chung để nhập mã cổ phiếu, tạo job nền và tự xem dashboard của
+lần chạy hoàn tất:
+
+```bash
+bin/stockrun web
+```
+
+Sau đó mở `http://127.0.0.1:8787`. Web workspace gọi đúng pipeline `full` có
+sẵn (`ML → tin có nguồn → News Reader → AI grounded`) và lưu report theo cấu
+trúc hiện tại. Mỗi máy local chỉ chạy một job tại một thời điểm để tránh chồng
+chéo train model/AI; nhập lại cùng mã khi job đang chạy sẽ trả về job đó.
+
+API local phục vụ UI:
+
+```text
+POST /api/analyses          # {"symbol":"VCB"} → job_id
+GET  /api/jobs/{job_id}     # trạng thái + log rút gọn
+GET  /api/reports?symbol=VCB
+GET  /reports/...           # dashboard/artifact của report
+```
+
+Đây là workspace local, chưa phải multi-user production: trạng thái job nằm
+trong bộ nhớ và sẽ mất khi dừng server. Khi deploy nhiều người dùng, giữ nguyên
+API/UI rồi thay `AnalysisJobManager` bằng Redis/RQ hoặc Celery và PostgreSQL.
 
 ## File đầu ra nằm ở đâu?
 

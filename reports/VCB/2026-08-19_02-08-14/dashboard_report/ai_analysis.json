@@ -1,0 +1,46 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 2 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, nganh: 2, rui_ro: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 2 trade; cần >= 10.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.026338461848141814 (dự báo điểm 0.0007247844478115439) chưa vượt chi phí + margin 0.0050.",
+    "ML guard: Technical score -1 < 2.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng."
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 2 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.026338461848141814 (dự báo điểm 0.0007247844478115439) chưa vượt chi phí + margin 0.0050.",
+    "ML decision artifact: NO_EDGE. Technical score -1 < 2.",
+    "News Reader [24HMoney]: Cổ phiếu VCB - Có nên mua? Dự phóng lợi nhuận cuối năm 2026 & 2027 - 24HMoney | nhóm: ket_qua_kinh_doanh, nganh, rui_ro (2026-08-16T06:56:21+00:00)",
+    "News Reader [index.vn]: Khối ngoại bán ròng hàng nghìn tỷ đồng, cổ phiếu BID, CTG, VCB giảm hơn 20% - index.vn | nhóm: ket_qua_kinh_doanh, nganh (2026-08-17T03:54:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Cổ phiếu VCB - Có nên mua? Dự phóng lợi nhuận cuối năm 2026 & 2027 - 24HMoney",
+      "publisher": "24HMoney",
+      "url": "https://24hmoney.vn/news/co-phieu-vcb-co-nen-mua-du-phong-loi-nhuan-cuoi-nam-2026-2027-c30a2821092.html",
+      "published_at": "2026-08-16T06:56:21+00:00"
+    },
+    {
+      "title": "Khối ngoại bán ròng hàng nghìn tỷ đồng, cổ phiếu BID, CTG, VCB giảm hơn 20% - index.vn",
+      "publisher": "index.vn",
+      "url": "https://index.vn/tin-tuc/khoi-ngoai-ban-rong-hang-nghin-ty-dong-co-phieu-bid-ctg-vcb-giam-hon-20",
+      "published_at": "2026-08-17T03:54:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json.",
+  "technical_view": "Artifact kỹ thuật: bias Trung tính; điểm -1. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Trung tính (RSI 46.1.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 21.3.); Thanh khoản: Thấp (0.58 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Vietcombank; kỳ 2026-Q2; P/E 11.68; P/B 1.96; ROE 17.9%; ROA 1.7%; Debt/Equity 9.69; Revenue Growth 47.6%; Profit Growth 64.7%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 2 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, nganh: 2, rui_ro: 1. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-18T19:08:29.819209+00:00; News Reader đọc được 2 bài. ML có 5 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest."
+}

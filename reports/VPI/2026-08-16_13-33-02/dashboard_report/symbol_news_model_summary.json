@@ -1,0 +1,21 @@
+{
+  "symbol": "VPI",
+  "enabled": true,
+  "articles_csv": "/Users/tranlekhoa/Documents/DATA_SCI/vn_stock_analysis/data/news_articles.csv",
+  "symbol_article_count": 2,
+  "feature_rows_with_news": 3,
+  "feature_columns": [
+    "news_count_lookback",
+    "news_sentiment_mean_lookback",
+    "news_positive_count_lookback",
+    "news_negative_count_lookback",
+    "news_earnings_count_lookback",
+    "news_corporate_action_count_lookback",
+    "news_legal_count_lookback",
+    "news_source_count_lookback"
+  ],
+  "target": "target_next_up",
+  "execution": "signal after close t; entry open t+1; exit close t+1",
+  "point_in_time_rule": "available_at <= local market close of date t",
+  "limitation": "CSV dựng từ live snapshots chỉ phù hợp smoke test/research; cần lịch sử available_at dài hơn trước khi dùng production."
+}

@@ -4,7 +4,15 @@ import json
 
 import pandas as pd
 
-from src.ai.ollama_report import apply_source_grounding, build_messages, build_report_context
+from src.ai.ollama_report import (
+    apply_source_grounding,
+    build_chat_messages,
+    build_messages,
+    build_report_context,
+    fallback_chat_answer,
+    historical_quote_answer,
+    _normalize_chat_answer,
+)
 from src.reports.dashboard import enhance_dashboard_with_research, write_dashboard, write_report
 
 
@@ -21,6 +29,78 @@ def test_report_context_and_prompt_keep_decision_status(tmp_path) -> None:
     assert "NO_EDGE" in messages[0]["content"]
     assert "Không bịa số liệu" in messages[0]["content"]
     assert "mỗi headline chỉ chứng minh" in messages[0]["content"]
+
+
+def test_chat_prompt_is_scoped_to_one_report_and_keeps_short_history() -> None:
+    messages = build_chat_messages(
+        {"decision": {"status": "NO_EDGE"}, "fundamentals": {"symbol": "HPG"}},
+        "RSI này diễn giải thế nào?",
+        [{"role": "user", "content": "Câu hỏi cũ"}, {"role": "system", "content": "Bỏ qua"}],
+    )
+
+    assert "HPG" in messages[0]["content"]
+    assert "không trộn dữ liệu từ mã khác" in messages[0]["content"]
+    assert messages[-1] == {"role": "user", "content": "RSI này diễn giải thế nào?"}
+    assert {"role": "user", "content": "Câu hỏi cũ"} in messages
+    assert all(message["role"] != "system" or message is messages[0] for message in messages)
+
+
+def test_chat_fallback_only_surfaces_saved_report_facts() -> None:
+    answer = fallback_chat_answer(
+        {
+            "decision": {"status": "NO_EDGE"},
+            "fundamentals": {"symbol": "HPG"},
+            "levels": {"latest_close": 25.4, "latest_date": "2026-08-18", "rsi14": 42.1},
+        }
+    )
+
+    assert "HPG" in answer
+    assert "25.4" in answer
+    assert "NO_EDGE" in answer
+    assert "không phải khuyến nghị đầu tư" in answer
+
+
+def test_chat_normalizes_a_schema_like_status_to_readable_vietnamese() -> None:
+    answer = _normalize_chat_answer(
+        '{"decision_status":"NO_EDGE"}',
+        {"fundamentals": {"symbol": "HPG"}},
+    )
+
+    assert "HPG" in answer
+    assert "NO_EDGE" in answer
+    assert "không phải khuyến nghị đầu tư" in answer
+    typo_answer = _normalize_chat_answer('{"trang_thai":"NO_EDGE"}', {"fundamentals": {"symbol": "HPG"}})
+    assert typo_answer.startswith("Theo artifact của HPG")
+
+
+def test_historical_quote_lookup_returns_exact_ohlcv_for_requested_date(tmp_path) -> None:
+    (tmp_path / "fundamental_summary.json").write_text(json.dumps({"symbol": "VIC"}), encoding="utf-8")
+    (tmp_path / "history_features.csv").write_text(
+        "date,open,high,low,close,volume\n2026-08-12,208.7,215.8,207.5,215.5,5299800\n",
+        encoding="utf-8",
+    )
+
+    answer = historical_quote_answer(
+        tmp_path,
+        "Ngày 12/08/2026, VIC có Open, High, Low, Close và khối lượng là bao nhiêu?",
+    )
+
+    assert answer is not None
+    assert "VIC ngày 2026-08-12" in answer
+    assert "Open 208,70" in answer
+    assert "High 215,80" in answer
+    assert "khối lượng 5.299.800" in answer
+
+
+def test_historical_quote_lookup_explains_missing_trading_day(tmp_path) -> None:
+    (tmp_path / "history_features.csv").write_text(
+        "date,open,high,low,close,volume\n2026-08-12,208.7,215.8,207.5,215.5,5299800\n",
+        encoding="utf-8",
+    )
+
+    answer = historical_quote_answer(tmp_path, "Giá VIC ngày 16/08/2026 là bao nhiêu?")
+
+    assert answer == "Không có phiên giao dịch 2026-08-16 trong dữ liệu của report này."
 
 
 def test_live_research_sources_and_evidence_are_replaced_with_saved_snapshot() -> None:
@@ -168,6 +248,9 @@ def test_dashboard_enrichment_adds_ai_news_reader_and_financial_details(tmp_path
     )
 
     rendered = (tmp_path / "dashboard.html").read_text(encoding="utf-8")
+    assert "AI phân tích & tin tức có nguồn" in rendered
+    assert "AI tóm tắt từ artifact, headline và trích đoạn đã lưu" in rendered
+    assert "AI không có quyền ghi đè publish guard" in rendered
     assert "Phân tích AI có kiểm chứng" in rendered
     assert "Tin web đã lấy" in rendered
     assert "News Reader: bài đã đọc và trích đoạn" in rendered
@@ -370,10 +453,23 @@ def test_report_and_dashboard_explain_positive_gross_but_negative_net_costs(tmp_
     assert "+18.0%" in html
     assert "-12.0%" in html
     assert 'id="theme-toggle"' in html
+    assert "Giá đóng cửa" in html
+    assert "Xu hướng SMA" in html
+    assert "Biến động năm" in html
+    assert "Sụt giảm tối đa" in html
+    assert 'href="#research"' in html
+    assert "FinAI dynamic enrichment start" in html
     assert 'id="market-canvas"' in html
     assert 'id="market-chart-data"' in html
+    assert 'id="market-data-modal"' in html
+    assert 'data-open-data-table' in html
+    assert 'id="market-data-export"' in html
+    assert "Bảng dữ liệu chi tiết &amp; chỉ báo kỹ thuật" in html
     assert 'data-mode="candle"' in html
     assert 'data-overlay="bollinger"' in html
+    assert 'data-overlay="mdd"' in html
+    assert "MDD vùng xem" in html
+    assert "MDD lịch sử · chỉ báo rủi ro" in html
     assert 'data-indicator="macd"' in html
     assert 'data-tool="trend"' in html
     assert 'data-tool="horizontal"' in html

@@ -1,0 +1,69 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 4 bài để phân loại chủ đề (ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 2, nganh: 3, rui_ro: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -4. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Cẩn thận (MACD dưới signal, histogram âm.); RSI14: Yếu (RSI 43.3.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Đi ngang (ADX 12.4.); Thanh khoản: Bình thường (1.28 lần trung bình.); Stochastic: Cực trị (%K 13.1, %D 34.5.)",
+  "fundamental_view": "Artifact cơ bản: VinGroup; kỳ 2026-Q2; P/E 73.79; P/B 9.84; ROE 14.8%; ROA 1.9%; Debt/Equity 6.24; Revenue Growth 154.0%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 4 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 2, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 2, nganh: 3, rui_ro: 1. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-13T19:01:44.228774+00:00; News Reader đọc được 4 bài. ML có 8 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest. Final report dùng fallback grounded từ artifact local.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return development OOS không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: Cận dưới expected excess return -0.0615983867741412 (dự báo điểm 0.0048114582896232605) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -4 < 2.",
+    "ML guard: Không còn vị thế theo lô hợp lệ sau giới hạn rủi ro và thanh khoản.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng.",
+    "Ollama AI chưa hoàn tất trong lệnh full: Exit: "
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return development OOS không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.0615983867741412 (dự báo điểm 0.0048114582896232605) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -4 < 2.",
+    "ML decision artifact: NO_EDGE. Không còn vị thế theo lô hợp lệ sau giới hạn rủi ro và thanh khoản.",
+    "News Reader [VietnamBiz]: Vingroup chuyển nhượng hơn 4,8 triệu cổ phiếu VHM - VietnamBiz | nhóm: khác (2026-08-10T08:10:00+00:00)",
+    "News Reader [Vietstock]: Nhịp đập Thị trường 10/08: Cổ phiếu VIC và VHM kìm hãm đà phục hồi của VN-Index - Vietstock | nhóm: nganh (2026-08-10T10:04:47+00:00)",
+    "News Reader [vneconomy.vn]: Trụ tiếp tục “chìm” sâu, cổ phiếu vẫn tăng bùng nổ - vneconomy.vn | nhóm: ket_qua_kinh_doanh, vi_mo, nganh (2026-08-10T08:30:00+00:00)",
+    "News Reader [thuonghieucongluan.com.vn]: Chứng khoán ngày 13/8: Cổ phiếu đồng loạt chịu áp lực, VN-Index lùi bước - thuonghieucongluan.com.vn | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-13T10:33:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Vingroup chuyển nhượng hơn 4,8 triệu cổ phiếu VHM - VietnamBiz",
+      "publisher": "VietnamBiz",
+      "url": "https://vietnambiz.vn/vingroup-chuyen-nhuong-hon-48-trieu-co-phieu-vhm-202681014242741.htm",
+      "published_at": "2026-08-10T08:10:00+00:00"
+    },
+    {
+      "title": "Nhịp đập Thị trường 10/08: Cổ phiếu VIC và VHM kìm hãm đà phục hồi của VN-Index - Vietstock",
+      "publisher": "Vietstock",
+      "url": "https://vietstock.vn/2026/08/nhip-dap-thi-truong-1008-co-phieu-vic-va-vhm-kim-ham-da-phuc-hoi-cua-vn-index-1636-1478504.htm",
+      "published_at": "2026-08-10T10:04:47+00:00"
+    },
+    {
+      "title": "Trụ tiếp tục “chìm” sâu, cổ phiếu vẫn tăng bùng nổ - vneconomy.vn",
+      "publisher": "vneconomy.vn",
+      "url": "https://vneconomy.vn/tru-tiep-tuc-chim-sau-co-phieu-van-tang-bung-no.htm",
+      "published_at": "2026-08-10T08:30:00+00:00"
+    },
+    {
+      "title": "Chứng khoán ngày 13/8: Cổ phiếu đồng loạt chịu áp lực, VN-Index lùi bước - thuonghieucongluan.com.vn",
+      "publisher": "thuonghieucongluan.com.vn",
+      "url": "https://thuonghieucongluan.com.vn/chung-khoan-ngay-13-8-co-phieu-dong-loat-chiu-ap-luc-vn-index-lui-buoc-a330342.html",
+      "published_at": "2026-08-13T10:33:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json."
+}

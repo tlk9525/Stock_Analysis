@@ -1,0 +1,69 @@
+{
+  "summary": "ML decision hiện giữ nguyên NO_EDGE. News Reader đã trích đoạn có nguồn của 4 bài để phân loại chủ đề (ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 3, nganh: 2, rui_ro: 1), nhưng các trích đoạn này không tạo bằng chứng mới cho quyết định đầu tư.",
+  "technical_view": "Artifact kỹ thuật: bias Suy yếu / cẩn thận; điểm -3. Chi tiết artifact: Xu hướng: Cẩn thận (Giá nằm dưới SMA60.); MACD: Tích cực (MACD trên signal, histogram dương.); RSI14: Yếu (RSI 39.8.); Bollinger: Ổn định (Giá nằm trong dải Bollinger.); ADX: Xu hướng giảm (ADX 34.7, -DI vượt +DI.); Thanh khoản: Bình thường (1.39 lần trung bình.); Stochastic: Yếu lại (%K nằm dưới %D.)",
+  "fundamental_view": "Artifact cơ bản: Thủy sản Nam Việt; kỳ 2026-Q2; P/E 5.28; P/B 1.18; ROE 23.6%; ROA 14.4%; Debt/Equity 0.67; Revenue Growth 12.2%; Profit Growth -59.5%.",
+  "news_view": "Đã đọc trích đoạn giới hạn của 4 bài; phân nhóm rule-based: ket_qua_kinh_doanh: 4, co_tuc_va_hanh_dong_doanh_nghiep: 1, vi_mo: 3, nganh: 2, rui_ro: 1. Tác động cần kiểm chứng: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường. Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động. Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh. So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp. Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro. Đây không phải sentiment hay dự báo tác động giá.",
+  "live_research_view": "Live snapshot lấy lúc 2026-08-16T03:05:10.916856+00:00; News Reader đọc được 4 bài. ML có 8 lý do guard và vẫn là NO_EDGE. Không dùng tin live để train/backtest. Final report dùng fallback grounded từ artifact local.",
+  "risks": [
+    "ML guard: Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML guard: Frozen holdout chỉ có 2 trade; cần >= 10.",
+    "ML guard: Correlation dự báo-return frozen holdout không dương.",
+    "ML guard: Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML guard: Frozen holdout không chịu được stress phí 1.5x.",
+    "ML guard: MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML guard: Cận dưới expected excess return -0.046384598387395615 (dự báo điểm 0.003794853575527668) chưa vượt chi phí + margin 0.0100.",
+    "ML guard: Technical score -3 < 2.",
+    "News Reader: Đối chiếu doanh thu/lợi nhuận trong bài với BCTC và kỳ vọng thị trường.",
+    "News Reader: Kiểm tra ngày GDKHQ, tỷ lệ, nguồn chi trả và nguy cơ pha loãng trước khi đánh giá tác động.",
+    "News Reader: Đối chiếu thời điểm công bố và kênh tác động lãi suất/tỷ giá với mô hình kinh doanh.",
+    "News Reader: So sánh tín hiệu ngành với thị phần, nhu cầu và đối thủ trước khi suy luận cho riêng doanh nghiệp.",
+    "News Reader: Xác minh công bố chính thức, phạm vi ảnh hưởng và khả năng định lượng rủi ro.",
+    "Chỉ lưu trích đoạn giới hạn để kiểm chứng nguồn; không lưu hay hiển thị toàn văn bài báo.",
+    "Phân nhóm là keyword rule-based để định tuyến research, không phải sentiment hay dự báo tác động giá.",
+    "Dữ liệu News Reader chỉ phục vụ research/report; không dùng làm feature train/backtest khi chưa có lịch sử available_at point-in-time.",
+    "Tin live/trích đoạn cần mở URL gốc để kiểm chứng bối cảnh, số liệu và thời điểm trước khi sử dụng.",
+    "Ollama AI chưa hoàn tất trong lệnh full: Exit: "
+  ],
+  "decision_status": "NO_EDGE",
+  "evidence": [
+    "ML decision artifact: NO_EDGE. Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chỉ có 2 trade; cần >= 10.",
+    "ML decision artifact: NO_EDGE. Correlation dự báo-return frozen holdout không dương.",
+    "ML decision artifact: NO_EDGE. Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "ML decision artifact: NO_EDGE. Frozen holdout không chịu được stress phí 1.5x.",
+    "ML decision artifact: NO_EDGE. MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "ML decision artifact: NO_EDGE. Cận dưới expected excess return -0.046384598387395615 (dự báo điểm 0.003794853575527668) chưa vượt chi phí + margin 0.0100.",
+    "ML decision artifact: NO_EDGE. Technical score -3 < 2.",
+    "News Reader [Tin nhanh chứng khoán]: Lãnh đạo Nam Việt (ANV) đã mua vào 1 triệu cổ phiếu - Tin nhanh chứng khoán | nhóm: ket_qua_kinh_doanh, co_tuc_va_hanh_dong_doanh_nghiep, vi_mo, nganh, rui_ro (2026-08-13T00:17:37+00:00)",
+    "News Reader [vnbusiness.vn]: Lãnh đạo Nam Việt gia tăng sở hữu cổ phiếu ANV - vnbusiness.vn | nhóm: ket_qua_kinh_doanh, vi_mo (2026-08-13T06:47:59+00:00)",
+    "News Reader [CafeBiz]: Con trai 'vua cá rô phi' lần thứ 3 mua thêm 1 triệu cổ phiếu ANV khi thị giá giảm gần 40% từ đầu năm - CafeBiz | nhóm: ket_qua_kinh_doanh (2026-08-13T07:09:00+00:00)",
+    "News Reader [Báo Pháp Luật Việt Nam]: Lãnh đạo Nam Việt (ANV) gom 1 triệu cổ phiếu giữa lúc lợi nhuận quý II giảm mạnh - Báo Pháp Luật Việt Nam | nhóm: ket_qua_kinh_doanh, vi_mo, nganh (2026-08-13T01:56:00+00:00)"
+  ],
+  "sources": [
+    {
+      "title": "Lãnh đạo Nam Việt (ANV) đã mua vào 1 triệu cổ phiếu - Tin nhanh chứng khoán",
+      "publisher": "Tin nhanh chứng khoán",
+      "url": "https://www.tinnhanhchungkhoan.vn/lanh-dao-nam-viet-anv-da-mua-vao-1-trieu-co-phieu-post395827.html",
+      "published_at": "2026-08-13T00:17:37+00:00"
+    },
+    {
+      "title": "Lãnh đạo Nam Việt gia tăng sở hữu cổ phiếu ANV - vnbusiness.vn",
+      "publisher": "vnbusiness.vn",
+      "url": "https://vnbusiness.vn/lanh-dao-nam-viet-mua-1-trieu-co-phieu-anv-sau-nhip-giam-hon-40.html",
+      "published_at": "2026-08-13T06:47:59+00:00"
+    },
+    {
+      "title": "Con trai 'vua cá rô phi' lần thứ 3 mua thêm 1 triệu cổ phiếu ANV khi thị giá giảm gần 40% từ đầu năm - CafeBiz",
+      "publisher": "CafeBiz",
+      "url": "https://cafebiz.vn/con-trai-vua-ca-ro-phi-lan-thu-3-mua-them-1-trieu-co-phieu-anv-khi-thi-gia-giam-gan-40-tu-dau-nam-176260813135325497.chn",
+      "published_at": "2026-08-13T07:09:00+00:00"
+    },
+    {
+      "title": "Lãnh đạo Nam Việt (ANV) gom 1 triệu cổ phiếu giữa lúc lợi nhuận quý II giảm mạnh - Báo Pháp Luật Việt Nam",
+      "publisher": "Báo Pháp Luật Việt Nam",
+      "url": "https://doanhnhan.baophapluat.vn/lanh-dao-nam-viet-anv-gom-1-trieu-co-phieu-giua-luc-loi-nhuan-quy-ii-giam-manh.html",
+      "published_at": "2026-08-13T01:56:00+00:00"
+    }
+  ],
+  "disclaimer": "Báo cáo chỉ tổng hợp artifact đã lưu để nghiên cứu; không phải khuyến nghị mua/bán. Quyết định và vị thế vẫn bị khóa theo signal_decision.json."
+}

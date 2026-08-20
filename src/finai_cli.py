@@ -33,6 +33,7 @@ from src.research.live_web import (
     write_news_reader,
 )
 from src.symbol_news_model import run_symbol_news_model
+from src.web_server import serve as serve_workspace
 
 
 app = typer.Typer(help="CLI nghiên cứu cổ phiếu Việt Nam có guard ML và portfolio ledger.")
@@ -41,6 +42,16 @@ ai_app = typer.Typer(help="Phân tích report đã có bằng Ollama local.")
 app.add_typer(portfolio_app, name="portfolio")
 app.add_typer(ai_app, name="ai")
 console = Console()
+
+
+@app.command("web")
+def web_workspace(
+    host: str = typer.Option("127.0.0.1", help="Host local để mở workspace."),
+    port: int = typer.Option(8787, min=1024, max=65535, help="Cổng local của workspace."),
+) -> None:
+    """Mở web workspace local để nhập mã và chạy pipeline dưới dạng job nền."""
+
+    serve_workspace(host=host, port=port)
 
 
 class QuietStepError(Exception):

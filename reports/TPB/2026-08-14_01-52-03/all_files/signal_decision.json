@@ -1,0 +1,58 @@
+{
+  "status": "NO_EDGE",
+  "direction": "NONE",
+  "checks": {
+    "swing_available": true,
+    "swing_margin_selected": false,
+    "swing_development_sample": false,
+    "swing_frozen_holdout": false,
+    "swing_development_ranking": false,
+    "swing_frozen_ranking": false,
+    "swing_net_edge": false,
+    "swing_cost_stress": false,
+    "swing_uncertainty_calibrated": true,
+    "swing_beats_naive_baseline": false,
+    "swing_latest_edge": false,
+    "technical_context": false,
+    "reward_risk": true,
+    "fresh_data": true,
+    "position_available": true
+  },
+  "failed_checks": [
+    "swing_margin_selected",
+    "swing_development_sample",
+    "swing_frozen_holdout",
+    "swing_development_ranking",
+    "swing_frozen_ranking",
+    "swing_net_edge",
+    "swing_cost_stress",
+    "swing_beats_naive_baseline",
+    "swing_latest_edge",
+    "technical_context"
+  ],
+  "reasons": [
+    "Không có margin nào đạt số trade tối thiểu trong validation; strict no-entry fallback không phải rule đã chọn.",
+    "Development OOS chỉ có 2 trade; cần >= 10.",
+    "Frozen holdout chỉ có 0 trade; cần >= 10.",
+    "Correlation dự báo-return development OOS không dương.",
+    "Correlation dự báo-return frozen holdout không dương.",
+    "Frozen holdout chưa có lợi thế ròng và Sharpe dương sau phí.",
+    "Frozen holdout không chịu được stress phí 1.5x.",
+    "MAE frozen holdout chưa tốt hơn baseline dự báo excess return bằng 0.",
+    "Cận dưới expected excess return -0.027223784949636398 (dự báo điểm 0.0016764632891863585) chưa vượt chi phí + margin 0.0100.",
+    "Technical score -1 < 2."
+  ],
+  "latest_data_age_days": 1,
+  "allowed_position_shares": null,
+  "execution_contract": "fixed_horizon_swing_5d",
+  "legacy_classifier": "research_only_not_used_for_signal_guard",
+  "thresholds": {
+    "minimum_completed_round_trips": 10,
+    "required_expected_excess_return": 0.01,
+    "latest_expected_excess_return_point": 0.0016764632891863585,
+    "latest_expected_excess_return_lower_bound": -0.027223784949636398,
+    "min_technical_score": 2,
+    "min_reward_risk": 1.5,
+    "max_data_age_days": 5
+  }
+}
